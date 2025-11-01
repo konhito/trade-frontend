@@ -1,0 +1,24 @@
+{
+  "title": "Historical Backtest vs Live Data",
+  "entries": [
+    {
+      "date": "2024-10-20",
+      "day": "MON",
+      "live": 5557,
+      "backtest": 5571,
+      "note": "-"
+    },
+    {
+      "date": "previous 25 days",
+      "day": "",
+      "live": 38059,
+      "backtest": 51423,
+      "note": "-"
+    }
+  ],
+  "total": {
+    "live": 43616,
+    "backtest": 56994
+  }
+}
+

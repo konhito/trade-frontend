@@ -1,0 +1,71 @@
+'use server'
+import { getCurrentLocale } from '@/locales/server'
+import { createClient } from '@/lib/auth'
+// TODO: ensureUserInDatabase removed - handled by backend
+const ensureUserInDatabase = async () => {}
+import { NextResponse } from 'next/server'
+// The client you created from the Server-Side Auth instructions
+
+export async function GET(request: Request) {
+  const { searchParams, origin } = new URL(request.url)
+  const code = searchParams.get('code')
+  // if "next" is in param, use it as the redirect URL
+  const next = searchParams.get('next')
+  const action = searchParams.get('action')
+
+  // Add debugging for Edge
+  console.log('Auth callback debug:', {
+    userAgent: request.headers.get('user-agent'),
+    origin,
+    hasCode: !!code,
+    next,
+    action
+  })
+
+  // Redirect to the decoded 'next' URL if it exists, otherwise to the homepage
+  let decodedNext: string | null = null;
+  if (next) {
+    decodedNext = decodeURIComponent(next)
+  }
+  if (code) {
+    const supabase = await createClient()
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+
+    if (!error) {
+      // Handle identity linking redirect
+      if (action === 'link') {
+        const forwardedHost = request.headers.get('x-forwarded-host')
+        const isLocalEnv = process.env.NODE_ENV === 'development'
+        const baseUrl = isLocalEnv
+          ? `${origin}/dashboard/settings`
+          : `https://${forwardedHost || origin}/dashboard/settings`
+        const redirectUrl = `${baseUrl}?linked=true`
+        return NextResponse.redirect(redirectUrl)
+      }
+
+      const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
+      const isLocalEnv = process.env.NODE_ENV === 'development'
+      if (isLocalEnv) {
+        // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
+        if (decodedNext) {
+          return NextResponse.redirect(new URL(decodedNext, origin))
+        }
+        return NextResponse.redirect(`${origin}${next ?? '/dashboard'}`)
+      } else if (forwardedHost) {
+        if (decodedNext) {
+          return NextResponse.redirect(new URL(decodedNext, `https://${forwardedHost}`))
+        }
+        return NextResponse.redirect(`https://${forwardedHost}${next ?? '/dashboard'}`)
+      } else {
+        if (decodedNext) {
+          return NextResponse.redirect(new URL(decodedNext, origin))
+        }
+        return NextResponse.redirect(`${origin}${next ?? '/dashboard'}`)
+      }
+    }
+    console.log('error', error)
+  }
+
+  // return the user to the authentication page
+  return NextResponse.redirect(`${origin}/authentication`)
+}

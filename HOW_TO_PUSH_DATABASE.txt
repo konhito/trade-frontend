@@ -1,0 +1,48 @@
+===============================================
+HOW TO PUSH DATABASE SCHEMA
+===============================================
+
+Quick Method (Recommended):
+---------------------------
+1. Stop your dev server (Ctrl+C)
+2. Run: push-database.bat
+3. Restart dev server: npm run dev
+
+Alternative Methods:
+-------------------
+Method 1 - PowerShell:
+    .\push-db.ps1
+
+Method 2 - Node Script:
+    node scripts/push-to-db.js
+
+Method 3 - Direct Command:
+    npx prisma db push --accept-data-loss
+
+Method 4 - With Generate:
+    npx prisma generate
+    npx prisma db push --accept-data-loss
+
+===============================================
+WHAT THE SCRIPT DOES:
+===============================================
+
+The script will add a new column "historicalData" 
+to the Strategy table in your database.
+
+This allows you to store backtest vs live comparison
+data for each strategy.
+
+===============================================
+AFTER PUSHING:
+===============================================
+
+1. Restart your dev server
+2. Go to http://localhost:3000/dashboard/strategies
+3. Click the Upload button on any strategy
+4. Paste your historical data in JSON format
+
+===============================================
+
+Script created. Just double-click: push-database.bat
+
