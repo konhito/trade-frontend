@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createI18nMiddleware } from "next-international/middleware"
-import { geolocation } from "@vercel/functions"
+// Removed @vercel/functions geolocation - using headers instead for Edge compatibility
 
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
@@ -128,44 +128,26 @@ export default async function middleware(req: NextRequest) {
     }
   }
 
-  // Geolocation handling with better error handling
-  try {
-    const geo = geolocation(req)
+  // Geolocation handling using Vercel headers (Edge compatible)
+  // Using headers directly instead of @vercel/functions for better Edge runtime compatibility
+  const country = req.headers.get("x-vercel-ip-country") || req.headers.get("cf-ipcountry")
+  const city = req.headers.get("x-vercel-ip-city") || req.headers.get("cf-ipcity")
+  const region = req.headers.get("x-vercel-ip-country-region") || req.headers.get("cf-region")
 
-    if (geo.country) {
-      response.headers.set("x-user-country", geo.country)
-      response.cookies.set("user-country", geo.country, {
-        path: "/",
-        maxAge: 60 * 60 * 24, // 24 hours
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-      })
-    }
-
-    if (geo.city) {
-      response.headers.set("x-user-city", encodeURIComponent(geo.city))
-    }
-
-    if (geo.countryRegion) {
-      response.headers.set("x-user-region", encodeURIComponent(geo.countryRegion))
-    }
-  } catch (geoError) {
-    // Fallback to Vercel headers
-    const country = req.headers.get("x-vercel-ip-country")
-    const city = req.headers.get("x-vercel-ip-city")
-    const region = req.headers.get("x-vercel-ip-country-region")
-
-    if (country) {
-      response.headers.set("x-user-country", country)
-      response.cookies.set("user-country", country, {
-        path: "/",
-        maxAge: 60 * 60 * 24,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-      })
-    }
-    if (city) response.headers.set("x-user-city", encodeURIComponent(city))
-    if (region) response.headers.set("x-user-region", encodeURIComponent(region))
+  if (country) {
+    response.headers.set("x-user-country", country)
+    response.cookies.set("user-country", country, {
+      path: "/",
+      maxAge: 60 * 60 * 24, // 24 hours
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    })
+  }
+  if (city) {
+    response.headers.set("x-user-city", encodeURIComponent(city))
+  }
+  if (region) {
+    response.headers.set("x-user-region", encodeURIComponent(region))
   }
 
   return response
