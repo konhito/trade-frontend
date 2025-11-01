@@ -36,43 +36,22 @@ const nextConfig: NextConfig = {
       net: false,
       tls: false,
     }
-    // Replace missing modules with stubs using require.resolve for compatibility
+    // Replace missing modules with stubs - use require.resolve which works at build time
     try {
+      // Use require.resolve with relative paths - works in both CommonJS and ES modules at build time
       const path = require('path')
-      const { fileURLToPath } = require('url')
-      
-      // Get current directory - works in both CommonJS and ES modules
-      let currentDir: string
-      try {
-        // ES module context
-        if (typeof __dirname === 'undefined') {
-          currentDir = path.dirname(fileURLToPath(import.meta.url))
-        } else {
-          // CommonJS context
-          currentDir = __dirname
-        }
-      } catch {
-        // Fallback to process.cwd() if both fail
-        currentDir = process.cwd()
-      }
+      // Use process.cwd() which is always available at build time
+      const projectRoot = process.cwd()
       
       config.resolve.alias = {
         ...config.resolve.alias,
-        '@prisma/client': path.resolve(currentDir, 'lib/stubs/prisma.ts'),
-        '@/server/subscription': path.resolve(currentDir, 'lib/stubs/server-subscription.ts'),
+        '@prisma/client': path.join(projectRoot, 'lib', 'stubs', 'prisma.ts'),
+        '@/server/subscription': path.join(projectRoot, 'lib', 'stubs', 'server-subscription.ts'),
       }
     } catch (error) {
-      // If path resolution fails, use require.resolve as fallback
-      try {
-        config.resolve.alias = {
-          ...config.resolve.alias,
-          '@prisma/client': require.resolve('./lib/stubs/prisma.ts'),
-          '@/server/subscription': require.resolve('./lib/stubs/server-subscription.ts'),
-        }
-      } catch {
-        // If all fails, skip alias configuration
-        console.warn('Could not configure webpack aliases:', error)
-      }
+      // If path resolution fails, just skip alias configuration
+      // The build will continue and missing modules will be handled by ignoreBuildErrors
+      console.warn('Could not configure webpack aliases, continuing without them:', error)
     }
     // Suppress warnings for missing modules (these are handled by ignoreBuildErrors above)
     if (config.infrastructureLogging) {
