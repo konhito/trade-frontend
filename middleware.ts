@@ -1,15 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createI18nMiddleware } from "next-international/middleware"
-// Removed @vercel/functions geolocation - using headers instead for Edge compatibility
+// Temporarily removed next-international to fix Edge runtime __dirname error
+// Will re-enable once Edge compatibility is confirmed
+// import { createI18nMiddleware } from "next-international/middleware"
 
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
 
-const I18nMiddleware = createI18nMiddleware({
-  locales: ["en", "fr"],
-  defaultLocale: "en",
-  urlMappingStrategy: "rewrite",
-})
+// Simple i18n handler - basic locale detection from pathname
+function handleI18n(req: NextRequest): NextResponse {
+  const pathname = req.nextUrl.pathname
+  const localeMatch = pathname.match(/^\/(en|fr)(\/|$)/)
+  const locale = localeMatch ? localeMatch[1] : 'en'
+  
+  // If pathname doesn't have locale prefix, add it
+  if (!localeMatch && !pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
+    const url = req.nextUrl.clone()
+    url.pathname = `/${locale}${pathname === '/' ? '' : pathname}`
+    return NextResponse.redirect(url)
+  }
+  
+  return NextResponse.next()
+}
 
 async function updateSession(request: NextRequest) {
   // Create a proper NextResponse first
@@ -72,8 +83,15 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Apply i18n middleware first
-  const response = I18nMiddleware(req)
+  // Apply simple i18n handling (Edge compatible)
+  const i18nResponse = handleI18n(req)
+  
+  // If i18n handler redirected, return it immediately
+  if (i18nResponse.status === 307 || i18nResponse.status === 308) {
+    return i18nResponse
+  }
+  
+  const response = i18nResponse
 
   // Then update session
   const { response: authResponse, user, error } = await updateSession(req)
@@ -167,3 +185,5 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|api|opengraph-image|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }
+
+// Middleware always runs on Edge runtime by default - no need to export runtime

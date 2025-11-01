@@ -2,13 +2,6 @@ import type { NextConfig } from 'next';
 import createMDX from '@next/mdx';
 
 const nextConfig: NextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        hostname: 'fhvmtnvjiotzztimdxbi.supabase.co',
-      },
-    ],
-  },
   modularizeImports: {
     'lucide-react': {
       transform: 'lucide-react/dist/esm/icons/{{member}}',
@@ -41,7 +34,6 @@ const nextConfig: NextConfig = {
 
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@prisma/client': path.join(projectRoot, 'lib', 'stubs', 'prisma.ts'),
       '@/server/subscription': path.join(projectRoot, 'lib', 'stubs', 'server-subscription.ts'),
     };
 
