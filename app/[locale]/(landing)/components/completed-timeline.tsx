@@ -6,7 +6,6 @@ import { motion } from "framer-motion"
 import { useI18n, useCurrentLocale } from '@/locales/client'
 import { TranslationKeys } from "@/app/[locale]/(landing)/types/translations"
 import Image from 'next/image'
-import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr, enUS } from 'date-fns/locale'
 
@@ -66,7 +65,7 @@ export default function CompletedTimeline({ milestones }: { milestones: Timeline
               <div className="h-3 w-3 rounded-full bg-neutral-300 dark:bg-neutral-700" />
             </div>
             
-            <Link href={`/updates/${milestone.id}`} className="block hover:opacity-90 transition-opacity">
+            <div className="block">
               <time className="mb-2 block text-sm text-neutral-600 dark:text-neutral-400">
                 {format(new Date(milestone.completedDate), 'MMMM d, yyyy', { locale: dateLocale })}
               </time>
@@ -87,7 +86,7 @@ export default function CompletedTimeline({ milestones }: { milestones: Timeline
                   />
                 </div>
               )}
-            </Link>
+            </div>
           </div>
         ))}
       </div>

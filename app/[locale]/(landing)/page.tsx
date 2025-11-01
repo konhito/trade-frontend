@@ -46,14 +46,6 @@ export default function LandingPage() {
                         <div className="flex flex-col w-full gap-y-16 md:gap-y-20 lg:gap-y-24">
                             <div className="flex flex-col justify-center space-y-10 text-center relative z-20">
                                 <div className="space-y-8">
-                                    <Link href="/updates">
-                                        <Button 
-                                        variant="link"
-                                        className="mx-auto sm:mb-8 box-border flex flex-row justify-center items-center px-4 py-2 h-[26px] bg-[#EAF6F5] dark:bg-[hsl(var(--chart-1)/0.1)] border border-[#BBE2DB] dark:border-[hsl(var(--chart-1)/0.3)] rounded-[26px] text-[10px] font-semibold leading-5 tracking-[0.35px] uppercase text-[rgba(36,36,36,0.8)] dark:text-[hsl(var(--chart-1)/0.8)] hover:bg-[#D4F0ED] dark:hover:bg-[hsl(var(--chart-1)/0.15)] transition-colors duration-200"
-                                        >
-                                            {t('landing.updates')}
-                                        </Button>
-                                    </Link>
                                     <h1 className="text-2xl font-bold tracking-tight sm:text-4xl xl:text-5xl/none bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white bg-clip-text text-transparent leading-snug relative z-20 pb-4">
                                         {t('landing.title')}
                                     </h1>

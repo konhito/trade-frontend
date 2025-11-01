@@ -195,9 +195,6 @@ export default function GitHubRepoCard() {
                 </AccordionTrigger>
                 <AccordionContent className="text-xs md:text-sm text-muted-foreground">
                   <p>{t('landing.accordion.openRoadmap.description')}</p>
-                  <Button variant="outline" className="mt-2 md:mt-4 mb-2 border-primary text-primary text-xs md:text-sm">
-                    <Link href="/updates">{t('landing.accordion.openRoadmap.button')}</Link>
-                  </Button>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>

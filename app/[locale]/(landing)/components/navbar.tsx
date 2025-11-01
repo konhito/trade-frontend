@@ -226,21 +226,6 @@ export default function Component() {
             title: t('landing.navbar.pricing'),
             path: "/pricing",
         },
-        {
-            title: t('landing.navbar.updates'),
-            children: [
-                {
-                    path: "/updates",
-                    title: t('landing.navbar.productUpdates'),
-                    icon: <BarChart3 className="h-4 w-4" />,
-                },
-                {
-                    path: "/community",
-                    title: t('landing.navbar.community'),
-                    icon: <Users className="h-4 w-4" />,
-                },
-            ],
-        },
         
     ]
 
@@ -296,19 +281,6 @@ export default function Component() {
                                 <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), 'bg-transparent')} href="/pricing">
                                     {t('landing.navbar.pricing')}
                                 </NavigationMenuLink>
-                            </NavigationMenuItem>
-                            <NavigationMenuItem onMouseEnter={() => setHoveredItem('updates')} onMouseLeave={() => setHoveredItem(null)}>
-                                <NavigationMenuTrigger className='bg-transparent'>{t('landing.navbar.updates')}</NavigationMenuTrigger>
-                                <NavigationMenuContent>
-                                    <ul className="grid gap-3 p-4 w-[400px] list-none">
-                                        <ListItem href="/updates" title={t('landing.navbar.productUpdates')} icon={<BarChart3 className="h-4 w-4" />}>
-                                            {t('landing.navbar.productUpdatesDescription')}
-                                        </ListItem>
-                                        <ListItem href="/community" title={t('landing.navbar.community')} icon={<Users className="h-4 w-4" />}>
-                                            {t('landing.navbar.communityDescription')}
-                                        </ListItem>
-                                    </ul>
-                                </NavigationMenuContent>
                             </NavigationMenuItem>
                             
                         </NavigationMenuList>
