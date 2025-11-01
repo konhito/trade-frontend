@@ -1,6 +1,12 @@
-import { createI18nServer } from 'next-international/server'
+// Stub i18n server implementation - removed next-international for Edge compatibility
+export const getI18n = () => {
+  return (key: string, params?: any) => key
+}
 
-export const { getI18n, getScopedI18n, getStaticParams } = createI18nServer({
-  en: () => import('./en'),
-  fr: () => import('./fr'),
-})
+export const getScopedI18n = () => {
+  return (key: string, params?: any) => key
+}
+
+export const getStaticParams = () => [{ locale: 'en' }, { locale: 'fr' }]
+
+export const getCurrentLocale = () => 'en'

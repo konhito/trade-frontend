@@ -1,7 +1,14 @@
-"use client"
-import { createI18nClient } from 'next-international/client'
+// Stub i18n implementation - removed next-international for Edge compatibility
+export const useI18n = () => {
+  return (key: string, params?: any) => key
+}
 
-export const { useI18n, useScopedI18n, I18nProviderClient, useChangeLocale, useCurrentLocale } = createI18nClient({
-  en: () => import('./en'),
-  fr: () => import('./fr'),
-})
+export const useScopedI18n = () => {
+  return (key: string, params?: any) => key
+}
+
+export const useCurrentLocale = () => 'en'
+
+export const useChangeLocale = () => () => {}
+
+export const I18nProviderClient = ({ children }: { children: React.ReactNode }) => children

@@ -20,12 +20,8 @@ import {
 import { useTheme } from '@/context/theme-provider'
 import { useAuth } from '@/context/auth-provider'
 import { cn } from '@/lib/utils'
-import { useChangeLocale, useI18n } from "@/locales/client"
+import { useI18n } from "@/locales/client"
 import { useRouter, usePathname } from "next/navigation"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { useCurrentLocale } from '@/locales/client'
-import { LanguageSelector } from "@/components/ui/language-selector"
 
 const ListItem = React.forwardRef<
     React.ElementRef<"a">,
@@ -99,7 +95,6 @@ export default function Component() {
     const [lastScrollY, setLastScrollY] = useState(0)
     const router = useRouter()
     const pathname = usePathname()
-    const currentLocale = useCurrentLocale()
     const t = useI18n()
 
     const toggleMenu = () => {
@@ -172,16 +167,9 @@ export default function Component() {
     ]
 
     const [themeOpen, setThemeOpen] = useState(false)
-    const [languageOpen, setLanguageOpen] = useState(false)
-    const changeLocale = useChangeLocale()
     const handleThemeChange = (value: string) => {
         setTheme(value as "light" | "dark" | "system")
         setThemeOpen(false)
-    }
-
-    const handleLanguageChange = (value: string) => {
-        changeLocale(value as "en" | "fr")
-        setLanguageOpen(false)
     }
 
     const getThemeIcon = () => {
@@ -298,7 +286,6 @@ export default function Component() {
                 </div>
 
                 <div className="flex items-center space-x-4">
-                    <LanguageSelector />
                     <Popover modal>
                         <PopoverTrigger asChild>
                             <Button variant="ghost" className="hidden lg:inline-flex h-9 w-9 px-0">
