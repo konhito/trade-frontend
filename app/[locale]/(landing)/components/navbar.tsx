@@ -22,6 +22,7 @@ import { useAuth } from '@/context/auth-provider'
 import { cn } from '@/lib/utils'
 import { useI18n } from "@/locales/client"
 import { useRouter, usePathname } from "next/navigation"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 const ListItem = React.forwardRef<
     React.ElementRef<"a">,
