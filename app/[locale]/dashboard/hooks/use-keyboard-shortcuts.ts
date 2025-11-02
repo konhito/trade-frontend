@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import hotkeys from 'hotkeys-js';
 import { useRouter } from 'next/navigation';
-import { signOut } from '@/lib/auth';
+// Using client-side signOut from useAuth hook
 
 export function useKeyboardShortcuts() {
   const router = useRouter();

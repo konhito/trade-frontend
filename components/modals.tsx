@@ -8,7 +8,7 @@ import { useUserStore } from '@/store/user-store'
 import LoadingOverlay from '../app/[locale]/dashboard/components/loading-overlay'
 import ImportButton from '../app/[locale]/dashboard/components/import/import-button'
 import { useI18n } from "@/locales/client"
-import { signOut } from '@/lib/auth'
+// Using client-side signOut from useAuth hook
 import PricingPlans from '@/components/pricing-plans'
 import { redirect, useSearchParams } from 'next/navigation'
 import OnboardingModal from './onboarding-modal'

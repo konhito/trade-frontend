@@ -462,7 +462,7 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
     resetProcessingState()
     clearMessageHistory()
 
-    const userId = await getUserId()
+    const userId = getUserId()
     // Ensure we are not already syncing
     // Prevent multiple syncs at the same time
     console.log('Is auto syncing', isAutoSyncing)

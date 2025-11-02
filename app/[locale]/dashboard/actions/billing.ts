@@ -1,6 +1,6 @@
 'use server'
 
-import { getUser } from '@/lib/auth'
+import { getUser } from '@/lib/server-auth'
 import { stripe } from '@/actions/stripe'
 import Stripe from 'stripe'
 

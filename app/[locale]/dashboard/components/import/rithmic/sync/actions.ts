@@ -1,5 +1,5 @@
 'use server'
-import { getUserId } from "@/lib/auth"
+import { getUserId } from "@/lib/server-auth"
 
 // Type definition for synchronization (replacing Prisma type)
 export type Synchronization = {

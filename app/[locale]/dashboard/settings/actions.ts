@@ -2,7 +2,7 @@
 
 // Prisma removed - using backend API instead
 import auth from '@/locales/en/auth'
-import { createClient } from '@/lib/auth'
+import { createClient } from '@/lib/server-auth'
 import { revalidatePath } from 'next/cache'
 
 export async function createBusiness(name: string, currency: 'USD' | 'EUR' = 'USD') {

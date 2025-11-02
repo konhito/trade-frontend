@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUserId } from '@/lib/auth'
+import { getUserId } from '@/lib/server-auth'
 // TODO: All server imports from backend API
 const getTradesAction = async () => { console.log('TODO: getTradesAction from backend API'); return [] }
 const getUserData = async () => { console.log('TODO: getUserData from backend API'); return null }

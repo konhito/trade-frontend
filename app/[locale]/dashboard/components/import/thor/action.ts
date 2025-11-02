@@ -1,6 +1,6 @@
 'use server'
 
-import { getUserId } from '@/lib/auth'
+import { getUserId } from '@/lib/server-auth'
 import crypto from 'crypto'
 // Prisma removed - using backend API instead
 

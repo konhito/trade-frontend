@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/auth'
-// TODO: ensureUserInDatabase removed - handled by backend
+// Stub for auth verification - using backend API
 const ensureUserInDatabase = async () => {}
 
 export async function POST(request: NextRequest) {

@@ -1,6 +1,6 @@
 "use server"
 
-import { getUser } from "@/lib/auth"
+import { getUser } from "@/lib/server-auth"
 import { revalidatePath } from "next/cache"
 import { backendBaseUrl } from "@/lib/api"
 

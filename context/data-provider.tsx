@@ -48,7 +48,6 @@ import { useCurrentLocale } from '@/locales/client';
 import { useMoodStore } from '@/store/mood-store';
 import { useStripeSubscriptionStore } from '@/store/stripe-subscription-store';
 // Subscription fetch pending backend
-import { getUserId } from '@/lib/auth';
 
 // Types from trades-data.tsx
 type StatisticsProps = {

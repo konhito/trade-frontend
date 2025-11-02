@@ -16,7 +16,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { signOut } from "@/lib/auth"
+// Using client-side signOut from useAuth hook
 import { Logo } from '@/components/logo'
 import Link from 'next/link'
 import ImportButton from './import/import-button'

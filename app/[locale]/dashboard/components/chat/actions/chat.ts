@@ -3,7 +3,7 @@ import { UIMessage } from "ai"
 import { addDays, format } from "date-fns"
 import { Mood } from "@/lib/types"
 import { revalidateTag } from "next/cache"
-import { getUserId } from "@/lib/auth"
+import { getUserId } from "@/lib/server-auth"
 
 export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
   console.log('Saving chat', messages)

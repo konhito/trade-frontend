@@ -1,6 +1,6 @@
 'use server'
 
-import { getUserId } from '@/lib/auth'
+import { getUserId } from '@/lib/server-auth'
 import { Trade, TickDetails } from '@/lib/types'
 import crypto from 'crypto'
 import { generateDeterministicTradeId } from '@/lib/trade-id-utils'

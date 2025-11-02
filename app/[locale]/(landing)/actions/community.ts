@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { createClient } from '@/lib/auth'
+import { createClient } from '@/lib/server-auth'
 import { PostType, PostStatus, VoteType } from '@prisma/client'
 
 import { revalidatePath } from 'next/cache'
