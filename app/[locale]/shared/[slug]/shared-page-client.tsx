@@ -13,7 +13,7 @@ import { Loader2, ChevronDown } from "lucide-react"
 import { useEffect, useState } from "react"
 // TODO: SharedParams from backend API
 type SharedParams = any
-import { Trade } from "@prisma/client"
+import { Trade } from "@/lib/types/trade"
 import { LanguageSelector } from "@/components/ui/language-selector"
 
 interface SharedPageClientProps {

@@ -62,6 +62,8 @@ export type TickDetails = {
   timestamp?: Date | string | null
   price?: number | null
   volume?: number | null
+  tickValue?: number
+  tickSize?: number
 }
 
 export type FinancialEvent = {
