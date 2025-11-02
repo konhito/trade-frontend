@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, ChevronLeft, ChevronRight, X, AlertCircle } from "lucide-react"
-import { useCurrentLocale, useI18n } from "@/locales/client"
+import { useCurrentLocale, useI18n } from "@/lib/i18n"
 import NumberFlow from '@number-flow/react'
 import {
   Dialog,
@@ -252,7 +252,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
     setIsLoading(true)
     
     try {
-      const { switchSubscriptionPlan } = await import('@/app/[locale]/dashboard/actions/billing')
+      const { switchSubscriptionPlan } = await import('@/app/dashboard/actions/billing')
       const result = await switchSubscriptionPlan(lookupKey)
       
       if (result.success) {

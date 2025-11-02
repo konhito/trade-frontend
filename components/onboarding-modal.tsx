@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useData } from '@/context/data-provider'
-import { useI18n, useCurrentLocale } from '@/locales/client'
+import { useI18n, useCurrentLocale } from '@/lib/i18n'
 import { useUserStore } from '@/store/user-store'
 
 export default function OnboardingModal() {

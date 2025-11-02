@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { Analytics } from "@vercel/analytics/react"
 import { AuthProvider } from "@/context/auth-provider";
 import Script from "next/script"
 import { ReactNode } from "react";
@@ -216,7 +215,6 @@ export default async function RootLayout({
       </head>
       <body className={inter.className + " min-h-screen overflow-x-hidden w-screen"}>
         <AuthProvider>
-          <Analytics />
           <Toaster />
           {children}
         </AuthProvider>

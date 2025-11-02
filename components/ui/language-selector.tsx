@@ -5,8 +5,8 @@ import { Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { useChangeLocale, useCurrentLocale } from '@/locales/client'
-import { useI18n } from "@/locales/client"
+import { useChangeLocale, useCurrentLocale } from '@/lib/i18n'
+import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 interface Language {

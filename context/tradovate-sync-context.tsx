@@ -3,9 +3,9 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
 import { useData } from '@/context/data-provider'
 import { toast } from 'sonner'
-import { useI18n } from "@/locales/client"
+import { useI18n } from "@/lib/i18n"
 import { useTradesStore } from '@/store/trades-store'
-import { getTradovateTrades, getAllTradovateTokens, removeTradovateToken } from '@/app/[locale]/dashboard/components/import/tradovate/actions'
+import { getTradovateTrades, getAllTradovateTokens, removeTradovateToken } from '@/app/dashboard/components/import/tradovate/actions'
 
 interface TradovateAccount {
   accountId: string

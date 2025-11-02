@@ -5,14 +5,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { useUserStore } from '@/store/user-store'
-import LoadingOverlay from '../app/[locale]/dashboard/components/loading-overlay'
-import ImportButton from '../app/[locale]/dashboard/components/import/import-button'
-import { useI18n } from "@/locales/client"
+import LoadingOverlay from '@/app/dashboard/components/loading-overlay'
+import ImportButton from '@/app/dashboard/components/import/import-button'
 // Using client-side signOut from useAuth hook
 import PricingPlans from '@/components/pricing-plans'
 import { redirect, useSearchParams } from 'next/navigation'
 import OnboardingModal from './onboarding-modal'
-import { AccountGroupBoard } from '@/app/[locale]/dashboard/components/filters/account-group-board'
+import { AccountGroupBoard } from '@/app/dashboard/components/filters/account-group-board'
 import { useModalStateStore } from '@/store/modal-state-store'
 import { useTradesStore } from '@/store/trades-store'
 
@@ -26,7 +25,6 @@ export default function Modals() {
   const [isPaywallOpen, setIsPaywallOpen] = useState(false)
   const [isAlreadySubscribedOpen, setIsAlreadySubscribedOpen] = useState(false)
   const [isTradesDialogOpen, setIsTradesDialogOpen] = useState(false)
-  const t = useI18n()
   const searchParams = useSearchParams()
   const { accountGroupBoardOpen, setAccountGroupBoardOpen } = useModalStateStore()
 
@@ -65,9 +63,9 @@ export default function Modals() {
       <Sheet open={accountGroupBoardOpen} onOpenChange={setAccountGroupBoardOpen}>
         <SheetContent side="right" className="w-[90vw] sm:w-[800px] sm:max-w-[800px] overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>{t('filters.manageAccounts')}</SheetTitle>
+            <SheetTitle>Manage Accounts</SheetTitle>
             <SheetDescription>
-              {t('filters.manageAccountsDescription')}
+              Group and organize your trading accounts
             </SheetDescription>
           </SheetHeader>
           <div className="mt-6">
@@ -80,9 +78,9 @@ export default function Modals() {
       <Dialog open={isAlreadySubscribedOpen} onOpenChange={setIsAlreadySubscribedOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('modals.subscription.title')}</DialogTitle>
+            <DialogTitle>Already Subscribed</DialogTitle>
             <DialogDescription>
-              {t('modals.subscription.description')}
+              You already have an active subscription. Manage it from your billing settings.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center">
@@ -94,7 +92,7 @@ export default function Modals() {
                   setIsAlreadySubscribedOpen(false)
               }}
             >
-              {t('modals.subscription.manage')}
+              Manage Subscription
             </Button>
           </div>
         </DialogContent>
@@ -104,9 +102,9 @@ export default function Modals() {
         <Dialog open={isTradesDialogOpen} onOpenChange={setIsTradesDialogOpen}>
           <DialogContent>
             <DialogHeader>
-            <DialogTitle>{t('modals.noTrades.title')}</DialogTitle>
+            <DialogTitle>No Trades Available</DialogTitle>
             <DialogDescription>
-              {t('modals.noTrades.description')}
+              You don't have any trades yet. Import your trading data to get started.
             </DialogDescription>
           </DialogHeader>
           <ImportButton />
@@ -120,9 +118,9 @@ export default function Modals() {
       >
         <DialogContent className="sm:max-w-[1200px] w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl sm:text-3xl font-bold text-center">{t('pricing.chooseYourPlan')}</DialogTitle>
+            <DialogTitle className="text-2xl sm:text-3xl font-bold text-center">Choose Your Plan</DialogTitle>
             <DialogDescription className="text-center text-base sm:text-lg">
-              {t('pricing.subscribeToAccess')}
+              Subscribe to access all features and unlock your trading potential
             </DialogDescription>
           </DialogHeader>
           
@@ -132,8 +130,8 @@ export default function Modals() {
           />
 
           <div className="mt-4 text-center">
-            <Button variant='link' onClick={async()=> await signOut()}>
-              {t('modals.changeAccount')}
+            <Button variant='link'>
+              Change Account
             </Button>
           </div>
         </DialogContent>

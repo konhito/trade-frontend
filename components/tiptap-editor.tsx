@@ -36,7 +36,7 @@ import {
 import { useCallback, useState, useEffect } from 'react'
 import { useUserStore } from '@/store/user-store'
 import { toast } from 'sonner'
-import { useI18n } from '@/locales/client'
+import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import './tiptap-editor.css'
 

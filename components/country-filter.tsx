@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useI18n } from "@/locales/client"
+import { useI18n } from "@/lib/i18n"
 import { Globe, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {

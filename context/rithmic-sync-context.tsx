@@ -4,11 +4,11 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode,
 import { getRithmicData, getAllRithmicData, updateLastSyncTime, clearRithmicData, saveRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
 import { useData } from '@/context/data-provider'
 import { toast } from "@/hooks/use-toast"
-import { useI18n } from "@/locales/client"
+import { useI18n } from "@/lib/i18n"
 import { useRithmicSyncStore, SyncInterval } from '@/store/rithmic-sync-store'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
-import { getRithmicSynchronizations, setRithmicSynchronization } from '@/app/[locale]/dashboard/components/import/rithmic/sync/actions'
+import { getRithmicSynchronizations, setRithmicSynchronization } from '@/app/dashboard/components/import/rithmic/sync/actions'
 import { getUserId } from '@/lib/auth'
 
 

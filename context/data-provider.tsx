@@ -44,7 +44,7 @@ import { calculateStatistics, formatCalendarData } from '@/lib/utils';
 import { useParams } from 'next/navigation';
 // Tags features pending backend; remove server dependency
 import { useRouter } from 'next/navigation';
-import { useCurrentLocale } from '@/locales/client';
+import { useCurrentLocale } from '@/lib/i18n';
 import { useMoodStore } from '@/store/mood-store';
 import { useStripeSubscriptionStore } from '@/store/stripe-subscription-store';
 // Subscription fetch pending backend
