@@ -21,12 +21,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
-      url: 'https://mytradejournal.app/updates',
-      lastModified: new Date(),
-      changeFrequency: 'weekly', 
-      priority: 0.7,
-    },
-    {
       url: 'https://mytradejournal.app/support',
       lastModified: new Date(),
       changeFrequency: 'monthly',
