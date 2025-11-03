@@ -438,7 +438,8 @@ export default function ProfilePage() {
                 </Badge>
               </CardHeader>
               <CardContent>
-                {/* Avatar upload */}
+                {/* Avatar upload - only when editing */}
+                {isEditing && (
                 <div className="space-y-2">
                   <Label htmlFor="avatarUpload">Profile Photo</Label>
                   <Input 
@@ -484,6 +485,7 @@ export default function ProfilePage() {
                     Max size: 2MB. Image will be stored as base64.
                   </p>
                 </div>
+                )}
                 <div className="space-y-3 mt-4">
                   <div className="flex items-center gap-2 text-sm">
                     <MapPin className="w-4 h-4 text-muted-foreground" />

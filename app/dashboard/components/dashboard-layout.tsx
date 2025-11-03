@@ -133,7 +133,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             >
               <Logo className={`fill-white flex-shrink-0 ${sidebarCollapsed ? 'md:h-6 md:w-6' : 'h-8 w-8'}`} />
               {!sidebarCollapsed && (
-                <h1 className="text-xl font-bold text-white whitespace-nowrap overflow-hidden">Trade Journal</h1>
+                <h1 className="text-xl font-bold text-white whitespace-nowrap overflow-hidden">My Trade Journal</h1>
               )}
             </div>
           </div>
@@ -283,7 +283,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           >
             <Menu className="w-6 h-6" />
           </Button>
-          <h1 className="text-lg font-semibold text-foreground">Trade Journal</h1>
+          <h1 className="text-lg font-semibold text-foreground">My Trade Journal</h1>
           <div className="w-6" /> {/* Spacer for centering */}
         </div>
 
@@ -299,7 +299,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Menu className="w-5 h-5" />
             </Button>
           )}
-          <h1 className="text-lg font-semibold text-foreground">Trade Journal</h1>
+          <h1 className="text-lg font-semibold text-foreground">My Trade Journal</h1>
         </div>
 
         {/* Page Content */}
