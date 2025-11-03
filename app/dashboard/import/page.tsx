@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { Suspense, useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTradovateSyncStore } from '@/store/tradovate-sync-store'
 import { handleTradovateCallback, storeTradovateToken } from '../components/import/tradovate/actions'
@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Loader2, CheckCircle, XCircle } from 'lucide-react'
 
-export default function ImportCallbackPage() {
+function ImportCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tradovateStore = useTradovateSyncStore()
@@ -223,4 +223,20 @@ export default function ImportCallbackPage() {
       </Card>
     </div>
   )
-} 
+}
+
+export default function ImportCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto max-w-md py-8">
+        <Card>
+          <CardContent className="flex items-center justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <ImportCallbackContent />
+    </Suspense>
+  )
+}
