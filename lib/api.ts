@@ -54,6 +54,32 @@ export async function apiFetch<T>(path: string, options: {
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     console.error('[apiFetch] Request failed:', res.status, text)
+    
+    // Handle 401 Unauthorized - token expired or invalid
+    if (res.status === 401) {
+      // Clear invalid token from localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token')
+        localStorage.removeItem('userId')
+        localStorage.removeItem('userEmail')
+        // Dispatch event to notify auth system
+        window.dispatchEvent(new CustomEvent('auth-token-expired'))
+      }
+      // Try to parse error message
+      let errorMessage = 'Your session has expired. Please sign in again.'
+      try {
+        const errorData = JSON.parse(text)
+        if (errorData.error === 'Invalid token') {
+          errorMessage = 'Your session has expired. Please sign in again.'
+        } else if (errorData.error) {
+          errorMessage = errorData.error
+        }
+      } catch {
+        // Use default message
+      }
+      throw new Error(errorMessage)
+    }
+    
     throw new Error(text || `Request failed: ${res.status}`)
   }
   return (await res.json()) as T
