@@ -14,8 +14,8 @@ type ThemeContextType = {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: 'system',
-  effectiveTheme: 'light',
+  theme: 'dark',
+  effectiveTheme: 'dark',
   intensity: 100,
   setTheme: () => {},
   setIntensity: () => {},
@@ -25,8 +25,8 @@ const ThemeContext = createContext<ThemeContextType>({
 export const useTheme = () => useContext(ThemeContext)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('system')
-  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light')
+  const [theme, setThemeState] = useState<Theme>('dark')
+  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('dark')
   const [intensity, setIntensityState] = useState<number>(100)
   const [mounted, setMounted] = useState(false)
 
@@ -56,7 +56,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (savedIntensity) {
       setIntensityState(Number(savedIntensity))
     }
-    applyTheme(savedTheme || 'system')
+    applyTheme(savedTheme || 'dark')
   }, [])
 
   useEffect(() => {
