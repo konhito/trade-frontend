@@ -365,10 +365,15 @@ export default function StrategiesPage() {
                 }
                 
                 const entries = strategy.historicalData.entries
-                const livePnL = entries.reduce((sum: number, e: any) => sum + (parseFloat(e.live) || 0), 0)
-                const backtestPnL = entries.reduce((sum: number, e: any) => sum + (parseFloat(e.backtest) || 0), 0)
-                const totalPnL = (livePnL + backtestPnL) / 2 // Average of live and backtest
-                const avgDailyPnL = entries.length > 0 ? totalPnL / entries.length : 0
+                // Use only LIVE values for P&L calculations
+                const parseNum = (v: any) => {
+                  if (typeof v === 'number' && Number.isFinite(v)) return v
+                  const n = Number(String(v).replace(/[^0-9.+-]/g, ''))
+                  return Number.isFinite(n) ? n : 0
+                }
+                const liveValues: number[] = entries.map((e: any) => parseNum(e.live))
+                const totalPnL = liveValues.reduce((sum, v) => sum + v, 0)
+                const avgDailyPnL = liveValues.length > 0 ? totalPnL / liveValues.length : 0
                 
                 return { totalPnL, avgDailyPnL, hasData: true }
               }

@@ -28,7 +28,7 @@ const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false })
 const Charts = dynamic(() => import('./Charts'), { ssr: false })
 
 export default function AISummarizerPage() {
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   const [loading, setLoading] = useState(false)
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [lastGenerated, setLastGenerated] = useState<Record<string, number>>({})
@@ -167,11 +167,20 @@ export default function AISummarizerPage() {
     setSelectedType(type)
     
     try {
+      // Get token from localStorage if not in context
+      const authToken = token || (typeof window !== 'undefined' ? localStorage.getItem('token') : null)
+      
+      if (!authToken) {
+        toast.error('Please sign in to generate summaries')
+        return
+      }
+
       // Call Gemini API
       const response = await fetch('/api/ai/summarize', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           type,

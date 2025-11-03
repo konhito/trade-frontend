@@ -4,8 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TrendingUp, TrendingDown, DollarSign, Percent, Target, Award, Calendar, BarChart3, Activity, Zap, AlertTriangle, Edit } from "lucide-react"
-import { AreaChart, Area, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts"
+import { TrendingUp, TrendingDown, DollarSign, Percent, Target, Award, Calendar, BarChart3, Activity, Zap, AlertTriangle } from "lucide-react"
+import { AreaChart, Area, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart } from "recharts"
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +21,15 @@ export function StrategyAnalyticsModal({ open, onOpenChange, strategy }: Strateg
 
   // Calculate comprehensive metrics from historical data
   const calculateMetrics = () => {
+    // Robust numeric parser: strips currency symbols, commas, spaces; supports negatives and decimals
+    const parseNumeric = (value: any): number => {
+      if (typeof value === 'number' && Number.isFinite(value)) return value
+      if (!value) return 0
+      const str = String(value)
+        .replace(/[^0-9.+-]/g, '') // keep digits, dot, plus, minus
+      const num = Number(str)
+      return Number.isFinite(num) ? num : 0
+    }
     if (!strategy?.historicalData || !strategy.historicalData.entries) {
       return {
         totalLive: 0,
@@ -67,8 +76,8 @@ export function StrategyAnalyticsModal({ open, onOpenChange, strategy }: Strateg
     }
 
     const entries = strategy.historicalData.entries || []
-    const liveValues = entries.map((e: any) => parseFloat(e.live) || 0)
-    const backtestValues = entries.map((e: any) => parseFloat(e.backtest) || 0)
+    const liveValues = entries.map((e: any) => parseNumeric(e.live))
+    const backtestValues = entries.map((e: any) => parseNumeric(e.backtest))
     
     const totalLive = liveValues.reduce((sum, val) => sum + val, 0)
     const totalBacktest = backtestValues.reduce((sum, val) => sum + val, 0)
@@ -228,19 +237,34 @@ export function StrategyAnalyticsModal({ open, onOpenChange, strategy }: Strateg
         if (!monthlyData[monthKey]) {
           monthlyData[monthKey] = { month: monthKey, total: 0, count: 0 }
         }
-        monthlyData[monthKey].total += parseFloat(entry.live) || 0
+        monthlyData[monthKey].total += parseNumeric(entry.live)
         monthlyData[monthKey].count++
       }
     })
     
-    // Calculate cumulative PnL data
-    const cumulativeData = entries.reduce((acc: any[], entry: any, index: number) => {
+    // Calculate cumulative PnL data (DAY-WISE aggregation)
+    // 1) Aggregate all trades by day
+    const dailyTotals: Record<string, number> = {}
+    entries.forEach((entry: any) => {
+      const raw = entry.date || entry.day || ''
+      // Normalize to YYYY-MM-DD for grouping
+      const dayKey = raw ? String(raw).slice(0, 10) : ''
+      if (!dayKey) return
+      const amount = parseNumeric(entry.live)
+      dailyTotals[dayKey] = (dailyTotals[dayKey] || 0) + amount
+    })
+
+    // 2) Build a sorted list of days
+    const sortedDays = Object.keys(dailyTotals).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+
+    // 3) Build cumulative series from the day-wise totals
+    const cumulativeData = sortedDays.reduce((acc: any[], day: string, idx: number) => {
       const prev = acc[acc.length - 1] || { cumulative: 0 }
-      const livePnL = parseFloat(entry.live) || 0
+      const daily = dailyTotals[day] || 0
       acc.push({
-        date: entry.date || entry.day || `Day ${index + 1}`,
-        cumulative: prev.cumulative + livePnL,
-        daily: livePnL
+        date: day,
+        cumulative: prev.cumulative + daily,
+        daily,
       })
       return acc
     }, [])
@@ -319,9 +343,6 @@ export function StrategyAnalyticsModal({ open, onOpenChange, strategy }: Strateg
               <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               <span className="truncate">{strategy.name}</span>
             </DialogTitle>
-            <div className="flex items-center gap-2">
-              <Edit className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground cursor-pointer hover:text-foreground" />
-            </div>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <Badge className={getCategoryColor(strategy.category)}>
@@ -631,78 +652,204 @@ export function StrategyAnalyticsModal({ open, onOpenChange, strategy }: Strateg
 
           <TabsContent value="charts" className="space-y-4 sm:space-y-6 mt-4">
             {/* Equity Curve Chart */}
-            {metrics.cumulativeData.length > 0 && (
-              <Card className="bg-card border-border">
-                <CardHeader className="p-4 sm:p-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
-                    <div>
-                      <CardTitle className="text-lg mb-1">Equity Curve - Total MTM</CardTitle>
-                      <div className="flex items-center gap-2 text-sm">
-                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                        <span className="text-muted-foreground">
-                          Current: {metrics.totalLive >= 0 ? '+' : ''}₹{metrics.totalLive.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
+            
+           {/* Equity Curve Chart */}
+           {metrics.cumulativeData.length > 0 && (() => {
+              const chartData = metrics.cumulativeData
+              const isPositive = metrics.totalLive >= 0
+              
+              // Add a starting point at zero, then all actual data points
+              const startingPoint = {
+                date: chartData[0]?.date ? (() => {
+                  try {
+                    const firstDate = new Date(chartData[0].date)
+                    firstDate.setDate(firstDate.getDate() - 1) // One day before first trade
+                    return firstDate.toISOString().split('T')[0]
+                  } catch {
+                    return 'Start'
+                  }
+                })() : 'Start',
+                cumulative: 0,
+                daily: 0,
+                areaPositive: 0,
+                areaNegative: 0
+              }
+              
+              // Build chart with continuous cumulative line and dynamic coloring
+              const dataWithSegments = [startingPoint, ...chartData.map((item: any) => {
+                const cumulative = typeof item.cumulative === 'number' ? item.cumulative : Number(item.cumulative) || 0
+                return {
+                  ...item,
+                  cumulative,
+                  areaPositive: cumulative > 0 ? cumulative : 0,
+                  areaNegative: cumulative < 0 ? cumulative : 0,
+                }
+              })]
+              
+              // Compute Y-axis domain with proper padding
+              const allValues = [0, ...chartData.map((d: any) => Number(d.cumulative) || 0)]
+              const yMin = Math.min(...allValues, 0)
+              const yMax = Math.max(...allValues, 0)
+              const range = yMax - yMin
+              const padding = range * 0.1 || Math.max(Math.abs(yMax), Math.abs(yMin)) * 0.1 || 100
+              const yPadMin = yMin - padding
+              const yPadMax = yMax + padding
+
+              return (
+                <Card className="bg-card border-border">
+                  <CardHeader className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
+                      <div>
+                        <CardTitle className="text-lg mb-1">Equity Curve - Total MTM</CardTitle>
+                        <div className="flex items-center gap-2 text-sm">
+                          <div className={`w-2 h-2 rounded-full ${isPositive ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <span className={`font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                            Current: {metrics.totalLive >= 0 ? '+' : ''}₹{metrics.totalLive.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs sm:text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                          <span className="text-muted-foreground">Profit Zone</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                          <span className="text-muted-foreground">Loss Zone</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6 pt-0">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={metrics.cumulativeData}>
-                      <defs>
-                        <linearGradient id="cumulativeGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-                          <stop offset="50%" stopColor="#10b981" stopOpacity={0.5}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis 
-                        dataKey="date" 
-                        tick={{fontSize: 11, fill: '#9ca3af'}}
-                        tickFormatter={(value) => format(new Date(value), 'dd/MM/yyyy')}
-                      />
-                      <YAxis 
-                        label={{ value: 'Total MTM (₹)', angle: -90, position: 'insideLeft', style: { fill: '#9ca3af', fontSize: 12 } }}
-                        domain={['auto', 'auto']}
-                        tick={{fontSize: 11, fill: '#9ca3af'}}
-                        tickFormatter={(value) => {
-                          if (value >= 1000000) return `₹${(value/1000000).toFixed(1)}M`
-                          if (value >= 1000) return `₹${(value/1000).toFixed(1)}K`
-                          return `₹${value.toFixed(0)}`
-                        }}
-                        allowDataOverflow={false}
-                      />
-                      <ReferenceLine y={0} stroke="#6b7280" strokeWidth={2} strokeDasharray="5 5" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'rgba(0,0,0,0.95)', 
-                          color: '#fff', 
-                          borderRadius: '8px', 
-                          border: 'none',
-                          padding: '10px'
-                        }}
-                        formatter={(value: any) => {
-                          return [`₹${Number(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Total MTM']
-                        }}
-                        labelFormatter={(label) => `Date: ${format(new Date(label), 'dd MMM yyyy')}`}
-                        labelStyle={{ color: '#10b981', fontWeight: 'bold', fontSize: 13 }}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="cumulative" 
-                        stroke="#22c55e" 
-                        strokeWidth={3}
-                        fill="url(#cumulativeGradient)"
-                        fillOpacity={0.6}
-                        dot={false}
-                        activeDot={{ r: 6, fill: '#22c55e' }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-          )}
+                  </CardHeader>
+                  <CardContent className="p-4 sm:p-6 pt-0">
+                    <ResponsiveContainer width="100%" height={400}>
+                      <ComposedChart data={dataWithSegments} margin={{ top: 10, right: 30, left: 10, bottom: 50 }}>
+                        <defs>
+                          <linearGradient id="positiveGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#22c55e" stopOpacity={0.4}/>
+                            <stop offset="100%" stopColor="#22c55e" stopOpacity={0.05}/>
+                          </linearGradient>
+                          <linearGradient id="negativeGradient" x1="0" y1="1" x2="0" y2="0">
+                            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.4}/>
+                            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.05}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
+                        <XAxis 
+                          dataKey="date" 
+                          tick={{fontSize: 10, fill: '#9ca3af'}}
+                          tickFormatter={(value) => {
+                            try {
+                              return format(new Date(value), 'dd MMM')
+                            } catch {
+                              return value
+                            }
+                          }}
+                          angle={-45}
+                          textAnchor="end"
+                          height={70}
+                        />
+                        <YAxis 
+                          label={{ value: 'Total MTM (₹)', angle: -90, position: 'insideLeft', style: { fill: '#9ca3af', fontSize: 12 } }}
+                          domain={[yPadMin, yPadMax]}
+                          tick={{fontSize: 10, fill: '#9ca3af'}}
+                          tickFormatter={(value) => {
+                            if (Math.abs(value) >= 1000000) return `₹${(value/1000000).toFixed(1)}M`
+                            if (Math.abs(value) >= 1000) return `₹${(value/1000).toFixed(1)}K`
+                            return `₹${value.toFixed(0)}`
+                          }}
+                        />
+                        <ReferenceLine y={0} stroke="#f59e0b" strokeWidth={3} label={{ value: '₹0 Baseline', position: 'insideTopRight', fill: '#f59e0b', fontSize: 12, fontWeight: 'bold' }} />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'rgba(17, 24, 39, 0.98)', 
+                            color: '#fff', 
+                            borderRadius: '8px', 
+                            border: '1px solid #374151',
+                            padding: '12px',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)'
+                          }}
+                          formatter={(value: any, name: string, props: any) => {
+                            const cumulative = props.payload.cumulative
+                            const daily = props.payload.daily
+                            if (name === 'cumulative') {
+                              return [
+                                <div key="tooltip" className="space-y-1">
+                                  <div>Cumulative: <span className={cumulative >= 0 ? 'text-green-400' : 'text-red-400'}>
+                                    {cumulative >= 0 ? '+' : ''}₹{Number(cumulative).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span></div>
+                                  <div>Daily P&L: <span className={daily >= 0 ? 'text-green-400' : 'text-red-400'}>
+                                    {daily >= 0 ? '+' : ''}₹{Number(daily).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span></div>
+                                </div>,
+                                ''
+                              ]
+                            }
+                            return null
+                          }}
+                          labelFormatter={(label) => {
+                            try {
+                              return format(new Date(label), 'EEEE, dd MMM yyyy')
+                            } catch {
+                              return label
+                            }
+                          }}
+                          labelStyle={{ color: '#e5e7eb', fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}
+                        />
+                        
+                        {/* Area fill for positive values */}
+                        <Area 
+                          type="monotone" 
+                          dataKey="areaPositive" 
+                          fill="url(#positiveGradient)"
+                          stroke="none"
+                          fillOpacity={1}
+                          baseValue={0}
+                        />
+                        
+                        {/* Area fill for negative values */}
+                        <Area 
+                          type="monotone" 
+                          dataKey="areaNegative" 
+                          fill="url(#negativeGradient)"
+                          stroke="none"
+                          fillOpacity={1}
+                          baseValue={0}
+                        />
+                        
+                        {/* Main cumulative line that changes color based on position */}
+                        <Line 
+                          type="monotone" 
+                          dataKey="cumulative" 
+                          stroke="#3b82f6"
+                          strokeWidth={2.5}
+                          dot={(props: any) => {
+                            const { cx, cy, payload } = props
+                            const value = payload.cumulative
+                            const color = value >= 0 ? '#22c55e' : '#ef4444'
+                            return (
+                              <circle 
+                                cx={cx} 
+                                cy={cy} 
+                                r={3} 
+                                fill={color} 
+                                stroke="#fff" 
+                                strokeWidth={1.5}
+                              />
+                            )
+                          }}
+                          activeDot={{ 
+                            r: 6, 
+                            fill: '#3b82f6', 
+                            stroke: '#fff', 
+                            strokeWidth: 2 
+                          }}
+                        />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )
+            })()}
 
           {/* No Data Message */}
             {metrics.cumulativeData.length === 0 && (

@@ -20,6 +20,7 @@ import {
   LineChart as LineChartIcon
 } from "lucide-react"
 import { LineChart, AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, BarChart, Bar, Cell } from 'recharts'
+import EquityCurve from '@/components/equity-curve'
 import { useData } from '@/context/data-provider'
 import { useAuth } from '@/context/auth-provider'
 import { listStrategies } from '@/lib/services/strategies'
@@ -560,7 +561,7 @@ export default function Home() {
               </div>
               <BarChart3 className="w-5 h-5 text-green-500 opacity-80" />
             </div>
-            <div className="text-4xl font-bold text-green-500 mb-2">
+            <div className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-green-500 mb-2 break-words">
               {dashboardStatsLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : hasNoData ? '₹0' : `₹${metrics.highestPnL.toLocaleString('en-IN')}`}
             </div>
             <div className="text-sm text-green-500/90 mb-3">
@@ -588,7 +589,7 @@ export default function Home() {
               </div>
               <Trophy className="w-5 h-5 text-blue-500 opacity-80" />
             </div>
-            <div className="text-4xl font-bold text-blue-500 mb-2">
+            <div className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-blue-500 mb-2 break-words">
               {dashboardStatsLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : hasNoData ? '0%' : `${metrics.winRate.toFixed(1)}%`}
             </div>
             <div className="text-sm text-blue-500/90 mb-3">
@@ -616,7 +617,7 @@ export default function Home() {
               </div>
               <Scale className="w-5 h-5 text-purple-500 opacity-80" />
             </div>
-            <div className="text-4xl font-bold text-purple-500 mb-2">
+            <div className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-purple-500 mb-2 break-words">
               {dashboardStatsLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : hasNoData ? '1:0' : metrics.riskReward}
             </div>
             <div className="text-sm text-purple-500/90 mb-3">
@@ -644,7 +645,7 @@ export default function Home() {
               </div>
               <TrendingUp className="w-5 h-5 text-orange-500 opacity-80" />
             </div>
-            <div className="text-4xl font-bold text-orange-500 mb-2">
+            <div className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-orange-500 mb-2 break-words">
               {dashboardStatsLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : hasNoData ? '0' : metrics.tradesThisMonth}
             </div>
             <div className="text-sm text-orange-500/90 mb-3">
@@ -1013,57 +1014,8 @@ export default function Home() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="h-[320px]">
-              {(hasNoData && !dashboardStats?.overview) || (metrics.chartData.length === 0 && (!dashboardStats?.monthlyData || dashboardStats.monthlyData.length === 0)) ? (
-                <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed border-muted">
-                  <div className="text-center">
-                    <LineChartIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Add trades to see equity curve</p>
-                  </div>
-                </div>
-              ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={metrics.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="hsl(var(--muted-foreground))" 
-                    tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}}
-                    axisLine={{ stroke: "hsl(var(--border))" }}
-                  />
-                  <YAxis 
-                    stroke="hsl(var(--muted-foreground))" 
-                    tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}}
-                    axisLine={{ stroke: "hsl(var(--border))" }}
-                    tickFormatter={(value) => {
-                      if (value >= 1000000) return `₹${(value/1000000).toFixed(1)}M`
-                      if (value >= 1000) return `₹${(value/1000).toFixed(1)}K`
-                      return `₹${value.toFixed(0)}`
-                    }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      color: 'hsl(var(--foreground))',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                    }} 
-                    formatter={(value: any) => [`₹${Number(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Cumulative P&L']}
-                    labelFormatter={(label) => `${label}`}
-                    labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: '12px' }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke="#10b981"
-                    strokeWidth={2.5}
-                    dot={false}
-                    activeDot={{ r: 6, fill: '#10b981', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-              )}
+            <div className="h-[400px]">
+              <EquityCurve trades={formattedTrades} strategies={strategies} />
             </div>
           </CardContent>
         </Card>
@@ -1119,7 +1071,8 @@ export default function Home() {
                       borderRadius: '8px',
                       color: 'hsl(var(--foreground))',
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                    }} 
+                    }}
+                    cursor={{ fill: 'transparent' }}
                     formatter={(value: any) => [value, 'Trades']}
                     labelFormatter={(label) => `${label}`}
                     labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: '12px' }}

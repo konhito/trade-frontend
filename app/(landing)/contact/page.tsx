@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { 
   Mail, 
   Phone, 
@@ -31,7 +31,6 @@ import {
 
 export default function ContactPage() {
 
-  const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' })
   const [isVisible, setIsVisible] = useState(false)
 
@@ -41,23 +40,35 @@ export default function ContactPage() {
 
   const onChange = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }))
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      })
-      if (!res.ok) throw new Error('Failed')
-      toast.success('Message sent successfully!')
-      setForm({ name: '', email: '', subject: '', message: '' })
-    } catch {
-      toast.error('Failed to send message. Please try again.')
-    } finally {
-      setLoading(false)
+    
+    // Validate required fields
+    if (!form.name || !form.email || !form.message) {
+      toast.error('Please fill in all required fields')
+      return
     }
+    
+    // Construct email body with all form values
+    const emailBody = `Name: ${form.name}\nEmail: ${form.email}\n\nMessage:\n${form.message}`
+    
+    // Encode the subject and body for mailto URL
+    const subject = encodeURIComponent(form.subject || 'Contact Form Message')
+    const body = encodeURIComponent(emailBody)
+    
+    // Create mailto link
+    const mailtoLink = `mailto:anubhavsingh290@gmail.com?subject=${subject}&body=${body}`
+    
+    // Open email client
+    window.location.href = mailtoLink
+    
+    // Show success message
+    toast.success('Opening your email client...')
+    
+    // Clear form after a short delay
+    setTimeout(() => {
+      setForm({ name: '', email: '', subject: '', message: '' })
+    }, 500)
   }
 
   const contactMethods = [
@@ -347,35 +358,13 @@ export default function ContactPage() {
               >
                 <Button 
                   type="submit" 
-                  disabled={loading}
                   size="lg"
                   className="px-8 py-3 text-lg font-medium"
                 >
-                  <AnimatePresence mode="wait">
-                    {loading ? (
-                      <motion.div
-                        key="loading"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="flex items-center gap-2"
-                      >
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Sending...
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="send"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="flex items-center gap-2"
-                      >
-                        <Send className="w-4 h-4" />
-                        Send Message
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <div className="flex items-center gap-2">
+                    <Send className="w-4 h-4" />
+                    Send Message
+                  </div>
                 </Button>
               </motion.div>
             </form>

@@ -25,30 +25,38 @@ async function getAuthToken(req: Request): Promise<string | null> {
 
 // Helper to get user from cookies or backend
 async function getAuthenticatedUser(req: Request): Promise<{ id: string | number; email?: string } | null> {
-  // First try to get from cookies (faster)
+  // First try to get token from Authorization header or cookies
+  const authToken = await getAuthToken(req)
+  if (!authToken) {
+    // No token available at all
+    return null
+  }
+  
+  // Try to get from cookies first (faster, if available)
   const cookieStore = await cookies()
   const userId = cookieStore.get('user_id')?.value
   const userEmail = cookieStore.get('user_email')?.value
-  const token = cookieStore.get('auth_token')?.value
+  const cookieToken = cookieStore.get('auth_token')?.value
   
-  if (userId && token) {
-    // Return user from cookies
+  // If we have userId from cookies and tokens match, use cookie data
+  if (userId && cookieToken && cookieToken === authToken) {
     return {
       id: userId,
       email: userEmail || undefined
     }
   }
   
-  // Fallback: verify token with backend
-  const authToken = await getAuthToken(req)
-  if (!authToken) return null
-  
+  // Fallback: verify token with backend to get user info
   try {
     const res = await fetch(`${backendBaseUrl}/auth/me`, {
       headers: { Authorization: `Bearer ${authToken}` }
     })
-    if (!res.ok) return null
-    return await res.json()
+    if (!res.ok) {
+      console.error('[AI Summarize] Backend auth/me failed:', res.status, res.statusText)
+      return null
+    }
+    const userData = await res.json()
+    return userData
   } catch (error) {
     console.error('[AI Summarize] Error verifying token with backend:', error)
     return null
