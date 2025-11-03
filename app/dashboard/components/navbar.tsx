@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { formatAvatarUrl, getUserInitials } from "@/lib/user-utils"
 import { useData } from "@/context/data-provider"
 import { LifeBuoy, CreditCard, Database, LogOut, Globe, LayoutDashboard, HelpCircle, Clock, RefreshCw, Home, Moon, Sun, Laptop, Settings, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -219,16 +220,20 @@ export default function Navbar() {
                   <DropdownMenuTrigger asChild>
                     <div className="relative inline-block">
                       <Avatar className="cursor-pointer h-8 w-8">
-                        <AvatarImage src={user?.user_metadata.avatar_url} />
+                        <AvatarImage src={formatAvatarUrl(user?.avatar || user?.user_metadata?.avatar_url || null)} />
                         <AvatarFallback className="uppercase text-xs bg-secondary text-secondary-foreground">
-                          {user?.email![0]}
+                          {getUserInitials(user)}
                         </AvatarFallback>
                       </Avatar>
                       <SubscriptionBadge className="absolute -bottom-1 -right-1 px-1 py-0 text-[10px] leading-3" />
                     </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuLabel>
+                      {user?.firstName || user?.lastName 
+                        ? [user?.firstName, user?.lastName].filter(Boolean).join(' ') 
+                        : 'My Account'}
+                    </DropdownMenuLabel>
                     <div className="px-2 py-1.5 text-sm text-muted-foreground">
                       {user?.email}
                     </div>

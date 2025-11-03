@@ -25,8 +25,10 @@ import {
   BarChart3,
   TrendingDown,
   Activity,
-  Loader2
+  Loader2,
+  IndianRupee
 } from "lucide-react"
+import { formatCurrency } from "@/lib/currency"
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/context/theme-provider'
 import { useData } from '@/context/data-provider'
@@ -38,7 +40,7 @@ import { toast } from 'sonner'
 
 export default function CalendarPage() {
   const { effectiveTheme } = useTheme()
-  const { session } = useAuth()
+  const { user } = useAuth()
   const { calendarData, statistics, loading } = useData()
   const [searchTerm, setSearchTerm] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
@@ -76,7 +78,7 @@ export default function CalendarPage() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'Economic Event': return <TrendingUp className="w-4 h-4" />
-      case 'Earnings': return <DollarSign className="w-4 h-4" />
+      case 'Earnings': return <IndianRupee className="w-4 h-4" />
       case 'Market Open': return <Target className="w-4 h-4" />
       case 'Personal': return <CalendarIcon className="w-4 h-4" />
       case 'Holiday': return <AlertCircle className="w-4 h-4" />
@@ -205,7 +207,7 @@ export default function CalendarPage() {
                 <Skeleton className="h-8 w-24 mt-2" />
               ) : (
                 <div className={`text-2xl font-bold ${calendarStats.totalPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  ${calendarStats.totalPnL.toLocaleString()}
+                  {formatCurrency(calendarStats.totalPnL)}
                 </div>
               )}
             </CardContent>
@@ -216,7 +218,7 @@ export default function CalendarPage() {
               {loading ? (
                 <Skeleton className="h-8 w-24 mt-2" />
               ) : (
-                <div className="text-2xl font-bold text-green-500">${calendarStats.bestDay.pnl.toLocaleString()}</div>
+                <div className="text-2xl font-bold text-green-500">{formatCurrency(calendarStats.bestDay.pnl)}</div>
               )}
             </CardContent>
           </Card>
@@ -226,7 +228,7 @@ export default function CalendarPage() {
               {loading ? (
                 <Skeleton className="h-8 w-24 mt-2" />
               ) : (
-                <div className="text-2xl font-bold text-red-500">${calendarStats.worstDay.pnl.toLocaleString()}</div>
+                <div className="text-2xl font-bold text-red-500">{formatCurrency(calendarStats.worstDay.pnl)}</div>
               )}
             </CardContent>
           </Card>

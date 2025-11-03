@@ -21,6 +21,8 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { formatAvatarUrl, getUserInitials } from "@/lib/user-utils"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,12 +38,20 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { effectiveTheme } = useTheme()
-  const { session, isAuthenticated, logout } = useAuth()
+  const { isAuthenticated, isLoading, user, logout } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [activeItem, setActiveItem] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true) // Default to collapsed
+
+  // Redirect to signin if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      const signInUrl = `/signin?next=${encodeURIComponent(pathname || '/dashboard')}`
+      router.replace(signInUrl)
+    }
+  }, [isAuthenticated, isLoading, router, pathname])
 
   const navigationItems = [
     { name: 'Dashboard', icon: Clock, id: 'dashboard', path: '/dashboard' },
@@ -81,6 +91,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     if (item.path) {
       router.prefetch(item.path)
     }
+  }
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="flex h-screen bg-background text-foreground items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render dashboard if not authenticated (redirect will happen)
+  if (!isAuthenticated) {
+    return null
   }
 
   return (
@@ -172,21 +199,29 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 >
                   {!sidebarCollapsed ? (
                     <div className="flex items-center space-x-3 w-full p-2 rounded-md hover:bg-sidebar-accent/50 transition-colors">
-                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                        <User className="w-4 h-4 text-primary-foreground" />
-                      </div>
+                      <Avatar className="w-8 h-8 flex-shrink-0">
+                        <AvatarImage src={formatAvatarUrl(user?.avatar || null)} />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                          {getUserInitials(user)}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="flex-1 min-w-0 overflow-hidden text-left">
                         <p className="text-sm font-medium text-sidebar-foreground truncate">
-                          {session?.user?.email || 'User'}
+                          {user?.firstName || user?.lastName 
+                            ? [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email 
+                            : user?.email || 'User'}
                         </p>
                         <p className="text-xs text-muted-foreground truncate">Trading Dashboard</p>
                       </div>
                     </div>
                   ) : (
                     <div className="hidden md:flex md:justify-center md:items-center md:p-2 md:rounded-md md:hover:bg-sidebar-accent/50 md:transition-colors">
-                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-primary-foreground" />
-                      </div>
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={formatAvatarUrl(user?.avatar || null)} />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                          {getUserInitials(user)}
+                        </AvatarFallback>
+                      </Avatar>
                     </div>
                   )}
                 </Button>
@@ -197,7 +232,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 className="w-56 bg-popover border-border text-popover-foreground"
               >
                 <DropdownMenuLabel className="text-foreground">
-                  {session?.user?.email || 'User Account'}
+                  {user?.firstName || user?.lastName 
+                    ? [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email 
+                    : user?.email || 'User Account'}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-border" />
                 <DropdownMenuItem

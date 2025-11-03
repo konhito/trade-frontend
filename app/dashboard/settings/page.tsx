@@ -158,18 +158,21 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={user?.user_metadata.avatar_url} />
+                <AvatarImage src={formatAvatarUrl(user?.avatar || null)} />
                 <AvatarFallback className="text-lg">
-                  {user?.email![0].toUpperCase()}
+                  {getUserInitials(user)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-semibold">{user?.email}</h3>
+                  <h3 className="font-semibold">{getUserDisplayName(user)}</h3>
                   <Badge variant="secondary">Active</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Member since {new Date(user?.created_at || '').toLocaleDateString()}
+                  {user?.email && <span className="block">{user.email}</span>}
+                  {user?.createdAt && (
+                    <span>Member since {new Date(user.createdAt).toLocaleDateString()}</span>
+                  )}
                 </p>
               </div>
             </div>

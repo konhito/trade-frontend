@@ -15,15 +15,7 @@ import {
 } from "@/components/ui/accordion"
 import { useUserStore } from "@/store/user-store"
 
-const formatCurrency = (value: number) => {
-  const formatted = value.toLocaleString('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  })
-  return formatted
-}
+import { formatCurrency } from '@/lib/currency'
 
 interface WeeklyCalendarPnlProps {
   calendarData: CalendarData;

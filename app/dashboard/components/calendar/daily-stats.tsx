@@ -9,15 +9,11 @@ import {
 } from "@/components/ui/card"
 import { CalendarEntry } from "@/app/dashboard/types/calendar"
 import { DailyMood } from './daily-mood'
+import { formatCurrency } from "@/lib/currency"
 
 interface DailyStatsProps {
   dayData: CalendarEntry | undefined;
   isWeekly?: boolean;
-}
-
-const formatCurrency = (value: number | undefined | null) => {
-  if (value == null) return '₹0.00'
-  return value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 const formatDuration = (seconds: number) => {

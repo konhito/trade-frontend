@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/chart"
 import { CalendarEntry } from "@/app/dashboard/types/calendar"
 import { useTheme } from "@/context/theme-provider"
+import { formatCurrency } from "@/lib/currency"
 
 interface ChartsProps {
   dayData: CalendarEntry | undefined;
@@ -31,11 +32,6 @@ const chartConfig = {
     color: "hsl(var(--chart-2))",
   },
 } satisfies ChartConfig
-
-const formatCurrency = (value: number | undefined | null) => {
-  if (value == null) return '₹0.00'
-  return value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
 
 export function Charts({ dayData, isWeekly = false }: ChartsProps) {
   const { effectiveTheme } = useTheme()

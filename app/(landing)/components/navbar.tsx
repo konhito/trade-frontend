@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Logo } from "@/components/logo"
-import { Moon, Sun, Github, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe, Laptop } from "lucide-react"
+import { Moon, Sun, Github, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe, Laptop, User, Settings, LogOut, CreditCard } from "lucide-react"
 import { motion, AnimatePresence } from "motion/react"
 import {
     NavigationMenu,
@@ -20,9 +20,19 @@ import {
 import { useTheme } from '@/context/theme-provider'
 import { useAuth } from '@/context/auth-provider'
 import { cn } from '@/lib/utils'
+import { formatAvatarUrl, getUserInitials } from '@/lib/user-utils'
 import { useRouter, usePathname } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const ListItem = React.forwardRef<
     React.ElementRef<"a">,
@@ -88,8 +98,7 @@ const itemVariant = {
 
 export default function Component() {
     const { theme, setTheme } = useTheme()
-    const { session } = useAuth()
-    const isAuthenticated = !!session
+    const { isAuthenticated, isLoading, user, logout } = useAuth()
     const [isOpen, setIsOpen] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
     const [isVisible, setIsVisible] = useState(true)
@@ -273,7 +282,11 @@ export default function Component() {
                             
                         </NavigationMenuList>
                         <Separator orientation="vertical" className="h-6 mx-4" />
-                        {isAuthenticated ? (
+                        {isLoading ? (
+                            <Button variant="ghost" className="text-sm font-medium" disabled>
+                                Loading...
+                            </Button>
+                        ) : isAuthenticated && user ? (
                             <Button variant="ghost" className="text-sm font-medium hover:text-accent-foreground" asChild>
                                 <Link href={"/dashboard"}>Dashboard</Link>
                             </Button>
@@ -314,6 +327,70 @@ export default function Component() {
                             </Command>
                         </PopoverContent>
                     </Popover>
+                    
+                    {/* Profile Dropdown - Only show if authenticated */}
+                    {isAuthenticated && user && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="hidden lg:inline-flex h-9 w-9 px-0 rounded-full">
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={formatAvatarUrl(user?.avatar || null)} />
+                                        <AvatarFallback className="uppercase text-xs bg-primary text-primary-foreground">
+                                            {getUserInitials(user)}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <span className="sr-only">Open user menu</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuLabel>
+                                    {user?.firstName || user?.lastName 
+                                      ? [user?.firstName, user?.lastName].filter(Boolean).join(' ') 
+                                      : 'My Account'}
+                                </DropdownMenuLabel>
+                                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                                    {user?.email}
+                                </div>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link href="/dashboard" className="flex items-center w-full">
+                                        <BarChart3 className="mr-2 h-4 w-4" />
+                                        <span>Dashboard</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/dashboard/profile" className="flex items-center w-full">
+                                        <User className="mr-2 h-4 w-4" />
+                                        <span>Profile</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/dashboard/settings" className="flex items-center w-full">
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        <span>Settings</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/dashboard/billing" className="flex items-center w-full">
+                                        <CreditCard className="mr-2 h-4 w-4" />
+                                        <span>Billing</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                    onClick={() => {
+                                        logout()
+                                        router.push('/')
+                                    }}
+                                    className="flex items-center text-destructive focus:text-destructive cursor-pointer"
+                                >
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    <span>Log Out</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                    
                     <button
                         type="button"
                         className="ml-auto lg:hidden p-2"
@@ -467,28 +544,91 @@ export default function Component() {
                                 );
                             })}
 
-                            <motion.li
-                                className="mt-auto border-t-[1px] pt-8"
-                                variants={itemVariant}
-                            >
-                                {isAuthenticated ? (
-                                    <Link
-                                        className="text-xl text-primary"
-                                        href="/dashboard"
-                                        onClick={closeMenu}
-                                    >
-                                        Dashboard
-                                    </Link>
-                                ) : (
-                                    <Link
-                                        className="text-xl text-primary"
-                                        href="/signin"
-                                        onClick={closeMenu}
-                                    >
-                                        Sign In
-                                    </Link>
-                                )}
-                            </motion.li>
+                            {/* Profile Section - Only show if authenticated */}
+                            {isAuthenticated && user && (
+                                <motion.li
+                                    className="mt-auto border-t-[1px] pt-8"
+                                    variants={itemVariant}
+                                >
+                                    <div className="space-y-4">
+                                        <div className="flex items-center space-x-3 px-2">
+                                            <Avatar className="h-10 w-10">
+                                                <AvatarImage src={formatAvatarUrl(user?.avatar || null)} />
+                                                <AvatarFallback className="uppercase text-sm bg-primary text-primary-foreground">
+                                                    {getUserInitials(user)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-foreground truncate">
+                                                    {user?.firstName || user?.lastName 
+                                                      ? [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email 
+                                                      : user?.email || 'User'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Link
+                                                className="block text-lg text-foreground hover:text-primary transition-colors"
+                                                href="/dashboard"
+                                                onClick={closeMenu}
+                                            >
+                                                Dashboard
+                                            </Link>
+                                            <Link
+                                                className="block text-lg text-foreground hover:text-primary transition-colors"
+                                                href="/dashboard/profile"
+                                                onClick={closeMenu}
+                                            >
+                                                Profile
+                                            </Link>
+                                            <Link
+                                                className="block text-lg text-foreground hover:text-primary transition-colors"
+                                                href="/dashboard/settings"
+                                                onClick={closeMenu}
+                                            >
+                                                Settings
+                                            </Link>
+                                            <Link
+                                                className="block text-lg text-foreground hover:text-primary transition-colors"
+                                                href="/dashboard/billing"
+                                                onClick={closeMenu}
+                                            >
+                                                Billing
+                                            </Link>
+                                            <button
+                                                className="block text-lg text-destructive hover:text-destructive/80 transition-colors w-full text-left"
+                                                onClick={() => {
+                                                    logout()
+                                                    closeMenu()
+                                                    router.push('/')
+                                                }}
+                                            >
+                                                Log Out
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.li>
+                            )}
+                            
+                            {/* Sign In link - Only show if not authenticated */}
+                            {!isAuthenticated && (
+                                <motion.li
+                                    className="mt-auto border-t-[1px] pt-8"
+                                    variants={itemVariant}
+                                >
+                                    {isLoading ? (
+                                        <span className="text-xl text-muted-foreground">Loading...</span>
+                                    ) : (
+                                        <Link
+                                            className="text-xl text-primary"
+                                            href="/signin"
+                                            onClick={closeMenu}
+                                        >
+                                            Sign In
+                                        </Link>
+                                    )}
+                                </motion.li>
+                            )}
 
                             <motion.li variants={itemVariant}>
                                 <motion.div 

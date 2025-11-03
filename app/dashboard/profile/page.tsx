@@ -28,12 +28,15 @@ import {
   Activity
 } from "lucide-react"
 import { useAuth } from '@/context/auth-provider'
+import { apiFetch } from '@/lib/api'
 import { toast } from 'sonner'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ProfilePage() {
-  const { session, user } = useAuth()
+  const { user, token } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
   
   // Profile data state
   const [profileData, setProfileData] = useState({
@@ -61,36 +64,136 @@ export default function ProfilePage() {
     }
   })
 
-  // Load user data on mount
+  // Load user data on mount - fetch from API to get latest data
   useEffect(() => {
-    if (user) {
-      setProfileData(prev => ({
-        ...prev,
-        firstName: user.user_metadata?.first_name || '',
-        lastName: user.user_metadata?.last_name || '',
-        email: user.email || '',
-        avatar: user.user_metadata?.avatar_url || '',
-        joinDate: new Date(user.created_at).toLocaleDateString(),
-        bio: user.user_metadata?.bio || '',
-        location: user.user_metadata?.location || '',
-        website: user.user_metadata?.website || '',
-        company: user.user_metadata?.company || '',
-        phone: user.user_metadata?.phone || ''
-      }))
+    const fetchUserData = async () => {
+      if (!token) {
+        setFetching(false)
+        return
+      }
+      
+      try {
+        const userData = await apiFetch<{
+          id: number
+          email: string
+          name?: string | null
+          firstName?: string | null
+          lastName?: string | null
+          phone?: string | null
+          bio?: string | null
+          location?: string | null
+          website?: string | null
+          company?: string | null
+          avatar?: string | null
+          preferences?: any
+          createdAt: string
+        }>('/auth/me', { token })
+        
+        setProfileData(prev => ({
+          ...prev,
+          firstName: userData.firstName || '',
+          lastName: userData.lastName || '',
+          email: userData.email || '',
+          avatar: userData.avatar 
+            ? (userData.avatar.startsWith('data:image') 
+                ? userData.avatar 
+                : `data:image/jpeg;base64,${userData.avatar}`)
+            : '',
+          joinDate: userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : '',
+          bio: userData.bio || '',
+          location: userData.location || '',
+          website: userData.website || '',
+          company: userData.company || '',
+          phone: userData.phone || '',
+          preferences: userData.preferences || prev.preferences
+        }))
+      } catch (error) {
+        console.error('Failed to fetch user data:', error)
+        toast.error('Failed to load profile data')
+      } finally {
+        setFetching(false)
+      }
     }
-  }, [user])
+
+    fetchUserData()
+  }, [token])
 
   const handleSave = async () => {
+    if (!token) {
+      toast.error('You must be logged in to update your profile')
+      return
+    }
+
     setLoading(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Prepare update data - only send fields that have values or are being cleared
+      const updateData: any = {
+        firstName: profileData.firstName || null,
+        lastName: profileData.lastName || null,
+        phone: profileData.phone || null,
+        bio: profileData.bio || null,
+        location: profileData.location || null,
+        website: profileData.website?.trim() || null,
+        company: profileData.company || null,
+        avatar: profileData.avatar?.startsWith('data:image') 
+          ? profileData.avatar.split(',')[1] // Extract base64 part if data URL
+          : profileData.avatar || null,
+        preferences: profileData.preferences || {}
+      }
       
-      // Update user metadata (this would be a real API call)
+      // Set name from firstName and lastName if name field exists
+      if (profileData.firstName || profileData.lastName) {
+        updateData.name = [profileData.firstName, profileData.lastName].filter(Boolean).join(' ') || null
+      }
+
+      // Call the API to update profile
+      const updatedUser = await apiFetch<{
+        id: number
+        email: string
+        firstName?: string | null
+        lastName?: string | null
+        phone?: string | null
+        bio?: string | null
+        location?: string | null
+        website?: string | null
+        company?: string | null
+        avatar?: string | null
+        preferences?: any
+      }>('/auth/profile', {
+        method: 'PUT',
+        token,
+        body: updateData
+      })
+      
+      // Update local state with returned data
+      setProfileData(prev => ({
+        ...prev,
+        firstName: updatedUser.firstName || '',
+        lastName: updatedUser.lastName || '',
+        phone: updatedUser.phone || '',
+        bio: updatedUser.bio || '',
+        location: updatedUser.location || '',
+        website: updatedUser.website || '',
+        company: updatedUser.company || '',
+        avatar: updatedUser.avatar 
+          ? (updatedUser.avatar.startsWith('data:image') 
+              ? updatedUser.avatar 
+              : `data:image/jpeg;base64,${updatedUser.avatar}`)
+          : '',
+        preferences: updatedUser.preferences || prev.preferences
+      }))
+
       toast.success('Profile updated successfully!')
       setIsEditing(false)
-    } catch (error) {
-      toast.error('Failed to update profile')
+      
+      // Trigger auth refresh to update user data in context
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('auth-profile-updated'))
+      }
+    } catch (error: any) {
+      console.error('Profile update error:', error)
+      const errorMessage = error?.message || 'Failed to update profile. Please try again.'
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -98,26 +201,195 @@ export default function ProfilePage() {
 
   const handleCancel = () => {
     setIsEditing(false)
-    // Reset form data to original values
-    if (user) {
-      setProfileData(prev => ({
-        ...prev,
-        firstName: user.user_metadata?.first_name || '',
-        lastName: user.user_metadata?.last_name || '',
-        email: user.email || '',
-        bio: user.user_metadata?.bio || '',
-        location: user.user_metadata?.location || '',
-        website: user.user_metadata?.website || '',
-        company: user.user_metadata?.company || '',
-        phone: user.user_metadata?.phone || ''
-      }))
+    // Reload user data from API to reset form
+    if (token) {
+      apiFetch<{
+        firstName?: string | null
+        lastName?: string | null
+        phone?: string | null
+        bio?: string | null
+        location?: string | null
+        website?: string | null
+        company?: string | null
+        avatar?: string | null
+        preferences?: any
+      }>('/auth/me', { token })
+        .then(userData => {
+          setProfileData(prev => ({
+            ...prev,
+            firstName: userData.firstName || '',
+            lastName: userData.lastName || '',
+            phone: userData.phone || '',
+            bio: userData.bio || '',
+            location: userData.location || '',
+            website: userData.website || '',
+            company: userData.company || '',
+            avatar: userData.avatar 
+              ? (userData.avatar.startsWith('data:image') 
+                  ? userData.avatar 
+                  : `data:image/jpeg;base64,${userData.avatar}`)
+              : '',
+            preferences: userData.preferences || prev.preferences
+          }))
+        })
+        .catch(() => {
+          toast.error('Failed to reload profile data')
+        })
     }
   }
 
   const getInitials = () => {
-    const first = profileData.firstName.charAt(0).toUpperCase()
-    const last = profileData.lastName.charAt(0).toUpperCase()
-    return first + last
+    if (profileData.firstName && profileData.lastName) {
+      return (profileData.firstName.charAt(0) + profileData.lastName.charAt(0)).toUpperCase()
+    }
+    if (profileData.firstName) {
+      return profileData.firstName.charAt(0).toUpperCase()
+    }
+    if (profileData.email) {
+      return profileData.email.charAt(0).toUpperCase()
+    }
+    return 'U'
+  }
+  
+  const getDisplayName = () => {
+    if (profileData.firstName || profileData.lastName) {
+      return [profileData.firstName, profileData.lastName].filter(Boolean).join(' ')
+    }
+    return profileData.email || 'User'
+  }
+
+  if (fetching) {
+    return (
+      <div className="flex-1 bg-background p-3 sm:p-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Header Skeleton */}
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-4 w-64" />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Profile Overview Card Skeleton */}
+            <div className="lg:col-span-1">
+              <Card className="bg-card border-border">
+                <CardHeader className="text-center">
+                  <div className="flex justify-center mb-4">
+                    <Skeleton className="h-24 w-24 rounded-full" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-32 mx-auto" />
+                    <Skeleton className="h-4 w-40 mx-auto" />
+                    <Skeleton className="h-6 w-24 mx-auto mt-2" />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                  <div className="space-y-3 mt-4">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-4 w-28" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-4 w-36" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Profile Details Card Skeleton */}
+            <div className="lg:col-span-2">
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-6 w-48" />
+                      <Skeleton className="h-4 w-72" />
+                    </div>
+                    <Skeleton className="h-9 w-28" />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Personal Information Skeleton */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Skeleton className="h-5 w-5" />
+                      <Skeleton className="h-5 w-40" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="space-y-2">
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-10 w-full" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Skeleton className="h-px w-full" />
+
+                  {/* Additional Information Skeleton */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Skeleton className="h-5 w-5" />
+                      <Skeleton className="h-5 w-48" />
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-20 w-full rounded-md" />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="space-y-2">
+                            <Skeleton className="h-4 w-20" />
+                            <Skeleton className="h-10 w-full" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Skeleton className="h-px w-full" />
+
+                  {/* Preferences Skeleton */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Skeleton className="h-5 w-5" />
+                      <Skeleton className="h-5 w-32" />
+                    </div>
+                    <div className="space-y-4">
+                      {[1, 2].map((i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <div className="space-y-2 flex-1">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-64" />
+                          </div>
+                          <Skeleton className="h-8 w-20" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -143,14 +415,21 @@ export default function ProfilePage() {
               <CardHeader className="text-center">
                 <div className="flex justify-center mb-4">
                   <Avatar className="w-24 h-24">
-                    <AvatarImage src={profileData.avatar} alt="Profile" />
+                    <AvatarImage 
+                      src={profileData.avatar?.startsWith('data:image') 
+                        ? profileData.avatar 
+                        : profileData.avatar 
+                          ? `data:image/jpeg;base64,${profileData.avatar}` 
+                          : undefined} 
+                      alt="Profile" 
+                    />
                     <AvatarFallback className="text-2xl font-semibold">
                       {getInitials()}
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 <CardTitle className="text-xl">
-                  {profileData.firstName} {profileData.lastName}
+                  {getDisplayName()}
                 </CardTitle>
                 <CardDescription>{profileData.email}</CardDescription>
                 <Badge variant="outline" className="mt-2">
@@ -162,14 +441,48 @@ export default function ProfilePage() {
                 {/* Avatar upload */}
                 <div className="space-y-2">
                   <Label htmlFor="avatarUpload">Profile Photo</Label>
-                  <Input id="avatarUpload" type="file" accept="image/*" onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      const url = URL.createObjectURL(file)
-                      setProfileData(prev => ({ ...prev, avatar: url }))
-                      toast.success('Photo selected')
-                    }
-                  }} />
+                  <Input 
+                    id="avatarUpload" 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        // Validate file size (max 2MB)
+                        const maxSize = 2 * 1024 * 1024 // 2MB
+                        if (file.size > maxSize) {
+                          toast.error('Image size must be less than 2MB')
+                          return
+                        }
+                        
+                        // Validate file type
+                        if (!file.type.startsWith('image/')) {
+                          toast.error('Please select a valid image file')
+                          return
+                        }
+                        
+                        try {
+                          // Convert image to base64
+                          const reader = new FileReader()
+                          reader.onloadend = () => {
+                            const base64String = reader.result as string
+                            setProfileData(prev => ({ ...prev, avatar: base64String }))
+                            toast.success('Photo selected. Click Save to upload.')
+                          }
+                          reader.onerror = () => {
+                            toast.error('Failed to read image file')
+                          }
+                          reader.readAsDataURL(file)
+                        } catch (error) {
+                          console.error('Error converting image to base64:', error)
+                          toast.error('Failed to process image')
+                        }
+                      }
+                    }} 
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Max size: 2MB. Image will be stored as base64.
+                  </p>
                 </div>
                 <div className="space-y-3 mt-4">
                   <div className="flex items-center gap-2 text-sm">

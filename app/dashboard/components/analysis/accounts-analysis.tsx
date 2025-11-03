@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import { useUserStore } from "@/store/user-store"
 import { DefaultChatTransport, ToolUIPart } from "ai"
+import { formatCurrency } from "@/lib/currency"
 import {
   Tool,
   ToolContent,
@@ -237,7 +238,7 @@ export function AccountsAnalysis({ onStatusChange }: AccountsAnalysisProps) {
               <Card className="p-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    ${accountPerformanceData.totalPortfolioValue?.toLocaleString() || 0}
+                    {formatCurrency(accountPerformanceData.totalPortfolioValue || 0)}
                   </div>
                   <p className="text-sm text-muted-foreground">{t('analysis.totalPortfolioValue')}</p>
                 </div>
@@ -281,7 +282,7 @@ export function AccountsAnalysis({ onStatusChange }: AccountsAnalysisProps) {
                         <tr key={index} className="border-b">
                           <td className="p-2 font-medium">{account.accountNumber}</td>
                           <td className={`p-2 ${account.netPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            ${account.netPnL?.toLocaleString() || 0}
+                            {formatCurrency(account.netPnL || 0)}
                           </td>
                           <td className="p-2">{account.winRate?.toFixed(1) || 0}%</td>
                           <td className="p-2">{account.totalTrades || 0}</td>
@@ -316,7 +317,7 @@ export function AccountsAnalysis({ onStatusChange }: AccountsAnalysisProps) {
                     </h5>
                     <div className="space-y-1 text-sm">
                       <div><strong>{t('analysis.account')}:</strong> {accountPerformanceData.bestPerformingAccount.accountNumber}</div>
-                      <div><strong>{t('analysis.netPnL')}:</strong> <span className="text-green-600">${accountPerformanceData.bestPerformingAccount.netPnL?.toLocaleString() || 0}</span></div>
+                      <div><strong>{t('analysis.netPnL')}:</strong> <span className="text-green-600">{formatCurrency(accountPerformanceData.bestPerformingAccount.netPnL || 0)}</span></div>
                       <div><strong>{t('analysis.winRate')}:</strong> {accountPerformanceData.bestPerformingAccount.winRate?.toFixed(1) || 0}%</div>
                     </div>
                   </Card>
@@ -329,7 +330,7 @@ export function AccountsAnalysis({ onStatusChange }: AccountsAnalysisProps) {
                     </h5>
                     <div className="space-y-1 text-sm">
                       <div><strong>{t('analysis.account')}:</strong> {accountPerformanceData.worstPerformingAccount.accountNumber}</div>
-                      <div><strong>{t('analysis.netPnL')}:</strong> <span className="text-red-600">${accountPerformanceData.worstPerformingAccount.netPnL?.toLocaleString() || 0}</span></div>
+                      <div><strong>{t('analysis.netPnL')}:</strong> <span className="text-red-600">{formatCurrency(accountPerformanceData.worstPerformingAccount.netPnL || 0)}</span></div>
                       <div><strong>{t('analysis.winRate')}:</strong> {accountPerformanceData.worstPerformingAccount.winRate?.toFixed(1) || 0}%</div>
                     </div>
                   </Card>
@@ -385,7 +386,7 @@ export function AccountsAnalysis({ onStatusChange }: AccountsAnalysisProps) {
                       <Card className="p-4">
                         <div className="text-center">
                           <div className="text-2xl font-bold text-primary">
-                            ${analysisResult.dataSummary.totalPortfolioValue?.toLocaleString() || 0}
+                            {formatCurrency(analysisResult.dataSummary.totalPortfolioValue || 0)}
                           </div>
                           <p className="text-sm text-muted-foreground">{t('analysis.totalPortfolioValue')}</p>
                         </div>

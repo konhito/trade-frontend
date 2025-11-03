@@ -1,6 +1,55 @@
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { SignUpForm } from '../authentication/components/sign-up-form'
+import { useAuth } from '@/context/auth-provider'
+import { Loader2 } from 'lucide-react'
 
 export default function SignUpPage() {
+  const { isAuthenticated, isLoading } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    // If already authenticated, redirect to dashboard or next URL
+    if (!isLoading && isAuthenticated) {
+      let nextUrl = searchParams.get('next') || '/dashboard'
+      // Decode the next URL if it exists and is not the default
+      if (nextUrl && nextUrl !== '/dashboard') {
+        try {
+          nextUrl = decodeURIComponent(nextUrl)
+          // Ensure it's a valid path starting with /
+          if (!nextUrl.startsWith('/')) {
+            nextUrl = '/dashboard'
+          }
+        } catch {
+          // If decoding fails, default to dashboard
+          nextUrl = '/dashboard'
+        }
+      }
+      // Use router.replace for client-side navigation (faster, no full reload)
+      router.replace(nextUrl)
+    }
+  }, [isAuthenticated, isLoading, router, searchParams])
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="container relative flex min-h-screen flex-col items-center justify-center p-4">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render the form if already authenticated (redirect will happen)
+  if (isAuthenticated) {
+    return null
+  }
+
   return (
     <div className="container relative flex min-h-screen flex-col items-center justify-center p-4 md:grid md:h-screen md:p-0 lg:max-w-none lg:grid-cols-2 lg:px-0">
       <div className="relative hidden h-full flex-col p-10 text-white dark:border-r lg:flex">

@@ -28,7 +28,7 @@ const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false })
 const Charts = dynamic(() => import('./Charts'), { ssr: false })
 
 export default function AISummarizerPage() {
-  const { session } = useAuth()
+  const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [lastGenerated, setLastGenerated] = useState<Record<string, number>>({})
@@ -176,7 +176,7 @@ export default function AISummarizerPage() {
         body: JSON.stringify({
           type,
           userData: {
-            userId: session?.user?.id,
+            userId: user?.id,
             timestamp: new Date().toISOString(),
           }
         })

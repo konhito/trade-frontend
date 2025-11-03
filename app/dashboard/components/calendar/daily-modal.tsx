@@ -14,6 +14,7 @@ import { Charts } from "./charts"
 import { DailyStats } from "./daily-stats"
 import { DailyComment } from "./daily-comment"
 import { useUserStore } from "@/store/user-store"
+import { formatCurrency } from "@/lib/currency"
 
 interface CalendarModalProps {
   isOpen: boolean;
@@ -49,9 +50,6 @@ export function CalendarModal({
   const dateLocale = enUS
   const [activeTab, setActiveTab] = useState("comment")
   const [formattedDate, setFormattedDate] = useState<string>("")
-
-  const formatCurrency = (value: number) =>
-    value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   React.useEffect(() => {
     if (selectedDate) {

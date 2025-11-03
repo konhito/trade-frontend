@@ -5,7 +5,8 @@ import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Icons } from "@/components/icons"
-import { login, signInWithDiscord, signInWithGoogle } from "@/lib/auth"
+import { signInWithDiscord, signInWithGoogle } from "@/lib/auth"
+import { useAuth } from "@/context/auth-provider"
 import { z } from 'zod';
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -35,11 +36,19 @@ export function SignInForm({ className, ...props }: SignInFormProps) {
     const [authMethod, setAuthMethod] = React.useState<AuthMethod>(null)
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
     const router = useRouter()
+    const { login } = useAuth()
 
     React.useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
         const next = urlParams.get('next')
-        setNextUrl(next)
+        // Decode the next URL if it exists
+        if (next) {
+            try {
+                setNextUrl(decodeURIComponent(next))
+            } catch {
+                setNextUrl(next)
+            }
+        }
     }, [])
 
     const loginForm = useForm<z.infer<typeof loginFormSchema>>({
@@ -54,18 +63,13 @@ export function SignInForm({ className, ...props }: SignInFormProps) {
         setIsLoading(true)
         setAuthMethod('email')
         try {
-            const result = await login(values.email, values.password)
-            // Store token in localStorage for client-side API calls
-            if (result?.token && typeof window !== 'undefined') {
-                localStorage.setItem('token', result.token)
-                // Trigger auth refresh by reloading or manually calling useAuth
-                window.dispatchEvent(new Event('auth-token-stored'))
-            }
+            await login(values.email, values.password)
             toast({
                 title: "Success",
                 description: "You have been signed in successfully.",
             })
-            router.push(nextUrl || '/dashboard')
+            // Don't redirect here - let the signin page useEffect handle it
+            // This prevents conflicts and ensures auth state is properly updated
         } catch (error: any) {
             toast({
                 title: "Error",

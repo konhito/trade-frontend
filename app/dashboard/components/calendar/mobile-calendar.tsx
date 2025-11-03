@@ -12,15 +12,18 @@ import { CalendarData } from "@/app/dashboard/types/calendar"
 import { Card, CardTitle } from "@/components/ui/card"
 import { useUserStore } from "@/store/user-store"
 
-function formatCurrency(value: number): string {
+import { formatCurrency } from '@/lib/currency'
+
+// Format currency with abbreviated units for mobile
+function formatCurrencyLocal(value: number): string {
   const absValue = Math.abs(value);
   if (absValue >= 1000000) {
-    return `${(value / 1000000).toFixed(1)}M`;
+    return `₹${(value / 1000000).toFixed(1)}M`;
   }
   if (absValue >= 1000) {
-    return `${(value / 1000).toFixed(1)}K`;
+    return `₹${(value / 1000).toFixed(1)}K`;
   }
-  return value.toFixed(0);
+  return `₹${value.toFixed(0)}`;
 }
 
 // Generates an array of 42 YYYY-MM-DD date strings for the calendar grid,
@@ -133,7 +136,7 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
             "text-sm font-semibold truncate",
             monthlyTotal >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
           )}>
-            ${formatCurrency(monthlyTotal)}
+            {formatCurrencyLocal(monthlyTotal)}
           </span>
         </div>
         <div className="flex items-center gap-1.5">

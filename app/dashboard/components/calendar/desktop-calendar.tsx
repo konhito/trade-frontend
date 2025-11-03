@@ -24,6 +24,7 @@ import { useFinancialEventsStore } from "@/store/financial-events-store"
 import { useUserStore } from "@/store/user-store"
 import { Account } from "@/context/data-provider"
 import { HIDDEN_GROUP_NAME } from "../filters/account-group-board"
+import { formatCurrency } from '@/lib/currency'
 
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
@@ -43,16 +44,6 @@ function getCalendarDays(monthStart: Date, monthEnd: Date) {
   })
 
   return [...days, ...additionalDays].slice(0, 42)
-}
-
-const formatCurrency = (value: number, options?: { minimumFractionDigits?: number; maximumFractionDigits?: number }) => {
-  const formatted = value.toLocaleString('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: options?.minimumFractionDigits ?? 0,
-    maximumFractionDigits: options?.maximumFractionDigits ?? 0
-  })
-  return formatted
 }
 
 const truncateAccountNumber = (accountNumber: string, maxLength: number = 15): string => {
