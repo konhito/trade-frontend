@@ -19,11 +19,13 @@ interface StrategyWithHistory {
 }
 
 interface EquityCurveProps {
-  trades: EquityCurveTrade[] | null | undefined
+  trades?: EquityCurveTrade[] | null | undefined
   strategies?: StrategyWithHistory[] | null | undefined
+  rangeDays?: number
+  dailyPnLData?: Array<{ name: string; pnl: number; isProfit: boolean }> | null | undefined
 }
 
-export function EquityCurve({ trades, strategies }: EquityCurveProps) {
+export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: EquityCurveProps) {
   // Robust numeric parser
   const parseNumeric = (value: any): number => {
     if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -33,8 +35,80 @@ export function EquityCurve({ trades, strategies }: EquityCurveProps) {
     return Number.isFinite(num) ? num : 0
   }
 
+  // Helper function to parse date strings (MMM dd format) to yyyy-MM-dd
+  const parseDateWithMonthName = (dateStr: string, year: number): Date => {
+    const months: { [key: string]: number } = {
+      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+      'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+    }
+    const parts = dateStr.split(' ')
+    const month = months[parts[0]] ?? 0
+    const day = parseInt(parts[1]) || 1
+    return new Date(year, month, day)
+  }
+
   // Aggregate by day and compute cumulative
   const { dataWithSegments, yPadMin, yPadMax } = React.useMemo(() => {
+    // If dailyPnLData is provided, use it directly
+    if (dailyPnLData && dailyPnLData.length > 0) {
+      const currentYear = new Date().getFullYear()
+      const cumulativeData = dailyPnLData
+        .map(item => {
+          // Parse "MMM dd" format to Date
+          const date = parseDateWithMonthName(item.name, currentYear)
+          const dateKey = format(date, 'yyyy-MM-dd')
+          return {
+            date: dateKey,
+            daily: item.pnl,
+            cumulative: 0 // Will calculate below
+          }
+        })
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .reduce((acc: any[], item: any, index: number) => {
+          const prev = acc[index - 1] || { cumulative: 0 }
+          acc.push({
+            ...item,
+            cumulative: prev.cumulative + item.daily
+          })
+          return acc
+        }, [])
+
+      // Include starting point at zero one day before first trade
+      const withStart = (() => {
+        if (cumulativeData.length === 0) return [] as any[]
+        try {
+          const first = new Date(cumulativeData[0].date)
+          first.setDate(first.getDate() - 1)
+          const start = { date: first.toISOString().slice(0, 10), cumulative: 0, daily: 0 }
+          return [start, ...cumulativeData]
+        } catch {
+          return cumulativeData
+        }
+      })()
+
+      const dataWithSegments = withStart.map((item: any) => {
+        const cumulative = Number(item.cumulative) || 0
+        return {
+          ...item,
+          cumulative,
+          areaPositive: Math.max(cumulative, 0),
+          areaNegative: Math.min(cumulative, 0),
+        }
+      })
+
+      const allValues = withStart.map((d: any) => Number(d.cumulative) || 0).concat(0)
+      const min = Math.min(...allValues)
+      const max = Math.max(...allValues)
+      const range = Math.max(1, max - min)
+      const pad = range * 0.1
+      return {
+        dataWithSegments,
+        yPadMin: min - pad,
+        yPadMax: max + pad,
+      }
+    }
+
+    // Otherwise, fall back to calculating from trades and strategies
     const dailyTotals: Record<string, number> = {}
     // Include user trades
     ;(trades || []).forEach((t) => {
@@ -78,7 +152,18 @@ export function EquityCurve({ trades, strategies }: EquityCurveProps) {
       })
     })
 
-    const sortedDays = Object.keys(dailyTotals).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+    let sortedDays = Object.keys(dailyTotals).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+
+    // Optional filter to last N days
+    if (rangeDays && rangeDays > 0) {
+      const today = new Date(); today.setHours(0,0,0,0)
+      const from = new Date(today); from.setDate(from.getDate() - rangeDays)
+      sortedDays = sortedDays.filter(d => {
+        const dt = new Date(d)
+        dt.setHours(0,0,0,0)
+        return dt >= from && dt <= today
+      })
+    }
     const cumulativeData = sortedDays.reduce((acc: any[], day: string) => {
       const prev = acc[acc.length - 1] || { cumulative: 0 }
       const daily = dailyTotals[day] || 0
@@ -119,7 +204,7 @@ export function EquityCurve({ trades, strategies }: EquityCurveProps) {
       yPadMin: min - pad,
       yPadMax: max + pad,
     }
-  }, [trades])
+  }, [trades, strategies, dailyPnLData, rangeDays])
 
   if (!dataWithSegments || dataWithSegments.length === 0) {
     return (

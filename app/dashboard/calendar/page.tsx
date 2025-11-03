@@ -29,7 +29,7 @@ import {
   IndianRupee
 } from "lucide-react"
 import { formatCurrency } from "@/lib/currency"
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTheme } from '@/context/theme-provider'
 import { useData } from '@/context/data-provider'
 import { useAuth } from '@/context/auth-provider'
@@ -37,11 +37,88 @@ import CalendarPnl from '../components/calendar/desktop-calendar'
 import YearCalendar from '../components/calendar/year-calendar'
 import { CalendarData } from './types/calendar'
 import { toast } from 'sonner'
+import { listStrategies } from '@/lib/services/strategies'
+import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 
 export default function CalendarPage() {
   const { effectiveTheme } = useTheme()
   const { user } = useAuth()
-  const { calendarData, statistics, loading } = useData()
+  const { calendarData: baseCalendarData, statistics, loading, formattedTrades } = useData()
+  const [strategies, setStrategies] = useState<any[]>([])
+  const [strategiesLoading, setStrategiesLoading] = useState(false)
+
+  // Fetch strategies
+  useEffect(() => {
+    const fetchStrategies = async () => {
+      if (!user?.id) return
+      setStrategiesLoading(true)
+      try {
+        const data = await listStrategies({ userId: String(user.id) })
+        setStrategies(data.strategies || [])
+      } catch (error) {
+        console.error('[Calendar] Error fetching strategies:', error)
+      } finally {
+        setStrategiesLoading(false)
+      }
+    }
+    fetchStrategies()
+  }, [user?.id])
+
+  // Merge strategy historical data into calendar data
+  const calendarData = useMemo(() => {
+    if (!baseCalendarData) return baseCalendarData
+    
+    const enhanced = { ...baseCalendarData }
+    
+    // Add strategy P&L to calendar data
+    strategies.forEach((strategy) => {
+      if (!strategy.historicalData) return
+      
+      let historicalData = strategy.historicalData
+      if (typeof historicalData === 'string') {
+        try {
+          historicalData = JSON.parse(historicalData)
+        } catch {
+          return
+        }
+      }
+      
+      if (historicalData && historicalData.entries && Array.isArray(historicalData.entries)) {
+        historicalData.entries.forEach((entry: any) => {
+          if (!entry.date || !entry.live) return
+          
+          try {
+            const entryDate = new Date(entry.date)
+            if (isNaN(entryDate.getTime())) return
+            
+            const dateKey = formatInTimeZone(entryDate, 'UTC', 'yyyy-MM-dd')
+            const livePnL = parseFloat(String(entry.live)) || 0
+            
+            if (!enhanced[dateKey]) {
+              enhanced[dateKey] = {
+                pnl: 0,
+                tradeNumber: 0,
+                longNumber: 0,
+                shortNumber: 0,
+                trades: [],
+                strategies: []
+              }
+            }
+            
+            enhanced[dateKey].pnl += livePnL
+            if (!enhanced[dateKey].strategies.includes(strategy.name)) {
+              enhanced[dateKey].strategies.push(strategy.name)
+            }
+          } catch (error) {
+            console.error('[Calendar] Error processing strategy entry:', error)
+          }
+        })
+      }
+    })
+    
+    return enhanced
+  }, [baseCalendarData, strategies])
   const [searchTerm, setSearchTerm] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedType, setSelectedType] = useState('All')
@@ -49,6 +126,9 @@ export default function CalendarPage() {
   const [viewMode, setViewMode] = useState<'calendar' | 'events' | 'year'>('calendar')
 
   const types = ['All', 'Economic Event', 'Earnings', 'Market Open', 'Personal', 'Holiday']
+
+  // Combine loading states
+  const isLoading = loading || strategiesLoading
 
   // Calculate calendar statistics
   const calendarStats = {
@@ -173,7 +253,7 @@ export default function CalendarPage() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Trading Days</div>
-              {loading ? (
+              {isLoading ? (
                 <Skeleton className="h-8 w-16 mt-2" />
               ) : (
                 <div className="text-2xl font-bold text-foreground">{calendarStats.totalDays}</div>
@@ -183,7 +263,7 @@ export default function CalendarPage() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Profitable Days</div>
-              {loading ? (
+              {isLoading ? (
                 <Skeleton className="h-8 w-16 mt-2" />
               ) : (
                 <div className="text-2xl font-bold text-green-500">{calendarStats.profitableDays}</div>
@@ -193,7 +273,7 @@ export default function CalendarPage() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Win Rate</div>
-              {loading ? (
+              {isLoading ? (
                 <Skeleton className="h-8 w-16 mt-2" />
               ) : (
                 <div className="text-2xl font-bold text-blue-500">{`${winRate.toFixed(1)}%`}</div>
@@ -203,7 +283,7 @@ export default function CalendarPage() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Total P&L</div>
-              {loading ? (
+              {isLoading ? (
                 <Skeleton className="h-8 w-24 mt-2" />
               ) : (
                 <div className={`text-2xl font-bold ${calendarStats.totalPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -215,7 +295,7 @@ export default function CalendarPage() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Best Day</div>
-              {loading ? (
+              {isLoading ? (
                 <Skeleton className="h-8 w-24 mt-2" />
               ) : (
                 <div className="text-2xl font-bold text-green-500">{formatCurrency(calendarStats.bestDay.pnl)}</div>
@@ -225,7 +305,7 @@ export default function CalendarPage() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Worst Day</div>
-              {loading ? (
+              {isLoading ? (
                 <Skeleton className="h-8 w-24 mt-2" />
               ) : (
                 <div className="text-2xl font-bold text-red-500">{formatCurrency(calendarStats.worstDay.pnl)}</div>
@@ -237,7 +317,7 @@ export default function CalendarPage() {
         {/* Main Content */}
         {viewMode === 'calendar' ? (
           <div className="h-[600px]">
-            {loading ? (
+            {isLoading ? (
               <Card className="bg-card border-border h-full">
                 <CardContent className="p-6 space-y-4">
                   <div className="grid grid-cols-7 gap-2">
@@ -261,7 +341,7 @@ export default function CalendarPage() {
           </div>
         ) : viewMode === 'year' ? (
           <div>
-            {loading ? (
+            {isLoading ? (
               <Card className="bg-card border-border">
                 <CardContent className="p-6">
                   <Skeleton className="h-96 w-full rounded" />

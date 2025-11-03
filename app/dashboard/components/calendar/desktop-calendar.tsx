@@ -305,11 +305,11 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
 
     const filteredEvents = userFinancialEvents.filter(event => {
       const eventDate = new Date(event.date)
-      return eventDate >= monthStart && eventDate <= monthEnd && event.lang === locale
+      return eventDate >= monthStart && eventDate <= monthEnd
     })
 
     setMonthEvents(filteredEvents)
-  }, [currentDate, userFinancialEvents, locale])
+  }, [currentDate, userFinancialEvents])
 
   const handlePrevMonth = React.useCallback(() => {
     setCurrentDate(subMonths(currentDate, 1))

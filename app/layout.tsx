@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/context/auth-provider";
+import TopLoader from "@/components/top-loader";
 import Script from "next/script"
 import { ReactNode } from "react";
 
@@ -215,6 +216,7 @@ export default async function RootLayout({
       </head>
       <body className={inter.className + " min-h-screen overflow-x-hidden w-screen"}>
         <AuthProvider>
+          <TopLoader />
           <Toaster />
           {children}
         </AuthProvider>

@@ -31,7 +31,7 @@ import Link from 'next/link'
 
 export default function Home() {
   const [selectedTimeframe, setSelectedTimeframe] = useState('W')
-  const [equityViewMode, setEquityViewMode] = useState<'daily' | 'pertrade'>('daily')
+  const [dateRangeDays, setDateRangeDays] = useState<number>(30)
   const { formattedTrades, statistics, isLoading, refreshTrades } = useData()
   const { user } = useAuth()
   
@@ -67,6 +67,17 @@ export default function Home() {
     
     fetchDashboardStats()
   }, [user?.id])
+
+  // Load/persist date range preference
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('dashboard_date_range_days')
+      if (saved) setDateRangeDays(Number(saved))
+    } catch {}
+  }, [])
+  useEffect(() => {
+    try { localStorage.setItem('dashboard_date_range_days', String(dateRangeDays)) } catch {}
+  }, [dateRangeDays])
 
   // Fetch strategies from backend
   useEffect(() => {
@@ -179,11 +190,11 @@ export default function Home() {
       let dailyPnLData: { name: string; pnl: number; isProfit: boolean }[] = []
       let tradesByDateData: { name: string; long: number; short: number; total: number }[] = []
       
-      // Date range for last 30 days
+      // Date range for last N days
       const todayDate = new Date()
       todayDate.setHours(0, 0, 0, 0)
       const thirtyDaysAgoDate = new Date(todayDate)
-      thirtyDaysAgoDate.setDate(thirtyDaysAgoDate.getDate() - 30)
+      thirtyDaysAgoDate.setDate(thirtyDaysAgoDate.getDate() - dateRangeDays)
       
       // Helper function to parse date strings (MMM dd format)
       function parseDateWithMonthName(dateStr: string, year: number): Date {
@@ -226,7 +237,8 @@ export default function Home() {
             if (!tradeDate) return
             const dateKey = format(tradeDate, 'MMM dd')
             const existing = dailyPnLMap.get(dateKey) || 0
-            dailyPnLMap.set(dateKey, existing + (t.pnl || 0))
+            const netPnL = (t.pnl || 0) - (t.commission || 0)
+            dailyPnLMap.set(dateKey, existing + netPnL)
           })
       }
       
@@ -439,8 +451,12 @@ export default function Home() {
         ).length
       }
       
+      // Calculate cumulative P&L from daily P&L data
+      const cumulativePnL = dailyPnLData.reduce((sum, day) => sum + day.pnl, 0)
+      
       return {
         highestPnL,
+        cumulativePnL,
         winRate,
         riskReward,
         tradesThisMonth,
@@ -456,6 +472,7 @@ export default function Home() {
     console.log('[Dashboard] No dashboardStats available, returning empty metrics')
     return {
       highestPnL: 0,
+      cumulativePnL: 0,
       winRate: 0,
       riskReward: '1:0',
       tradesThisMonth: 0,
@@ -465,7 +482,7 @@ export default function Home() {
       shortTrades: 0,
       tradesByDateData: []
     }
-  }, [formattedTrades, statistics, strategies, dashboardStats])
+  }, [formattedTrades, statistics, strategies, dashboardStats, dateRangeDays])
 
   // Check if we have data - prioritize dashboardStats from API
   const hasNoData = !dashboardStats?.overview || (dashboardStats.overview.totalTrades === 0 && (!formattedTrades || formattedTrades.length === 0))
@@ -546,7 +563,7 @@ export default function Home() {
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 bg-background text-foreground min-h-screen">
       {/* KPI Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-        {/* Highest P&L */}
+        {/* Cumulative P&L */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -557,19 +574,24 @@ export default function Home() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm font-medium text-muted-foreground">Highest P&L</span>
+                <span className="text-sm font-medium text-muted-foreground">Cumulative P&L</span>
               </div>
-              <BarChart3 className="w-5 h-5 text-green-500 opacity-80" />
+              <LineChartIcon className="w-5 h-5 text-green-500 opacity-80" />
             </div>
-            <div className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-green-500 mb-2 break-words">
-              {dashboardStatsLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : hasNoData ? '₹0' : `₹${metrics.highestPnL.toLocaleString('en-IN')}`}
+            <div className={`text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold mb-2 break-words ${
+              dashboardStatsLoading || hasNoData ? 'text-muted-foreground' : 
+              metrics.cumulativePnL >= 0 ? 'text-green-500' : 'text-red-500'
+            }`}>
+              {dashboardStatsLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : hasNoData ? '₹0' : `₹${metrics.cumulativePnL.toLocaleString('en-IN')}`}
             </div>
-            <div className="text-sm text-green-500/90 mb-3">
-              {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : `${metrics.winRate.toFixed(1)}% win rate`}
+            <div className="text-sm text-muted-foreground mb-3">
+              {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : `Last ${dateRangeDays} days`}
             </div>
-            <Progress value={dashboardStatsLoading ? 0 : hasNoData ? 0 : metrics.winRate} className="h-2 bg-muted">
-              <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${dashboardStatsLoading ? 0 : hasNoData ? 0 : metrics.winRate}%` }}></div>
-            </Progress>
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div className={`h-full rounded-full transition-all ${
+                metrics.cumulativePnL >= 0 ? 'bg-green-500' : 'bg-red-500'
+              }`} style={{ width: dashboardStatsLoading || hasNoData ? '0%' : '100%' }}></div>
+            </div>
           </CardContent>
         </Card>
         </motion.div>
@@ -659,42 +681,7 @@ export default function Home() {
         </motion.div>
       </div>
 
-      {/* Confidence Index */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.4 }}
-      >
-      <Card className="bg-card border-border shadow-lg">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-foreground">Confidence Index</h3>
-            <span className="text-xs text-muted-foreground">Last 90 Days</span>
-          </div>
-          <div className="relative">
-            <div className="h-3 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded-full shadow-inner">
-              <div className={`absolute top-0 w-6 h-6 bg-background rounded-full border-2 border-foreground/20 transform -translate-y-1.5 transition-all duration-300 ${
-                hasNoData ? 'left-0' : 
-                metrics.winRate >= 60 ? 'right-0' : 
-                metrics.winRate >= 40 ? 'left-1/2 -translate-x-1/2' : 
-                'left-0'
-              }`}></div>
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground mt-2">
-              <span>Low</span>
-              <span>High</span>
-            </div>
-          </div>
-          <p className={`text-sm mt-4 ${dashboardStatsLoading ? 'text-muted-foreground' : hasNoData ? 'text-muted-foreground' : metrics.winRate >= 60 ? 'text-green-500' : metrics.winRate >= 40 ? 'text-yellow-500' : 'text-red-500'}`}>
-            {dashboardStatsLoading ? 'Loading data...' : 
-             hasNoData ? 'Add trades to see confidence index.' :
-             metrics.winRate >= 60 ? 'High Confidence - You are trading well with consistent focus.' :
-             metrics.winRate >= 40 ? 'Moderate Confidence - Keep improving your trading strategy.' :
-             'Low Confidence - Review your trading approach and risk management.'}
-          </p>
-        </CardContent>
-      </Card>
-      </motion.div>
+      {/* Confidence Index removed per request */}
 
       {/* Daily Profit/Loss Chart - Full Width */}
       <motion.div
@@ -707,9 +694,7 @@ export default function Home() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-semibold text-foreground">Daily Profit/Loss</CardTitle>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  Last 30 days daily performance
-                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">Net of fees • Live strategies • Last {dateRangeDays} days</div>
               </div>
             </div>
           </CardHeader>
@@ -776,20 +761,27 @@ export default function Home() {
                     />
                     <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} strokeDasharray="5 5" opacity={0.5} />
                     <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        color: 'hsl(var(--foreground))',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                      }} 
-                      formatter={(value: any) => {
-                        const numValue = Number(value)
-                        return [`${numValue >= 0 ? '+' : ''}₹${Math.abs(numValue).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Daily P&L']
-                      }}
-                      labelFormatter={(label) => `${label}`}
-                      labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: '12px' }}
                       cursor={{ fill: 'hsl(var(--muted))', opacity: 0.1 }}
+                      content={(props: any) => {
+                        const payload = props?.payload && props.payload.length > 0 ? props.payload[0] : null
+                        const date = props?.label || ''
+                        const value = typeof payload?.value === 'number' ? payload.value : Number(payload?.value || 0)
+                        const formatted = `${value >= 0 ? '+' : ''}₹${Math.abs(value).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                        if (!payload) return null
+                        return (
+                          <div style={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: 8,
+                            color: 'hsl(var(--foreground))',
+                            padding: 12,
+                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)'
+                          }}>
+                            <div style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))', marginBottom: 4 }}>{date}</div>
+                            <div style={{ fontWeight: 700 }}>{formatted}</div>
+                          </div>
+                        )
+                      }}
                     />
                     <Bar 
                       dataKey="pnl" 
@@ -981,41 +973,28 @@ export default function Home() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-semibold text-foreground">Equity Curve</CardTitle>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  Showing cumulative profit and loss over time
-                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">Net of fees • Live strategies • Last {dateRangeDays} days</div>
               </div>
               <div className="flex space-x-1 bg-background/50 border border-border p-1 rounded-md">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setEquityViewMode('daily')}
-                  className={`px-3 py-1 text-xs h-7 transition-all ${
-                    equityViewMode === 'daily'
-                      ? 'bg-muted text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                  }`}
-                >
-                  Daily PnL
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setEquityViewMode('pertrade')}
-                  className={`px-3 py-1 text-xs h-7 transition-all ${
-                    equityViewMode === 'pertrade'
-                      ? 'bg-muted text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                  }`}
-                >
-                  Per-trade PnL
-                </Button>
+                {[7,30,90].map((d) => (
+                  <Button
+                    key={d}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDateRangeDays(d)}
+                    className={`px-2 py-1 text-xs h-7 transition-all ${
+                      dateRangeDays === d ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                    }`}
+                  >
+                    {d}d
+                  </Button>
+                ))}
               </div>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="h-[400px]">
-              <EquityCurve trades={formattedTrades} strategies={strategies} />
+              <EquityCurve dailyPnLData={metrics.dailyPnLData} rangeDays={dateRangeDays} />
             </div>
           </CardContent>
         </Card>
