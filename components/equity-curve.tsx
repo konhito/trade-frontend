@@ -112,7 +112,13 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
     const dailyTotals: Record<string, number> = {}
     // Include user trades
     ;(trades || []).forEach((t) => {
-      const pnl = parseNumeric(t.pnl) - parseNumeric(t.commission)
+      // Ensure P&L is properly parsed (handles negative values correctly)
+      const tradePnL = parseNumeric(t.pnl)
+      const tradeCommission = parseNumeric(t.commission)
+      const pnl = tradePnL - tradeCommission
+      // Skip only if P&L is invalid (NaN), but allow negative values and zero
+      if (isNaN(pnl)) return
+      
       const raw = (t.entryDate || t.createdAt || t.date || '') as any
       let dayKey = ''
       try {
@@ -147,7 +153,8 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
         }
         if (!dayKey) return
         const live = parseNumeric(e.live)
-        if (!live) return
+        // Skip only if P&L is invalid (NaN), but allow negative values and zero
+        if (isNaN(live)) return
         dailyTotals[dayKey] = (dailyTotals[dayKey] || 0) + live
       })
     })
@@ -216,7 +223,7 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart data={dataWithSegments} margin={{ top: 10, right: 30, left: 10, bottom: 50 }}>
+      <ComposedChart data={dataWithSegments} margin={{ top: 10, right: 20, left: 5, bottom: 40 }}>
         <defs>
           <linearGradient id="positiveGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#22c55e" stopOpacity={0.4}/>
@@ -230,18 +237,20 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
         <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
         <XAxis
           dataKey="date"
-          tick={{ fontSize: 10, fill: '#9ca3af' }}
+          tick={{ fontSize: 9, fill: '#9ca3af' }}
           tickFormatter={(value) => {
             try { return format(new Date(value), 'dd MMM') } catch { return value }
           }}
           angle={-45}
           textAnchor="end"
-          height={70}
+          height={60}
+          interval="preserveStartEnd"
         />
         <YAxis
-          label={{ value: 'Total MTM (₹)', angle: -90, position: 'insideLeft', style: { fill: '#9ca3af', fontSize: 12 } }}
+          label={{ value: 'Total MTM (₹)', angle: -90, position: 'insideLeft', style: { fill: '#9ca3af', fontSize: 11 } }}
           domain={[yPadMin, yPadMax]}
-          tick={{ fontSize: 10, fill: '#9ca3af' }}
+          tick={{ fontSize: 9, fill: '#9ca3af' }}
+          width={45}
           tickFormatter={(value: number) => {
             if (Math.abs(value) >= 1000000) return `₹${(value/1000000).toFixed(1)}M`
             if (Math.abs(value) >= 1000) return `₹${(value/1000).toFixed(1)}K`
@@ -252,14 +261,18 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
         <Tooltip
           contentStyle={{ backgroundColor: 'rgba(17, 24, 39, 0.98)', color: '#fff', borderRadius: 8, border: '1px solid #374151', padding: 12 }}
           formatter={(value: any, name, props: any) => {
-            const { cumulative, daily } = props.payload
+            // Hide areaPositive and areaNegative from tooltip
+            if (name === 'areaPositive' || name === 'areaNegative') {
+              return [null, null]
+            }
+            const { cumulative } = props.payload
             if (name === 'cumulative') {
               return [
-                `Cumulative: ${cumulative >= 0 ? '+' : ''}₹${Number(cumulative).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\nDaily: ${daily >= 0 ? '+' : ''}₹${Number(daily).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                ''
+                `${cumulative >= 0 ? '+' : ''}₹${Number(cumulative).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                'Cumulative'
               ]
             }
-            return null
+            return [null, null]
           }}
           labelFormatter={(label) => {
             try { return format(new Date(label), 'EEEE, dd MMM yyyy') } catch { return label }

@@ -105,12 +105,21 @@ export function calculateStatistics(trades: Trade[], accounts: Account[] = []): 
   };
 
   const statistics = filteredTrades.reduce((acc: StatisticsProps, trade: Trade) => {
-    const pnl = trade.pnl;
+    // Ensure P&L is properly parsed as a number (handles negative values correctly)
+    const pnl = typeof trade.pnl === 'number' ? trade.pnl : (trade.pnl !== undefined && trade.pnl !== null ? parseFloat(String(trade.pnl)) : 0)
+    // Ensure commission is properly parsed as a number
+    const commission = typeof trade.commission === 'number' ? trade.commission : (trade.commission !== undefined && trade.commission !== null ? parseFloat(String(trade.commission)) : 0)
+    
+    // Skip if P&L is invalid (NaN)
+    if (isNaN(pnl)) {
+      console.warn('[calculateStatistics] Invalid P&L value:', trade.pnl, 'for trade:', trade.id)
+      return acc
+    }
     
     acc.nbTrades++;
     acc.cumulativePnl += pnl;
-    acc.cumulativeFees += trade.commission;
-    acc.totalPositionTime += trade.timeInPosition;
+    acc.cumulativeFees += commission;
+    acc.totalPositionTime += trade.timeInPosition || 0;
 
     if (pnl === 0) {
       acc.nbBe++;
@@ -183,8 +192,17 @@ export function formatCalendarData(trades: Trade[], accounts: Account[] = []) {
         strategies: new Set<string>()
       }
     }
+    // Ensure P&L and commission are properly parsed as numbers (handles negative values correctly)
+    const pnl = typeof trade.pnl === 'number' ? trade.pnl : (trade.pnl !== undefined && trade.pnl !== null ? parseFloat(String(trade.pnl)) : 0)
+    const commission = typeof trade.commission === 'number' ? trade.commission : (trade.commission !== undefined && trade.commission !== null ? parseFloat(String(trade.commission)) : 0)
+    
+    // Skip if P&L is invalid (NaN)
+    if (isNaN(pnl)) {
+      return acc
+    }
+    
     acc[date].tradeNumber++
-    acc[date].pnl += trade.pnl - trade.commission
+    acc[date].pnl += pnl - commission
 
     const isLong = trade.side 
       ? (trade.side.toLowerCase() === 'long' || trade.side.toLowerCase() === 'buy' || trade.side.toLowerCase() === 'b') 

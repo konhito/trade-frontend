@@ -115,8 +115,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
           onClick={() => setSidebarOpen(false)}
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
         />
       )}
 
@@ -124,16 +125,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className={`fixed inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       } ${sidebarCollapsed ? 'md:w-16' : 'md:w-64'} w-64 overflow-hidden`}>
-        <div className={`h-screen bg-sidebar-background flex flex-col border-r border-sidebar-border transition-all duration-300 ${sidebarCollapsed ? 'md:w-16 w-64' : 'w-64'}`}>
+        <div 
+          className={`h-screen flex flex-col border-r border-sidebar-border/50 transition-all duration-300 backdrop-blur-xl ${sidebarCollapsed ? 'md:w-16 w-64' : 'w-64'}`} 
+          style={{ 
+            backgroundColor: effectiveTheme === 'dark' 
+              ? 'rgba(15, 23, 42, 0.85)' 
+              : 'rgba(255, 255, 255, 0.85)', 
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)'
+          }}
+        >
           {/* Logo Section */}
-          <div className={`border-b border-sidebar-border ${sidebarCollapsed ? 'md:p-2' : 'p-6'}`}>
+          <div className={`border-b border-sidebar-border ${sidebarCollapsed ? 'md:p-2' : 'p-4 md:p-6'}`}>
             <div 
               className={`flex items-center cursor-pointer ${sidebarCollapsed ? 'md:justify-center' : 'space-x-2'}`}
               onClick={() => router.push('/')}
             >
-              <Logo className={`fill-white flex-shrink-0 ${sidebarCollapsed ? 'md:h-6 md:w-6' : 'h-8 w-8'}`} />
+              <Logo className="fill-white flex-shrink-0 h-7 w-7 md:h-8 md:w-8" />
+              {/* Mobile: Always show title */}
+              <h1 className="text-base md:text-xl font-bold text-white whitespace-nowrap overflow-hidden md:hidden">My Trade Journal</h1>
+              {/* Desktop: Show title only when not collapsed */}
               {!sidebarCollapsed && (
-                <h1 className="text-xl font-bold text-white whitespace-nowrap overflow-hidden">My Trade Journal</h1>
+                <h1 className="hidden md:block text-xl font-bold text-white whitespace-nowrap overflow-hidden">My Trade Journal</h1>
               )}
             </div>
           </div>
@@ -166,7 +179,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   onMouseEnter={() => handleItemHover(item)}
                   className={`w-full h-12 min-w-0 ${
                     sidebarCollapsed 
-                      ? 'md:justify-center md:px-0' 
+                      ? 'md:justify-center md:px-0 justify-start px-4' 
                       : 'justify-start px-4'
                   } ${
                     isActive
@@ -176,9 +189,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   onClick={() => handleItemClick(item)}
                   title={sidebarCollapsed ? item.name : undefined}
                 >
-                  <Icon className={`flex-shrink-0 ${sidebarCollapsed ? 'md:w-5 md:h-5' : 'w-5 h-5'}`} />
+                  <Icon className="flex-shrink-0 w-5 h-5" />
+                  {/* Mobile: Always show text */}
+                  <span className="font-medium ml-3 whitespace-nowrap truncate md:hidden">{item.name}</span>
+                  {/* Desktop: Show text only when not collapsed */}
                   {!sidebarCollapsed && (
-                    <span className="font-medium ml-3 whitespace-nowrap truncate">{item.name}</span>
+                    <span className="hidden md:inline font-medium ml-3 whitespace-nowrap truncate">{item.name}</span>
                   )}
                 </Button>
               )
@@ -186,19 +202,37 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </nav>
 
           {/* User Info and Dropdown Menu */}
-          <div className={`border-t border-sidebar-border ${sidebarCollapsed ? 'md:p-2' : 'p-4'}`}>
+          <div className={`border-t border-sidebar-border ${sidebarCollapsed ? 'md:p-2' : 'p-3 md:p-4'}`}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   className={`w-full h-auto p-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
                     sidebarCollapsed 
-                      ? 'md:justify-center md:px-0' 
+                      ? 'md:justify-center md:px-0 justify-start px-0' 
                       : 'justify-start px-0'
                   }`}
                 >
+                  {/* Mobile: Always show full user info */}
+                  <div className="flex items-center space-x-3 w-full p-2 rounded-md hover:bg-sidebar-accent/50 transition-colors md:hidden">
+                    <Avatar className="w-8 h-8 flex-shrink-0">
+                      <AvatarImage src={formatAvatarUrl(user?.avatar || null)} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                        {getUserInitials(user)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0 overflow-hidden text-left">
+                      <p className="text-sm font-medium text-sidebar-foreground truncate">
+                        {user?.firstName || user?.lastName 
+                          ? [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email 
+                          : user?.email || 'User'}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">Trading Dashboard</p>
+                    </div>
+                  </div>
+                  {/* Desktop: Show based on collapsed state */}
                   {!sidebarCollapsed ? (
-                    <div className="flex items-center space-x-3 w-full p-2 rounded-md hover:bg-sidebar-accent/50 transition-colors">
+                    <div className="hidden md:flex items-center space-x-3 w-full p-2 rounded-md hover:bg-sidebar-accent/50 transition-colors">
                       <Avatar className="w-8 h-8 flex-shrink-0">
                         <AvatarImage src={formatAvatarUrl(user?.avatar || null)} />
                         <AvatarFallback className="bg-primary text-primary-foreground text-xs">

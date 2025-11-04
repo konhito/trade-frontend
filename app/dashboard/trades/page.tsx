@@ -32,12 +32,14 @@ import {
 } from "lucide-react"
 import { useTheme } from '@/context/theme-provider'
 import { useAuth } from '@/context/auth-provider'
+import { useData } from '@/context/data-provider'
 import { useEffect } from 'react'
 import { listTrades, createTrade, updateTrade, deleteTrade } from '@/lib/services/trades'
 
 export default function TradesPage() {
   const { effectiveTheme } = useTheme()
   const { user, isLoading: authLoading } = useAuth()
+  const { refreshTrades } = useData()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('All')
   const [filterStrategy, setFilterStrategy] = useState('All')
@@ -130,6 +132,8 @@ export default function TradesPage() {
     exitDate: '',
     strategy: '',
     duration: 'Intraday',
+    stopLoss: '',
+    targetProfit: '',
     notes: '',
     psychology: {
       emotion: 'Confident',
@@ -204,6 +208,8 @@ export default function TradesPage() {
         exitDate: formData.exitDate,
         strategy: formData.strategy,
         duration: formData.duration,
+        stopLoss: formData.stopLoss || null,
+        targetProfit: formData.targetProfit || null,
         notes: formData.notes,
         psychology: formData.psychology,
         status: formData.exitDate ? 'Closed' : 'Open'
@@ -214,8 +220,12 @@ export default function TradesPage() {
       setTrades(prev => [data.trade, ...prev])
       setShowAddModal(false)
       resetForm()
-      // Reload trades to get updated data
+      // Reload trades locally
       loadTrades()
+      // Refresh global trades data for dashboard and other components
+      if (refreshTrades) {
+        await refreshTrades(true)
+      }
     } catch (error: any) {
       console.error('Error saving trade:', error)
       alert(`Error saving trade: ${error.message || 'Please check your connection.'}`)
@@ -235,6 +245,8 @@ export default function TradesPage() {
       exitDate: '',
       strategy: '',
       duration: 'Intraday',
+      stopLoss: '',
+      targetProfit: '',
       notes: '',
       psychology: {
         emotion: 'Confident',
@@ -270,6 +282,8 @@ export default function TradesPage() {
       exitDate: trade.exitDate || '',
       strategy: trade.strategy || '',
       duration: trade.duration || 'Intraday',
+      stopLoss: (trade as any).stopLoss?.toString() || '',
+      targetProfit: (trade as any).targetProfit?.toString() || '',
       notes: trade.notes || '',
       psychology: '',
       commission: trade.commission?.toString() || ''
@@ -287,6 +301,10 @@ export default function TradesPage() {
       await deleteTrade(tradeId)
       // Remove trade from local state
       setTrades(prevTrades => prevTrades.filter(trade => trade.id !== tradeId))
+      // Refresh global trades data for dashboard and other components
+      if (refreshTrades) {
+        await refreshTrades(true)
+      }
       alert('Trade deleted successfully!')
     } catch (error: any) {
       console.error('Error deleting trade:', error)
@@ -318,6 +336,11 @@ export default function TradesPage() {
       
       // Reload trades to get fresh data from backend
       await loadTrades(true)
+      
+      // Refresh global trades data for dashboard and other components
+      if (refreshTrades) {
+        await refreshTrades(true)
+      }
       
       setShowEditModal(false)
       alert('Trade updated successfully!')
@@ -797,6 +820,30 @@ export default function TradesPage() {
                   </div>
 
                   <div>
+                    <Label htmlFor="stopLoss">Stop Loss</Label>
+                    <Input
+                      id="stopLoss"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.stopLoss}
+                      onChange={(e) => handleInputChange('stopLoss', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="targetProfit">Target Profit</Label>
+                    <Input
+                      id="targetProfit"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.targetProfit}
+                      onChange={(e) => handleInputChange('targetProfit', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
                     <Label htmlFor="quantity">Quantity *</Label>
                     <Input
                       id="quantity"
@@ -998,6 +1045,14 @@ export default function TradesPage() {
                     <p className="text-lg font-semibold">₹{selectedTrade.exitPrice || 'N/A'}</p>
                   </div>
                   <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Stop Loss</Label>
+                    <p className="text-lg font-semibold">₹{(selectedTrade as any).stopLoss || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Target Profit</Label>
+                    <p className="text-lg font-semibold">₹{(selectedTrade as any).targetProfit || 'N/A'}</p>
+                  </div>
+                  <div>
                     <Label className="text-sm font-medium text-muted-foreground">Quantity</Label>
                     <p className="text-lg font-semibold">{selectedTrade.quantity}</p>
                   </div>
@@ -1115,6 +1170,30 @@ export default function TradesPage() {
                       placeholder="155.00"
                       value={formData.exitPrice}
                       onChange={(e) => handleInputChange('exitPrice', e.target.value)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="edit-stop-loss">Stop Loss</Label>
+                    <Input
+                      id="edit-stop-loss"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.stopLoss}
+                      onChange={(e) => handleInputChange('stopLoss', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-target-profit">Target Profit</Label>
+                    <Input
+                      id="edit-target-profit"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.targetProfit}
+                      onChange={(e) => handleInputChange('targetProfit', e.target.value)}
                     />
                   </div>
                   

@@ -792,10 +792,13 @@ export const DataProvider: React.FC<{
           }
         }
 
-        // PnL range filter
-        if ((pnlRange.min !== undefined && trade.pnl < pnlRange.min) ||
-          (pnlRange.max !== undefined && trade.pnl > pnlRange.max)) {
-          return false;
+        // PnL range filter - ensure P&L is properly parsed as number (handles negative values correctly)
+        const tradePnL = typeof trade.pnl === 'number' ? trade.pnl : (trade.pnl !== undefined && trade.pnl !== null ? parseFloat(String(trade.pnl)) : 0)
+        if (!isNaN(tradePnL)) {
+          if ((pnlRange.min !== undefined && tradePnL < pnlRange.min) ||
+            (pnlRange.max !== undefined && tradePnL > pnlRange.max)) {
+            return false;
+          }
         }
 
         // Tick filter

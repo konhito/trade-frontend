@@ -157,6 +157,31 @@ export default function Home() {
       clearTimeout(timeoutId)
     }
   }, [user?.id, refreshTrades, formattedTrades?.length, isLoading]) // Include more dependencies
+  
+  // Refresh dashboard stats when trades change
+  useEffect(() => {
+    if (!user?.id) return
+    
+    const refreshStats = async () => {
+      try {
+        console.log('[Dashboard] Refreshing stats due to trades change, trades count:', formattedTrades?.length || 0)
+        setDashboardStatsLoading(true)
+        const data = await getDashboardStats(String(user.id), 30, true)
+        setDashboardStats(data.stats)
+        setDashboardStatsLoading(false)
+      } catch (error) {
+        console.error('[Dashboard] Error refreshing stats:', error)
+        setDashboardStatsLoading(false)
+      }
+    }
+    
+    // Small delay to ensure trades are fully updated
+    const timeoutId = setTimeout(() => {
+      refreshStats()
+    }, 500)
+    
+    return () => clearTimeout(timeoutId)
+  }, [user?.id, formattedTrades?.length]) // Refresh when trades count changes
 
   // This effect is now merged with the one above
 
@@ -223,26 +248,34 @@ export default function Home() {
         })
       }
       
-      // 1. Add P&L from formattedTrades (individual trades)
+      // 1. Add P&L from formattedTrades (individual trades) - ALL TRADES (positive, negative, zero)
       if (formattedTrades && formattedTrades.length > 0) {
         formattedTrades
           .filter(t => {
             const tradeDate = t.closeDate ? new Date(t.closeDate) : (t.entryDate ? new Date(t.entryDate) : null)
             if (!tradeDate || isNaN(tradeDate.getTime())) return false
             tradeDate.setHours(0, 0, 0, 0)
-            return tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate && (t.pnl !== undefined && t.pnl !== null)
+            // Include all trades with valid P&L (including negative values and zero)
+            const pnl = typeof t.pnl === 'number' ? t.pnl : (t.pnl !== undefined && t.pnl !== null ? parseFloat(String(t.pnl)) : null)
+            return tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate && pnl !== null && !isNaN(pnl)
           })
           .forEach(t => {
             const tradeDate = t.closeDate ? new Date(t.closeDate) : (t.entryDate ? new Date(t.entryDate) : null)
             if (!tradeDate) return
             const dateKey = format(tradeDate, 'MMM dd')
             const existing = dailyPnLMap.get(dateKey) || 0
-            const netPnL = (t.pnl || 0) - (t.commission || 0)
-            dailyPnLMap.set(dateKey, existing + netPnL)
+            // Ensure P&L is properly parsed as a number (handles negative values correctly)
+            const pnl = typeof t.pnl === 'number' ? t.pnl : (t.pnl !== undefined && t.pnl !== null ? parseFloat(String(t.pnl)) : 0)
+            const commission = typeof t.commission === 'number' ? t.commission : (t.commission !== undefined && t.commission !== null ? parseFloat(String(t.commission)) : 0)
+            const netPnL = pnl - commission
+            // Check if the value is valid (not NaN)
+            if (!isNaN(netPnL)) {
+              dailyPnLMap.set(dateKey, existing + netPnL)
+            }
           })
       }
       
-      // 2. Add P&L from topTrades - BUT exclude outliers that would skew the daily chart scale
+      // 2. Add P&L from topTrades - ALL TRADES - BUT exclude outliers that would skew the daily chart scale
       // TopTrades may contain aggregated or very large values that make other bars invisible
       if (dashboardStats.topTrades && dashboardStats.topTrades.length > 0) {
         dashboardStats.topTrades.forEach((trade: any) => {
@@ -252,11 +285,14 @@ export default function Home() {
             if (tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate) {
               // Filter out extreme outliers (values > 1 million) that would skew the chart
               // These are likely data errors or aggregated values that shouldn't be in daily granularity
-              const tradePnL = Math.abs(trade.pnl || 0)
-              if (tradePnL < 1000000) { // Only include trades with P&L < 1 million for daily chart
+              // Ensure P&L is properly parsed as a number (handles negative values correctly)
+              const tradePnLValue = typeof trade.pnl === 'number' ? trade.pnl : (trade.pnl !== undefined && trade.pnl !== null ? parseFloat(String(trade.pnl)) : 0)
+              const tradePnL = Math.abs(tradePnLValue)
+              // Include all trades with P&L < 1 million for daily chart (positive, negative, zero)
+              if (tradePnL < 1000000 && !isNaN(tradePnLValue)) {
                 const dateKey = format(tradeDate, 'MMM dd')
                 const existing = dailyPnLMap.get(dateKey) || 0
-                dailyPnLMap.set(dateKey, existing + (trade.pnl || 0))
+                dailyPnLMap.set(dateKey, existing + tradePnLValue)
               } else {
                 console.log(`[Dashboard] Filtered outlier trade from daily P&L: PnL=${trade.pnl}, date=${trade.entryDate}`)
               }
@@ -297,7 +333,14 @@ export default function Home() {
               }
               
               tradeDate.setHours(0, 0, 0, 0)
-              const livePnL = parseFloat(entry.live) || 0
+              // Ensure P&L is properly parsed as a number (handles negative values correctly)
+              const livePnL = typeof entry.live === 'number' ? entry.live : (entry.live !== undefined && entry.live !== null ? parseFloat(String(entry.live)) : 0)
+              
+              // Skip if P&L is invalid (NaN), but allow negative and zero values
+              if (isNaN(livePnL)) {
+                console.log(`[Dashboard] Entry ${index} has invalid P&L value: ${entry.live}`)
+                return
+              }
               
               console.log(`[Dashboard] Entry ${index}: date=${entry.date}, live=${entry.live}, parsedDate=${tradeDate.toISOString()}, pnl=${livePnL}, inRange=${tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate}`)
               
@@ -358,6 +401,7 @@ export default function Home() {
               const tradeDate = t.closeDate ? new Date(t.closeDate) : (t.entryDate ? new Date(t.entryDate) : null)
               if (!tradeDate || isNaN(tradeDate.getTime())) return false
               tradeDate.setHours(0, 0, 0, 0)
+              // Include all trades (positive, negative, zero P&L)
               return tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate
             })
             .forEach(t => {
@@ -365,11 +409,18 @@ export default function Home() {
               if (!tradeDate) return
               const dateKey = format(tradeDate, 'MMM dd')
               const existing = tradesByDateMap.get(dateKey) || { long: 0, short: 0 }
-              const isLong = t.side?.toLowerCase() === 'long' || t.direction?.toLowerCase() === 'long' || t.side === 'BUY' || t.direction === 'BUY'
+              const side = (t.side || '').toLowerCase()
+              const direction = (t.direction || '').toLowerCase()
+              const isLong = side === 'long' || direction === 'long' || side === 'buy' || direction === 'buy'
+              const isShort = side === 'short' || direction === 'short' || side === 'sell' || direction === 'sell'
+              
               if (isLong) {
                 existing.long++
-              } else {
+              } else if (isShort) {
                 existing.short++
+              } else {
+                // If direction is unclear, default to long (you can adjust this logic)
+                existing.long++
               }
               tradesByDateMap.set(dateKey, existing)
             })
@@ -423,11 +474,31 @@ export default function Home() {
             return dateA.getTime() - dateB.getTime()
           })
       
-      // Calculate long/short trade counts from topTrades or formattedTrades
+      // Calculate long/short trade counts from formattedTrades (most accurate) - ALL TRADES
+      // Use formattedTrades as primary source since it includes all filtered trades
       let longTrades = 0
       let shortTrades = 0
       
-      if (dashboardStats.topTrades && dashboardStats.topTrades.length > 0) {
+      if (formattedTrades && formattedTrades.length > 0) {
+        // Count from formattedTrades - ALL TRADES (positive, negative, zero)
+        formattedTrades.forEach(t => {
+          const side = (t.side || '').toLowerCase()
+          const direction = (t.direction || '').toLowerCase()
+          const isLong = side === 'long' || direction === 'long' || side === 'buy' || direction === 'buy'
+          const isShort = side === 'short' || direction === 'short' || side === 'sell' || direction === 'sell'
+          
+          if (isLong) {
+            longTrades++
+          } else if (isShort) {
+            shortTrades++
+          } else {
+            // If no clear direction, try to infer from entry/exit dates or default to long
+            // For now, we'll count as long if uncertain (you can adjust this logic)
+            longTrades++
+          }
+        })
+      } else if (dashboardStats.topTrades && dashboardStats.topTrades.length > 0) {
+        // Fallback to topTrades if formattedTrades is not available - ALL TRADES
         dashboardStats.topTrades.forEach((trade: any) => {
           const direction = (trade.direction || '').toLowerCase()
           if (direction === 'long' || direction === 'buy') {
@@ -436,23 +507,44 @@ export default function Home() {
             shortTrades++
           }
         })
-      } else if (formattedTrades && formattedTrades.length > 0) {
-        longTrades = formattedTrades.filter(t => 
-          t.side?.toLowerCase() === 'long' || 
-          t.direction?.toLowerCase() === 'long' || 
-          t.side === 'BUY' || 
-          t.direction === 'BUY'
-        ).length
-        shortTrades = formattedTrades.filter(t => 
-          t.side?.toLowerCase() === 'short' || 
-          t.direction?.toLowerCase() === 'short' || 
-          t.side === 'SELL' || 
-          t.direction === 'SELL'
-        ).length
       }
       
-      // Calculate cumulative P&L from daily P&L data
-      const cumulativePnL = dailyPnLData.reduce((sum, day) => sum + day.pnl, 0)
+      // Also add strategy historical data entries as trades (count as total, no direction info)
+      if (strategies && strategies.length > 0) {
+        strategies.forEach((strategy: any) => {
+          if (!strategy.historicalData) return
+          
+          let historicalData = strategy.historicalData
+          if (typeof historicalData === 'string') {
+            try {
+              historicalData = JSON.parse(historicalData)
+            } catch {
+              return
+            }
+          }
+          
+          if (historicalData && historicalData.entries && Array.isArray(historicalData.entries)) {
+            // Count strategy entries as long trades (since we don't have direction info)
+            historicalData.entries.forEach((entry: any) => {
+              if (entry.date) {
+                const tradeDate = new Date(entry.date)
+                if (!isNaN(tradeDate.getTime())) {
+                  tradeDate.setHours(0, 0, 0, 0)
+                  if (tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate) {
+                    longTrades++ // Count strategy entries as trades
+                  }
+                }
+              }
+            })
+          }
+        })
+      }
+      
+      // Calculate cumulative P&L from daily P&L data (ensure all values are numbers, handles negative correctly)
+      const cumulativePnL = dailyPnLData.reduce((sum, day) => {
+        const dayPnL = typeof day.pnl === 'number' ? day.pnl : parseFloat(String(day.pnl)) || 0
+        return sum + (isNaN(dayPnL) ? 0 : dayPnL)
+      }, 0)
       
       return {
         highestPnL,
@@ -504,15 +596,15 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 bg-background text-foreground">
+      <div className="p-2 sm:p-4 md:p-5 lg:p-6 space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6 bg-background text-foreground">
         {/* KPI Cards Skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 lg:gap-6">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i} className="bg-card border-border">
-              <CardContent className="p-6 space-y-3">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-8 w-24" />
-                <Skeleton className="h-3 w-40" />
+              <CardContent className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-2 sm:space-y-3">
+                <Skeleton className="h-3 sm:h-4 w-24 sm:w-32" />
+                <Skeleton className="h-6 sm:h-8 w-20 sm:w-24" />
+                <Skeleton className="h-2 sm:h-3 w-32 sm:w-40" />
                 <Skeleton className="h-2 w-full" />
               </CardContent>
             </Card>
@@ -560,9 +652,9 @@ export default function Home() {
   }
 
   return (
-    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 bg-background text-foreground min-h-screen">
+    <div className="p-2 sm:p-4 md:p-5 lg:p-6 space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6 bg-background text-foreground min-h-screen">
       {/* KPI Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 lg:gap-6">
         {/* Cumulative P&L */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -570,21 +662,21 @@ export default function Home() {
           transition={{ duration: 0.3, delay: 0 }}
         >
           <Card className="bg-card border-border shadow-lg hover:shadow-xl transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm font-medium text-muted-foreground">Cumulative P&L</span>
+          <CardContent className="p-3 sm:p-4 md:p-5 lg:p-6">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full"></div>
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Cumulative P&L</span>
               </div>
-              <LineChartIcon className="w-5 h-5 text-green-500 opacity-80" />
+              <LineChartIcon className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 opacity-80" />
             </div>
-            <div className={`text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold mb-2 break-words ${
+            <div className={`text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold mb-1 sm:mb-2 break-words ${
               dashboardStatsLoading || hasNoData ? 'text-muted-foreground' : 
               metrics.cumulativePnL >= 0 ? 'text-green-500' : 'text-red-500'
             }`}>
-              {dashboardStatsLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : hasNoData ? '₹0' : `₹${metrics.cumulativePnL.toLocaleString('en-IN')}`}
+              {dashboardStatsLoading ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : hasNoData ? '₹0' : `₹${metrics.cumulativePnL.toLocaleString('en-IN')}`}
             </div>
-            <div className="text-sm text-muted-foreground mb-3">
+            <div className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">
               {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : `Last ${dateRangeDays} days`}
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -603,18 +695,18 @@ export default function Home() {
           transition={{ duration: 0.3, delay: 0.1 }}
         >
           <Card className="bg-card border-border shadow-lg hover:shadow-xl transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-sm font-medium text-muted-foreground">Win Rate</span>
+          <CardContent className="p-3 sm:p-4 md:p-5 lg:p-6">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></div>
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Win Rate</span>
               </div>
-              <Trophy className="w-5 h-5 text-blue-500 opacity-80" />
+              <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 opacity-80" />
             </div>
-            <div className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-blue-500 mb-2 break-words">
-              {dashboardStatsLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : hasNoData ? '0%' : `${metrics.winRate.toFixed(1)}%`}
+            <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-blue-500 mb-1 sm:mb-2 break-words">
+              {dashboardStatsLoading ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : hasNoData ? '0%' : `${metrics.winRate.toFixed(1)}%`}
             </div>
-            <div className="text-sm text-blue-500/90 mb-3">
+            <div className="text-xs sm:text-sm text-blue-500/90 mb-2 sm:mb-3">
               {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : `${dashboardStats?.overview?.closedTrades || 0} closed trades`}
             </div>
             <Progress value={metrics.winRate} className="h-2 bg-muted">
@@ -631,18 +723,18 @@ export default function Home() {
           transition={{ duration: 0.3, delay: 0.2 }}
         >
           <Card className="bg-card border-border shadow-lg hover:shadow-xl transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <span className="text-sm font-medium text-muted-foreground">Avg. Risk/Reward</span>
+          <CardContent className="p-3 sm:p-4 md:p-5 lg:p-6">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-500 rounded-full"></div>
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Avg. Risk/Reward</span>
               </div>
-              <Scale className="w-5 h-5 text-purple-500 opacity-80" />
+              <Scale className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 opacity-80" />
             </div>
-            <div className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-purple-500 mb-2 break-words">
-              {dashboardStatsLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : hasNoData ? '1:0' : metrics.riskReward}
+            <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-purple-500 mb-1 sm:mb-2 break-words">
+              {dashboardStatsLoading ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : hasNoData ? '1:0' : metrics.riskReward}
             </div>
-            <div className="text-sm text-purple-500/90 mb-3">
+            <div className="text-xs sm:text-sm text-purple-500/90 mb-2 sm:mb-3">
               {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : `Profit Factor: ${dashboardStats?.overview?.profitFactor?.toFixed(2) || '0.00'}`}
             </div>
             <Progress value={dashboardStatsLoading ? 0 : hasNoData ? 0 : Math.min((dashboardStats?.overview?.profitFactor || 0) * 10, 100)} className="h-2 bg-muted">
@@ -659,18 +751,18 @@ export default function Home() {
           transition={{ duration: 0.3, delay: 0.3 }}
         >
           <Card className="bg-card border-border shadow-lg hover:shadow-xl transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-sm font-medium text-muted-foreground">Trades This Month</span>
+          <CardContent className="p-3 sm:p-4 md:p-5 lg:p-6">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-orange-500 rounded-full"></div>
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Trades This Month</span>
               </div>
-              <TrendingUp className="w-5 h-5 text-orange-500 opacity-80" />
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 opacity-80" />
             </div>
-            <div className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-orange-500 mb-2 break-words">
-              {dashboardStatsLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : hasNoData ? '0' : metrics.tradesThisMonth}
+            <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-orange-500 mb-1 sm:mb-2 break-words">
+              {dashboardStatsLoading ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : hasNoData ? '0' : metrics.tradesThisMonth}
             </div>
-            <div className="text-sm text-orange-500/90 mb-3">
+            <div className="text-xs sm:text-sm text-orange-500/90 mb-2 sm:mb-3">
               {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : `Total: ${dashboardStats?.overview?.totalTrades || 0} trades`}
             </div>
             <Progress value={dashboardStatsLoading ? 0 : hasNoData ? 0 : Math.min((metrics.tradesThisMonth / Math.max(dashboardStats?.overview?.totalTrades || 1, 1)) * 100, 100)} className="h-2 bg-muted">
@@ -690,16 +782,16 @@ export default function Home() {
         transition={{ duration: 0.4, delay: 0.5 }}
       >
         <Card className="bg-card border-border shadow-lg">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+          <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
               <div>
-                <CardTitle className="text-lg font-semibold text-foreground">Daily Profit/Loss</CardTitle>
+                <CardTitle className="text-base sm:text-lg font-semibold text-foreground">Daily Profit/Loss</CardTitle>
                 <div className="text-xs text-muted-foreground mt-0.5">Net of fees • Live strategies • Last {dateRangeDays} days</div>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="h-[400px]">
+          <CardContent className="pt-0 px-3 sm:px-6">
+            <div className="h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px]">
               {(hasNoData && !dashboardStats?.overview && (!strategies || strategies.length === 0 || !strategies.some((s: any) => s.historicalData))) || (metrics.dailyPnLData.length === 0 && (!dashboardStats?.topTrades || dashboardStats.topTrades.length === 0) && (!strategies || strategies.length === 0 || !strategies.some((s: any) => s.historicalData))) ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed border-muted">
                   <div className="text-center">
@@ -743,16 +835,18 @@ export default function Home() {
                     <XAxis 
                       dataKey="name" 
                       stroke="hsl(var(--muted-foreground))" 
-                      tick={{fontSize: 11}}
+                      tick={{fontSize: 10}}
                       axisLine={{ stroke: "hsl(var(--border))" }}
                       angle={-45}
                       textAnchor="end"
                       height={80}
+                      interval="preserveStartEnd"
                     />
                     <YAxis 
                       stroke="hsl(var(--muted-foreground))" 
-                      tick={{fontSize: 11}}
+                      tick={{fontSize: 10}}
                       axisLine={{ stroke: "hsl(var(--border))" }}
+                      width={50}
                       tickFormatter={(value) => {
                         if (value >= 1000000) return `₹${(value/1000000).toFixed(1)}M`
                         if (value >= 1000) return `₹${(value/1000).toFixed(1)}K`
@@ -803,42 +897,80 @@ export default function Home() {
         </Card>
       </motion.div>
 
+      {/* Equity Curve Chart - Full Width */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.5 }}
+      >
+        <Card className="bg-card border-border shadow-lg">
+          <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+              <div>
+                <CardTitle className="text-base sm:text-lg font-semibold text-foreground">Equity Curve</CardTitle>
+                <div className="text-xs text-muted-foreground mt-0.5">Net of fees • Live strategies • Last {dateRangeDays} days</div>
+              </div>
+              <div className="flex space-x-1 bg-background/50 border border-border p-0.5 sm:p-1 rounded-md">
+                {[7,30,90].map((d) => (
+                  <Button
+                    key={d}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDateRangeDays(d)}
+                    className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs h-6 sm:h-7 transition-all ${
+                      dateRangeDays === d ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                    }`}
+                  >
+                    {d}d
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0 px-3 sm:px-6">
+            <div className="h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px]">
+              <EquityCurve dailyPnLData={metrics.dailyPnLData} rangeDays={dateRangeDays} />
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Strategies Overview */}
       {strategies.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.5 }}
+          transition={{ duration: 0.4, delay: 0.6 }}
         >
           <Card className="bg-card border-border shadow-lg">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+            <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                 <div>
-                  <CardTitle className="text-lg font-semibold text-foreground">Active Strategies</CardTitle>
+                  <CardTitle className="text-base sm:text-lg font-semibold text-foreground">Active Strategies</CardTitle>
                   <div className="text-xs text-muted-foreground mt-0.5">
                     Performance overview of your trading strategies
                   </div>
                 </div>
                 <Link href="/dashboard/strategies">
-                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">
+                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 text-xs sm:text-sm h-7 sm:h-8">
                     View All
-                    <ArrowUpRight className="w-4 h-4 ml-1" />
+                    <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
                   </Button>
                 </Link>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 sm:px-6">
               {strategiesLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                  <span className="ml-2 text-muted-foreground">Loading strategies...</span>
+                <div className="flex items-center justify-center py-6 sm:py-8">
+                  <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-xs sm:text-sm text-muted-foreground">Loading strategies...</span>
                 </div>
               ) : strategies.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">
                   No strategies created yet. <Link href="/dashboard/strategies" className="text-primary hover:underline">Create one</Link>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {strategies.filter(s => s.isActive).slice(0, 6).map((strategy) => {
                     // Calculate metrics from historical data
                     let tradesFromHistorical = 0
@@ -908,35 +1040,35 @@ export default function Home() {
                     
                     return (
                       <Card key={strategy.id} className="bg-muted/30 border-border hover:shadow-md transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-foreground mb-1">{strategy.name}</h4>
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="flex items-start justify-between mb-2 sm:mb-3">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm sm:text-base font-semibold text-foreground mb-1 truncate">{strategy.name}</h4>
                               <p className="text-xs text-muted-foreground mb-2">{strategy.category}</p>
                             </div>
                             <Badge 
                               variant={strategy.isActive ? "default" : "secondary"}
-                              className={strategy.isActive ? "bg-green-500 text-white" : ""}
+                              className={`text-xs ${strategy.isActive ? "bg-green-500 text-white" : ""}`}
                             >
                               {strategy.isActive ? "Active" : "Inactive"}
                             </Badge>
                           </div>
-                          <div className="grid grid-cols-2 gap-3 mt-4">
+                          <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3 sm:mt-4">
                             <div>
                               <div className="text-xs text-muted-foreground mb-1">Win Rate</div>
-                              <div className="text-lg font-bold text-foreground">
+                              <div className="text-sm sm:text-base md:text-lg font-bold text-foreground">
                                 {displayWinRate.toFixed(1)}%
                               </div>
                             </div>
                             <div>
                               <div className="text-xs text-muted-foreground mb-1">Total Trades</div>
-                              <div className="text-lg font-bold text-foreground">
+                              <div className="text-sm sm:text-base md:text-lg font-bold text-foreground">
                                 {displayTrades}
                               </div>
                             </div>
-                            <div>
+                            <div className="col-span-2">
                               <div className="text-xs text-muted-foreground mb-1">Profit Factor</div>
-                              <div className={`text-lg font-bold ${
+                              <div className={`text-sm sm:text-base md:text-lg font-bold ${
                                 displayProfitFactor > 1 ? 'text-green-500' : 
                                 displayProfitFactor > 0 ? 'text-yellow-500' : 'text-red-500'
                               }`}>
@@ -945,7 +1077,7 @@ export default function Home() {
                             </div>
                           </div>
                           {strategy.description && (
-                            <p className="text-xs text-muted-foreground mt-3 line-clamp-2">
+                            <p className="text-xs text-muted-foreground mt-2 sm:mt-3 line-clamp-2">
                               {strategy.description}
                             </p>
                           )}
@@ -959,116 +1091,6 @@ export default function Home() {
           </Card>
         </motion.div>
       )}
-
-      {/* Charts Row */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.6 }}
-      >
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Equity Curve Chart */}
-        <Card className="bg-card border-border shadow-lg">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-semibold text-foreground">Equity Curve</CardTitle>
-                <div className="text-xs text-muted-foreground mt-0.5">Net of fees • Live strategies • Last {dateRangeDays} days</div>
-              </div>
-              <div className="flex space-x-1 bg-background/50 border border-border p-1 rounded-md">
-                {[7,30,90].map((d) => (
-                  <Button
-                    key={d}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDateRangeDays(d)}
-                    className={`px-2 py-1 text-xs h-7 transition-all ${
-                      dateRangeDays === d ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                    }`}
-                  >
-                    {d}d
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="h-[400px]">
-              <EquityCurve dailyPnLData={metrics.dailyPnLData} rangeDays={dateRangeDays} />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Number of Trades Chart */}
-        <Card className="bg-card border-border shadow-lg">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-semibold text-foreground">Number of trades</CardTitle>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  Showing long and short trades numbers
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-foreground">Long {metrics.longTrades}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-semibold text-muted-foreground">Short {metrics.shortTrades}</div>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="h-[320px]">
-              {(hasNoData && !dashboardStats?.overview) || (metrics.tradesByDateData.length === 0 && (!dashboardStats?.overview || dashboardStats.overview.totalTrades === 0)) ? (
-                <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed border-muted">
-                  <div className="text-center">
-                    <BarChart3 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Add trades to see trade numbers</p>
-                  </div>
-                </div>
-              ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={metrics.tradesByDateData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="hsl(var(--muted-foreground))" 
-                    tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}}
-                    axisLine={{ stroke: "hsl(var(--border))" }}
-                  />
-                  <YAxis 
-                    stroke="hsl(var(--muted-foreground))" 
-                    tick={{fontSize: 11, fill: 'hsl(var(--muted-foreground))'}}
-                    axisLine={{ stroke: "hsl(var(--border))" }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      color: 'hsl(var(--foreground))',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                    }}
-                    cursor={{ fill: 'transparent' }}
-                    formatter={(value: any) => [value, 'Trades']}
-                    labelFormatter={(label) => `${label}`}
-                    labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: '12px' }}
-                  />
-                  <Bar 
-                    dataKey="total" 
-                    radius={[4, 4, 0, 0]}
-                    fill="#10b981"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      </motion.div>
 
     </div>
   )

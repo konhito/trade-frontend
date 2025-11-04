@@ -596,7 +596,7 @@ export default function StrategiesPage() {
                       onClick={() => { setImportingStrategy(strategy); setShowImportModal(true) }}
                     >
                       <Upload className="w-4 h-4 mr-2" />
-                      Data
+                      Add Data
                     </Button>
                     <Button 
                       size="sm" 
