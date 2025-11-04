@@ -6,7 +6,7 @@ export interface CalendarEntry {
   longNumber: number;
   shortNumber: number;
   trades: Trade[];
-  strategies?: Set<string> | string[];
+  strategies?: string[];
 }
 
 export interface CalendarData {

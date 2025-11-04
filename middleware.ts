@@ -12,15 +12,19 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   
   // Check if accessing admin subdomain
-  if (hostname.includes('admin.mytradingjournal.co.in') || hostname.includes('admin.mytradejournal.co.in')) {
-    // If not already on /admin route, redirect to it
+  if (hostname.includes('admin.mytradejournal.co.in') || hostname.includes('www.admin.mytradejournal.co.in')) {
+    // If not on admin routes, redirect to /admin
     if (!pathname.startsWith('/admin')) {
       const adminUrl = new URL('/admin', request.url)
-      adminUrl.hostname = hostname
       return NextResponse.redirect(adminUrl)
     }
-    // Allow access to /admin route
+    // Allow access to /admin routes (client-side will handle auth)
     return NextResponse.next()
+  }
+  
+  // Block admin routes on non-admin domains
+  if (pathname.startsWith('/admin') && !hostname.includes('admin.mytradejournal.co.in') && !hostname.includes('www.admin.mytradejournal.co.in') && !hostname.includes('localhost') && !hostname.includes('127.0.0.1')) {
+    return NextResponse.redirect(new URL('/', request.url))
   }
   
   // Try to get token from cookie (set by backend/auth if needed)

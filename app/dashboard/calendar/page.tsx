@@ -35,7 +35,7 @@ import { useData } from '@/context/data-provider'
 import { useAuth } from '@/context/auth-provider'
 import CalendarPnl from '../components/calendar/desktop-calendar'
 import YearCalendar from '../components/calendar/year-calendar'
-import { CalendarData } from './types/calendar'
+import { CalendarData } from '../types/calendar'
 import { toast } from 'sonner'
 import { listStrategies } from '@/lib/services/strategies'
 import { format } from 'date-fns'
@@ -44,7 +44,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 export default function CalendarPage() {
   const { effectiveTheme } = useTheme()
   const { user } = useAuth()
-  const { calendarData: baseCalendarData, statistics, loading, formattedTrades } = useData()
+  const { calendarData: baseCalendarData, statistics, isLoading, formattedTrades } = useData()
   const [strategies, setStrategies] = useState<any[]>([])
   const [strategiesLoading, setStrategiesLoading] = useState(false)
 
@@ -65,13 +65,91 @@ export default function CalendarPage() {
     fetchStrategies()
   }, [user?.id])
 
-  // Merge strategy historical data into calendar data
+  // Merge strategy historical data and trades data into calendar data
   const calendarData = useMemo(() => {
-    if (!baseCalendarData) return baseCalendarData
+    // Start with base calendar data (which should already have trades from formatCalendarData)
+    const enhanced: CalendarData = baseCalendarData ? { ...baseCalendarData } : {}
     
-    const enhanced = { ...baseCalendarData }
+    // Ensure each date entry has proper structure
+    Object.keys(enhanced).forEach(dateKey => {
+      if (!enhanced[dateKey].trades) {
+        enhanced[dateKey].trades = []
+      }
+      if (!enhanced[dateKey].strategies) {
+        enhanced[dateKey].strategies = []
+      }
+    })
     
-    // Add strategy P&L to calendar data
+    // Add trades data explicitly to ensure it's included (only if baseCalendarData is missing trades)
+    // This ensures trades are always included even if baseCalendarData doesn't have them
+    if (formattedTrades && Array.isArray(formattedTrades)) {
+      formattedTrades.forEach((trade: any) => {
+        if (!trade.entryDate) return
+        
+        try {
+          const entryDate = new Date(trade.entryDate)
+          if (isNaN(entryDate.getTime())) return
+          
+          const dateKey = formatInTimeZone(entryDate, 'UTC', 'yyyy-MM-dd')
+          
+          // Initialize date entry if it doesn't exist
+          if (!enhanced[dateKey]) {
+            enhanced[dateKey] = {
+              pnl: 0,
+              tradeNumber: 0,
+              longNumber: 0,
+              shortNumber: 0,
+              trades: [],
+              strategies: []
+            }
+          }
+          
+          // Check if trade already exists in this date entry
+          const tradeExists = enhanced[dateKey].trades.some((t: any) => t.id === trade.id)
+          
+          if (!tradeExists) {
+            // Add trade to trades array
+            enhanced[dateKey].trades.push(trade)
+            enhanced[dateKey].tradeNumber++
+            
+            // Update long/short counts
+            const isLong = trade.side 
+              ? (trade.side.toLowerCase() === 'long' || trade.side.toLowerCase() === 'buy' || trade.side.toLowerCase() === 'b') 
+              : (new Date(trade.entryDate).getTime() < new Date(trade.closeDate || trade.entryDate).getTime())
+            
+            if (isLong) {
+              enhanced[dateKey].longNumber++
+            } else {
+              enhanced[dateKey].shortNumber++
+            }
+            
+            // Add trade P&L (net of commission) if this date entry doesn't have P&L from baseCalendarData
+            // Check if baseCalendarData already has this date with P&L calculated
+            const basePnL = baseCalendarData?.[dateKey]?.pnl || 0
+            const currentPnL = enhanced[dateKey].pnl || 0
+            
+            // If the current P&L matches base P&L, it means we need to add this trade's P&L
+            // Otherwise, baseCalendarData already calculated it, so we don't double-count
+            if (basePnL === currentPnL || !baseCalendarData?.[dateKey]) {
+              const tradePnL = (parseFloat(String(trade.pnl)) || 0) - (parseFloat(String(trade.commission)) || 0)
+              enhanced[dateKey].pnl += tradePnL
+            }
+            
+            // Add strategy from trade if available
+            if (trade.strategy && !enhanced[dateKey].strategies?.includes(trade.strategy)) {
+              if (!enhanced[dateKey].strategies) {
+                enhanced[dateKey].strategies = []
+              }
+              enhanced[dateKey].strategies.push(trade.strategy)
+            }
+          }
+        } catch (error) {
+          console.error('[Calendar] Error processing trade:', error)
+        }
+      })
+    }
+    
+    // Add strategy historical data P&L to calendar data
     strategies.forEach((strategy) => {
       if (!strategy.historicalData) return
       
@@ -106,8 +184,9 @@ export default function CalendarPage() {
               }
             }
             
+            // Add strategy P&L to existing P&L (which includes trades)
             enhanced[dateKey].pnl += livePnL
-            if (!enhanced[dateKey].strategies.includes(strategy.name)) {
+            if (strategy.name && !enhanced[dateKey].strategies.includes(strategy.name)) {
               enhanced[dateKey].strategies.push(strategy.name)
             }
           } catch (error) {
@@ -118,7 +197,7 @@ export default function CalendarPage() {
     })
     
     return enhanced
-  }, [baseCalendarData, strategies])
+  }, [baseCalendarData, strategies, formattedTrades])
   const [searchTerm, setSearchTerm] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedType, setSelectedType] = useState('All')
@@ -128,7 +207,7 @@ export default function CalendarPage() {
   const types = ['All', 'Economic Event', 'Earnings', 'Market Open', 'Personal', 'Holiday']
 
   // Combine loading states
-  const isLoading = loading || strategiesLoading
+  const isCalendarLoading = isLoading || strategiesLoading
 
   // Calculate calendar statistics
   const calendarStats = {
@@ -253,7 +332,7 @@ export default function CalendarPage() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Trading Days</div>
-              {isLoading ? (
+              {isCalendarLoading ? (
                 <Skeleton className="h-8 w-16 mt-2" />
               ) : (
                 <div className="text-2xl font-bold text-foreground">{calendarStats.totalDays}</div>
@@ -263,7 +342,7 @@ export default function CalendarPage() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Profitable Days</div>
-              {isLoading ? (
+              {isCalendarLoading ? (
                 <Skeleton className="h-8 w-16 mt-2" />
               ) : (
                 <div className="text-2xl font-bold text-green-500">{calendarStats.profitableDays}</div>
@@ -273,7 +352,7 @@ export default function CalendarPage() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Win Rate</div>
-              {isLoading ? (
+              {isCalendarLoading ? (
                 <Skeleton className="h-8 w-16 mt-2" />
               ) : (
                 <div className="text-2xl font-bold text-blue-500">{`${winRate.toFixed(1)}%`}</div>
@@ -283,7 +362,7 @@ export default function CalendarPage() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Total P&L</div>
-              {isLoading ? (
+              {isCalendarLoading ? (
                 <Skeleton className="h-8 w-24 mt-2" />
               ) : (
                 <div className={`text-2xl font-bold ${calendarStats.totalPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -295,7 +374,7 @@ export default function CalendarPage() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Best Day</div>
-              {isLoading ? (
+              {isCalendarLoading ? (
                 <Skeleton className="h-8 w-24 mt-2" />
               ) : (
                 <div className="text-2xl font-bold text-green-500">{formatCurrency(calendarStats.bestDay.pnl)}</div>
@@ -305,7 +384,7 @@ export default function CalendarPage() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Worst Day</div>
-              {isLoading ? (
+              {isCalendarLoading ? (
                 <Skeleton className="h-8 w-24 mt-2" />
               ) : (
                 <div className="text-2xl font-bold text-red-500">{formatCurrency(calendarStats.worstDay.pnl)}</div>
@@ -317,7 +396,7 @@ export default function CalendarPage() {
         {/* Main Content */}
         {viewMode === 'calendar' ? (
           <div className="h-[600px]">
-            {isLoading ? (
+            {isCalendarLoading ? (
               <Card className="bg-card border-border h-full">
                 <CardContent className="p-6 space-y-4">
                   <div className="grid grid-cols-7 gap-2">
@@ -341,7 +420,7 @@ export default function CalendarPage() {
           </div>
         ) : viewMode === 'year' ? (
           <div>
-            {isLoading ? (
+            {isCalendarLoading ? (
               <Card className="bg-card border-border">
                 <CardContent className="p-6">
                   <Skeleton className="h-96 w-full rounded" />
