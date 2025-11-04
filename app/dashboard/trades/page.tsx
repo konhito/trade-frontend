@@ -720,7 +720,7 @@ export default function TradesPage() {
 
       {/* Add Trade Modal */}
       <Dialog open={showAddModal} onOpenChange={handleCloseModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] bg-background border-border text-foreground shadow-2xl fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] flex flex-col w-[95vw] sm:w-full mx-4 sm:mx-0">
+        <DialogContent className="max-w-4xl max-h-[90vh] bg-background border-border text-foreground shadow-2xl fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] flex flex-col w-[95vw] sm:w-full mx-4 sm:mx-0 overflow-hidden">
           <DialogHeader className="flex flex-row items-center justify-between flex-shrink-0">
             <DialogTitle className="text-xl font-bold text-foreground">Add New Trade</DialogTitle>
             <Button
@@ -735,8 +735,8 @@ export default function TradesPage() {
             </Button>
           </DialogHeader>
           
-          <div className="flex-1 overflow-hidden">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col">
             <TabsList className="grid w-full grid-cols-2 bg-muted">
               <TabsTrigger value="general" className="data-[state=active]:bg-background flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -750,7 +750,7 @@ export default function TradesPage() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="general" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6 flex-1 overflow-y-auto">
+            <TabsContent value="general" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div className="space-y-4">
                   <div>
@@ -958,7 +958,7 @@ export default function TradesPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="psychology" className="space-y-6 mt-6 flex-1 overflow-y-auto">
+            <TabsContent value="psychology" className="space-y-6 mt-6">
               <div className="text-center text-muted-foreground py-8">
                 <Brain className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="text-lg font-medium text-foreground mb-2">Psychology Analysis</h3>
