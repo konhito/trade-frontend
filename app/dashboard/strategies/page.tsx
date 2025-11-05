@@ -27,7 +27,10 @@ import {
   Loader2,
   Upload,
   BarChart4,
-  Calendar
+  Calendar,
+  ImagePlus,
+  X,
+  Download
 } from "lucide-react"
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/context/theme-provider'
@@ -93,7 +96,10 @@ export default function StrategiesPage() {
   }, [user?.id, token, authLoading, selectedCategory, searchTerm])
 
   const createStrategy = async (strategyData: any) => {
-    console.log('[Strategies] createStrategy called with:', strategyData)
+    console.log('[Strategies] createStrategy called with:', {
+      ...strategyData,
+      image: strategyData.image ? `Base64 string (${strategyData.image.length} chars)` : 'null'
+    })
     
     // Get userId from auth context
     const userId = user?.id
@@ -598,16 +604,88 @@ export default function StrategiesPage() {
                       <Upload className="w-4 h-4 mr-2" />
                       Add Data
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="w-full border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      onClick={() => deleteStrategy(strategy.id)}
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
-                    </Button>
+                    {strategy.image && (
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="w-full border-input text-muted-foreground hover:bg-accent hover:text-foreground"
+                        onClick={() => {
+                          try {
+                            // Handle base64 data URL
+                            const base64Data = strategy.image
+                            
+                            // Determine file extension from data URL or default to png
+                            let extension = 'png'
+                            let mimeType = 'image/png'
+                            if (base64Data.includes('data:image/jpeg') || base64Data.includes('data:image/jpg')) {
+                              extension = 'jpg'
+                              mimeType = 'image/jpeg'
+                            } else if (base64Data.includes('data:image/webp')) {
+                              extension = 'webp'
+                              mimeType = 'image/webp'
+                            } else if (base64Data.includes('data:image/png')) {
+                              extension = 'png'
+                              mimeType = 'image/png'
+                            }
+                            
+                            // Convert base64 to blob
+                            const base64String = base64Data.split(',')[1] || base64Data
+                            const byteCharacters = atob(base64String)
+                            const byteNumbers = new Array(byteCharacters.length)
+                            for (let i = 0; i < byteCharacters.length; i++) {
+                              byteNumbers[i] = byteCharacters.charCodeAt(i)
+                            }
+                            const byteArray = new Uint8Array(byteNumbers)
+                            const blob = new Blob([byteArray], { type: mimeType })
+                            
+                            // Create download link
+                            const url = URL.createObjectURL(blob)
+                            const link = document.createElement('a')
+                            link.href = url
+                            link.download = `${(strategy.name || 'strategy').replace(/[^a-z0-9]/gi, '_').toLowerCase()}-image.${extension}`
+                            document.body.appendChild(link)
+                            link.click()
+                            document.body.removeChild(link)
+                            URL.revokeObjectURL(url)
+                            
+                            toast.success('Image downloaded successfully')
+                          } catch (error) {
+                            console.error('Error downloading image:', error)
+                            toast.error('Failed to download image')
+                          }
+                        }}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Image
+                      </Button>
+                    )}
+                  </div>
+                  {strategy.image && (
+                    <div className="grid grid-cols-1 gap-2 mt-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="w-full border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        onClick={() => deleteStrategy(strategy.id)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
                     </div>
+                  )}
+                  {!strategy.image && (
+                    <div className="grid grid-cols-1 gap-2 mt-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="w-full border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        onClick={() => deleteStrategy(strategy.id)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
+                  )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -686,9 +764,11 @@ function AddStrategyModal({
     description: '',
     category: 'Breakout',
     rules: '',
-    parameters: ''
+    parameters: '',
+    image: null as string | null
   })
   const [saving, setSaving] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
 
   // Populate when editing
   useEffect(() => {
@@ -698,12 +778,53 @@ function AddStrategyModal({
         description: initialData.description || '',
         category: initialData.category || 'Breakout',
         rules: typeof initialData.rules === 'string' ? initialData.rules : (initialData.rules ? JSON.stringify(initialData.rules, null, 2) : ''),
-        parameters: typeof initialData.parameters === 'string' ? initialData.parameters : (initialData.parameters ? JSON.stringify(initialData.parameters, null, 2) : '')
+        parameters: typeof initialData.parameters === 'string' ? initialData.parameters : (initialData.parameters ? JSON.stringify(initialData.parameters, null, 2) : ''),
+        image: initialData.image || null
       })
     } else {
-      setFormData({ name: '', description: '', category: 'Breakout', rules: '', parameters: '' })
+      setFormData({ name: '', description: '', category: 'Breakout', rules: '', parameters: '', image: null })
     }
   }, [initialData, open])
+
+  const handleImageUpload = async (file: File) => {
+    if (!file) return
+
+    const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+    const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('Image size must be less than 5MB')
+      return
+    }
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      toast.error('Please upload a valid image (JPEG, PNG, or WebP)')
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const base64String = reader.result as string
+        setFormData(prev => ({ ...prev, image: base64String }))
+        toast.success('Image uploaded successfully')
+        setIsUploading(false)
+      }
+      reader.onerror = () => {
+        toast.error('Failed to read image file')
+        setIsUploading(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      toast.error('Failed to upload image')
+      setIsUploading(false)
+    }
+  }
+
+  const removeImage = () => {
+    setFormData(prev => ({ ...prev, image: null }))
+  }
 
   const handleSave = async () => {
     console.log('[AddStrategyModal] handleSave called', formData)
@@ -715,21 +836,25 @@ function AddStrategyModal({
 
     try {
       setSaving(true)
-      console.log('[AddStrategyModal] Calling onSave with data:', {
+      // Log image data before sending
+      console.log('[AddStrategyModal] Image data:', formData.image ? `Base64 string (${formData.image.length} chars)` : 'null')
+      console.log('[AddStrategyModal] Image preview (first 100 chars):', formData.image ? formData.image.substring(0, 100) : 'null')
+      
+      const strategyPayload = {
         name: formData.name,
         description: formData.description,
         category: formData.category,
         rules: formData.rules,
-        parameters: formData.parameters
+        parameters: formData.parameters,
+        image: formData.image && formData.image.trim().length > 0 ? formData.image : null // Ensure null instead of empty string
+      }
+      
+      console.log('[AddStrategyModal] Calling onSave with data:', {
+        ...strategyPayload,
+        image: strategyPayload.image ? `Base64 string (${strategyPayload.image.length} chars)` : 'null'
       })
       
-      await onSave({
-        name: formData.name,
-        description: formData.description,
-        category: formData.category,
-        rules: formData.rules,
-        parameters: formData.parameters
-      })
+      await onSave(strategyPayload)
       
       console.log('[AddStrategyModal] onSave completed successfully')
       
@@ -739,7 +864,8 @@ function AddStrategyModal({
         description: '',
         category: 'Breakout',
         rules: '',
-        parameters: ''
+        parameters: '',
+        image: null
       })
       onOpenChange(false)
       console.log('[AddStrategyModal] Modal closed')
@@ -753,7 +879,7 @@ function AddStrategyModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-background border-border text-foreground">
+      <DialogContent className="max-w-2xl bg-background border-border text-foreground max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-foreground">{title}</DialogTitle>
         </DialogHeader>
@@ -818,6 +944,56 @@ function AddStrategyModal({
               className="bg-background border-input text-foreground"
               rows={3}
             />
+          </div>
+
+          <div>
+            <Label className="text-foreground">Strategy Image (Optional)</Label>
+            <p className="text-xs text-muted-foreground mb-2">Upload a screenshot or image of your strategy to download later</p>
+            {formData.image ? (
+              <div className="relative">
+                <img 
+                  src={formData.image} 
+                  alt="Strategy preview" 
+                  className="w-full h-48 object-contain rounded-md border border-input bg-muted"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="absolute top-2 right-2"
+                  onClick={removeImage}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center">
+                <Input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleImageUpload(file)
+                    e.target.value = ''
+                  }}
+                  className="hidden"
+                  id="strategy-image-upload"
+                  disabled={isUploading}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  asChild
+                  className="w-full"
+                  disabled={isUploading}
+                >
+                  <label htmlFor="strategy-image-upload" className="cursor-pointer">
+                    <ImagePlus className="mr-2 h-4 w-4" />
+                    {isUploading ? 'Uploading...' : 'Upload Image'}
+                  </label>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 

@@ -237,7 +237,7 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
     <ResponsiveContainer width="100%" height="100%">
       <ComposedChart 
         data={dataWithSegments} 
-        margin={isMobile ? { top: 10, right: 10, left: 50, bottom: 50 } : { top: 10, right: 20, left: 5, bottom: 40 }}
+        margin={isMobile ? { top: 10, right: 10, left: 50, bottom: 50 } : { top: 10, right: 20, left: 60, bottom: 40 }}
       >
         <defs>
           <linearGradient id="positiveGradient" x1="0" y1="0" x2="0" y2="1">
@@ -262,10 +262,10 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
           interval="preserveStartEnd"
         />
         <YAxis
-          label={isMobile ? undefined : { value: 'Total MTM (₹)', angle: -90, position: 'insideLeft', style: { fill: '#9ca3af', fontSize: 11 } }}
+          label={isMobile ? undefined : { value: 'Total MTM (₹)', angle: -90, position: 'left', offset: 10, style: { fill: '#9ca3af', fontSize: 11 } }}
           domain={[yPadMin, yPadMax]}
           tick={{ fontSize: isMobile ? 8 : 9, fill: '#9ca3af' }}
-          width={isMobile ? 50 : 45}
+          width={isMobile ? 50 : 50}
           tickFormatter={(value: number) => {
             if (Math.abs(value) >= 1000000) return `₹${(value/1000000).toFixed(1)}M`
             if (Math.abs(value) >= 1000) return `₹${(value/1000).toFixed(1)}K`

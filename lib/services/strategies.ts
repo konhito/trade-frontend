@@ -16,9 +16,12 @@ export async function listStrategies(params: { userId: string; category?: string
   return apiFetch<{ strategies: any[] }>(`/strategies?${qs.toString()}`, { token })
 }
 
-export async function createStrategy(body: { userId: string; name: string; category: string; description?: string; rules?: any; parameters?: any }) {
+export async function createStrategy(body: { userId: string; name: string; category: string; description?: string; rules?: any; parameters?: any; image?: string | null }) {
   const token = getAuthToken()
-  return apiFetch<{ strategy: any }>(`/strategies`, { method: 'POST', body, token })
+  console.log('[createStrategy API] Sending request with image:', body.image ? `Base64 string (${body.image.length} chars)` : 'null')
+  const result = await apiFetch<{ strategy: any }>(`/strategies`, { method: 'POST', body, token })
+  console.log('[createStrategy API] Response received, image in response:', result.strategy?.image ? `Base64 string (${result.strategy.image.length} chars)` : 'null')
+  return result
 }
 
 export async function updateStrategy(body: { id: string } & Record<string, any>) {

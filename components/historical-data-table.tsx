@@ -15,8 +15,7 @@ interface Entry {
   live: string
   backtest: string
   lotSize: string
-  maxMtm: string
-  minMtm: string
+  deployedDate: string
   note: string
 }
 
@@ -27,8 +26,6 @@ interface HistoricalData {
     live: number
     backtest: number
     lotSize: number
-    maxMtm: number
-    minMtm: number
   }
 }
 
@@ -56,8 +53,7 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
           live: String(e.live || ''),
           backtest: String(e.backtest || ''),
           lotSize: String(e.lotSize || ''),
-          maxMtm: String(e.maxMtm || ''),
-          minMtm: String(e.minMtm || ''),
+          deployedDate: e.deployedDate || '',
           note: e.note || '-'
         }))
         
@@ -65,20 +61,18 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
         const totalLive = entries.reduce((sum, e) => sum + (parseFloat(e.live) || 0), 0)
         const totalBacktest = entries.reduce((sum, e) => sum + (parseFloat(e.backtest) || 0), 0)
         const totalLotSize = entries.reduce((sum, e) => sum + (parseFloat(e.lotSize) || 0), 0)
-        const totalMaxMtm = entries.reduce((sum, e) => sum + (parseFloat(e.maxMtm) || 0), 0)
-        const totalMinMtm = entries.reduce((sum, e) => sum + (parseFloat(e.minMtm) || 0), 0)
         
         newData = {
           title: initialData.title || strategyName || 'Historical Backtest vs Live Data',
           entries,
-          total: { live: totalLive, backtest: totalBacktest, lotSize: totalLotSize, maxMtm: totalMaxMtm, minMtm: totalMinMtm }
+          total: { live: totalLive, backtest: totalBacktest, lotSize: totalLotSize }
         }
       } else {
         // Create empty state for new data
         newData = {
           title: strategyName || 'Historical Backtest vs Live Data',
           entries: [],
-          total: { live: 0, backtest: 0, lotSize: 0, maxMtm: 0, minMtm: 0 }
+          total: { live: 0, backtest: 0, lotSize: 0 }
         }
       }
       
@@ -102,8 +96,8 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
     if (!data) return
     setData(prev => prev ? {
       ...prev,
-      entries: [...prev.entries, { date: '', day: '', live: '', backtest: '', lotSize: '', maxMtm: '', minMtm: '', note: '-' }],
-      total: { live: prev.total.live, backtest: prev.total.backtest, lotSize: prev.total.lotSize, maxMtm: prev.total.maxMtm, minMtm: prev.total.minMtm }
+      entries: [...prev.entries, { date: '', day: '', live: '', backtest: '', lotSize: '', deployedDate: '', note: '-' }],
+      total: { live: prev.total.live, backtest: prev.total.backtest, lotSize: prev.total.lotSize }
     } : null)
   }
 
@@ -115,12 +109,10 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
       const totalLive = newEntries.reduce((sum, e) => sum + (parseFloat(e.live) || 0), 0)
       const totalBacktest = newEntries.reduce((sum, e) => sum + (parseFloat(e.backtest) || 0), 0)
       const totalLotSize = newEntries.reduce((sum, e) => sum + (parseFloat(e.lotSize) || 0), 0)
-      const totalMaxMtm = newEntries.reduce((sum, e) => sum + (parseFloat(e.maxMtm) || 0), 0)
-      const totalMinMtm = newEntries.reduce((sum, e) => sum + (parseFloat(e.minMtm) || 0), 0)
       return {
         ...prev,
         entries: newEntries,
-        total: { live: totalLive, backtest: totalBacktest, lotSize: totalLotSize, maxMtm: totalMaxMtm, minMtm: totalMinMtm }
+        total: { live: totalLive, backtest: totalBacktest, lotSize: totalLotSize }
       }
     })
   }
@@ -136,13 +128,11 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
       const totalLive = newEntries.reduce((sum, e) => sum + (parseFloat(e.live) || 0), 0)
       const totalBacktest = newEntries.reduce((sum, e) => sum + (parseFloat(e.backtest) || 0), 0)
       const totalLotSize = newEntries.reduce((sum, e) => sum + (parseFloat(e.lotSize) || 0), 0)
-      const totalMaxMtm = newEntries.reduce((sum, e) => sum + (parseFloat(e.maxMtm) || 0), 0)
-      const totalMinMtm = newEntries.reduce((sum, e) => sum + (parseFloat(e.minMtm) || 0), 0)
       
       return { 
         ...prev, 
         entries: newEntries,
-        total: { live: totalLive, backtest: totalBacktest, lotSize: totalLotSize, maxMtm: totalMaxMtm, minMtm: totalMinMtm }
+        total: { live: totalLive, backtest: totalBacktest, lotSize: totalLotSize }
       }
     })
   }
@@ -163,13 +153,11 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
       const totalLive = newEntries.reduce((sum, e) => sum + (parseFloat(e.live) || 0), 0)
       const totalBacktest = newEntries.reduce((sum, e) => sum + (parseFloat(e.backtest) || 0), 0)
       const totalLotSize = newEntries.reduce((sum, e) => sum + (parseFloat(e.lotSize) || 0), 0)
-      const totalMaxMtm = newEntries.reduce((sum, e) => sum + (parseFloat(e.maxMtm) || 0), 0)
-      const totalMinMtm = newEntries.reduce((sum, e) => sum + (parseFloat(e.minMtm) || 0), 0)
       
       return {
         ...prev,
         entries: newEntries,
-        total: { live: totalLive, backtest: totalBacktest, lotSize: totalLotSize, maxMtm: totalMaxMtm, minMtm: totalMinMtm }
+        total: { live: totalLive, backtest: totalBacktest, lotSize: totalLotSize }
       }
     })
     
@@ -205,8 +193,7 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
               <TableHead className="bg-muted text-right font-bold">Live P&L</TableHead>
               <TableHead className="bg-muted text-right font-bold">Backtest P&L</TableHead>
               <TableHead className="bg-muted text-right font-bold">Lot Size</TableHead>
-              <TableHead className="bg-muted text-right font-bold">Max MTM</TableHead>
-              <TableHead className="bg-muted text-right font-bold">Min MTM</TableHead>
+              <TableHead className="bg-muted font-bold">Deployed Date</TableHead>
               <TableHead className="bg-muted font-bold">Note</TableHead>
               <TableHead className="bg-muted w-20 text-center font-bold">Action</TableHead>
             </TableRow>
@@ -214,7 +201,7 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
           <TableBody>
             {data.entries.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                   No data yet. Click "Add Row" to start adding data.
                 </TableCell>
               </TableRow>
@@ -295,23 +282,37 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
                       type="number"
                     />
                   </TableCell>
-                  <TableCell className="p-1 text-right">
-                    <Input
-                      value={entry.maxMtm}
-                      onChange={(e) => updateEntry(idx, 'maxMtm', e.target.value)}
-                      className="h-8 border-input bg-background focus-visible:ring-1 focus-visible:ring-ring text-right"
-                      placeholder="0"
-                      type="number"
-                    />
-                  </TableCell>
-                  <TableCell className="p-1 text-right">
-                    <Input
-                      value={entry.minMtm}
-                      onChange={(e) => updateEntry(idx, 'minMtm', e.target.value)}
-                      className="h-8 border-input bg-background focus-visible:ring-1 focus-visible:ring-ring text-right"
-                      placeholder="0"
-                      type="number"
-                    />
+                  <TableCell className="p-1">
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={entry.deployedDate}
+                        onChange={(e) => updateEntry(idx, 'deployedDate', e.target.value)}
+                        className="h-8 border-input bg-background focus-visible:ring-1 focus-visible:ring-ring flex-1"
+                        placeholder="YYYY-MM-DD"
+                        type="date"
+                      />
+                      <Popover open={openDatePicker === idx + 1000} onOpenChange={(open) => setOpenDatePicker(open ? idx + 1000 : null)}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                            <CalendarIcon className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={entry.deployedDate ? new Date(entry.deployedDate) : undefined}
+                            onSelect={(date) => {
+                              if (date && data) {
+                                const formattedDate = format(date, 'yyyy-MM-dd')
+                                updateEntry(idx, 'deployedDate', formattedDate)
+                                setOpenDatePicker(null)
+                              }
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </TableCell>
                   <TableCell className="p-1">
                     <Input
@@ -357,12 +358,7 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
                <TableCell className="text-right text-lg font-bold">
                  {data.total.lotSize.toLocaleString()}
                </TableCell>
-               <TableCell className="text-right text-lg font-bold">
-                 {data.total.maxMtm.toLocaleString()}
-               </TableCell>
-               <TableCell className="text-right text-lg font-bold">
-                 {data.total.minMtm.toLocaleString()}
-               </TableCell>
+               <TableCell></TableCell>
                <TableCell colSpan={2}></TableCell>
              </TableRow>
           </TableBody>
@@ -386,11 +382,10 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
                 live: '', 
                 backtest: '', 
                 lotSize: '', 
-                maxMtm: '', 
-                minMtm: '', 
+                deployedDate: '', 
                 note: '-' 
               }],
-              total: { live: prev.total.live, backtest: prev.total.backtest, lotSize: prev.total.lotSize, maxMtm: prev.total.maxMtm, minMtm: prev.total.minMtm }
+              total: { live: prev.total.live, backtest: prev.total.backtest, lotSize: prev.total.lotSize }
             } : null)
           }}
         >
