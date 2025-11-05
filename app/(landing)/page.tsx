@@ -33,10 +33,12 @@ export default function LandingPage() {
         
         const token = searchParams.get('token')
         if (token && typeof window !== 'undefined') {
+            console.log('[LandingPage] Processing OAuth token...')
             hasProcessedToken.current = true;
             
             // Store token from OAuth callback
             localStorage.setItem('token', token)
+            console.log('[LandingPage] Token stored in localStorage')
             
             // Get redirect URL
             const next = searchParams.get('next') || '/dashboard'
@@ -53,21 +55,41 @@ export default function LandingPage() {
             }
             
             redirectUrlRef.current = nextUrl
+            console.log('[LandingPage] Will redirect to:', nextUrl)
             
-            // Dispatch event to notify auth system (this will trigger validation)
-            window.dispatchEvent(new Event('auth-token-stored'))
-            
-            // Remove token from URL
+            // Remove token from URL first
             const newUrl = window.location.pathname
             window.history.replaceState({}, '', newUrl)
+            
+            // Dispatch event to notify auth system (this will trigger validation)
+            // Use a small delay to ensure the auth provider is ready
+            setTimeout(() => {
+                console.log('[LandingPage] Dispatching auth-token-stored event')
+                window.dispatchEvent(new Event('auth-token-stored'))
+            }, 100)
+            
+            // Fallback: Also trigger a storage event in case the event listener doesn't work
+            // This ensures the auth hook picks up the token change
+            setTimeout(() => {
+                if (typeof window !== 'undefined' && window.dispatchEvent) {
+                    const storageEvent = new StorageEvent('storage', {
+                        key: 'token',
+                        newValue: token,
+                        storageArea: localStorage,
+                    })
+                    window.dispatchEvent(storageEvent)
+                }
+            }, 200)
         }
     }, [searchParams])
     
     // Wait for auth validation to complete before redirecting
     useEffect(() => {
+        console.log('[LandingPage] Auth state:', { hasToken: hasProcessedToken.current, authLoading, isAuthenticated, hasRedirectUrl: !!redirectUrlRef.current })
         if (hasProcessedToken.current && !authLoading && isAuthenticated && redirectUrlRef.current) {
             // Auth validation completed successfully, now redirect
             const nextUrl = redirectUrlRef.current
+            console.log('[LandingPage] Authentication complete, redirecting to:', nextUrl)
             redirectUrlRef.current = null
             router.replace(nextUrl)
         }

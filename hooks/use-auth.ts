@@ -26,11 +26,18 @@ export function useAuth() {
   // Validate token and fetch user
   const validateToken = useCallback(async (token: string): Promise<boolean> => {
     try {
+      console.log('[useAuth] Validating token...')
       const user = await apiFetch<AuthUser>('/api/auth/me', { token })
+      console.log('[useAuth] Token validated successfully, user:', user)
       setState({ token, user })
+      // Also store user info in localStorage for compatibility
+      if (typeof window !== 'undefined' && user) {
+        localStorage.setItem('userId', String(user.id))
+        localStorage.setItem('userEmail', user.email)
+      }
       return true
     } catch (err) {
-      console.warn('[useAuth] Token validation failed:', err)
+      console.error('[useAuth] Token validation failed:', err)
       // Clear invalid token
       if (typeof window !== 'undefined') {
         localStorage.removeItem('token')
@@ -69,14 +76,21 @@ export function useAuth() {
     // Listen for auth events (token updates from other tabs/components)
     const handleTokenStored = async () => {
       if (!mounted) return
+      console.log('[useAuth] handleTokenStored event received')
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
       if (token) {
+        console.log('[useAuth] Token found, validating...')
         setLoading(true)
         try {
-          await validateToken(token)
+          const isValid = await validateToken(token)
+          console.log('[useAuth] Token validation result:', isValid)
+        } catch (err) {
+          console.error('[useAuth] Error in handleTokenStored:', err)
         } finally {
           if (mounted) setLoading(false)
         }
+      } else {
+        console.warn('[useAuth] handleTokenStored called but no token found in localStorage')
       }
     }
 
