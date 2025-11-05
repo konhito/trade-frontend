@@ -23,28 +23,52 @@ export default function RiskRewardRatioCard({ size = 'tiny' }: RiskRewardRatioCa
   const t = useI18n()
   
   const { avgWin, avgLoss, riskRewardRatio, profitPercentage } = useMemo(() => {
-    // Filter winning and losing trades
-    const winningTrades = formattedTrades.filter(trade => trade.pnl > 0)
-    const losingTrades = formattedTrades.filter(trade => trade.pnl < 0)
+    // Helper function to parse numeric values
+    const parseNumeric = (value: any): number => {
+      if (typeof value === 'number' && Number.isFinite(value)) return value
+      if (!value) return 0
+      const str = String(value).replace(/[^0-9.+-]/g, '')
+      const num = Number(str)
+      return Number.isFinite(num) ? num : 0
+    }
 
-    // Calculate averages
-    const avgWin = winningTrades.length > 0
-      ? winningTrades.reduce((sum, trade) => sum + trade.pnl, 0) / winningTrades.length
+    // Collect all P&L values from trades (net of commission)
+    const winningValues: number[] = []
+    const losingValues: number[] = []
+
+    // Process trades
+    formattedTrades.forEach(trade => {
+      const pnl = typeof trade.pnl === 'number' ? trade.pnl : parseNumeric(trade.pnl)
+      const commission = typeof trade.commission === 'number' ? trade.commission : parseNumeric(trade.commission)
+      const netPnL = pnl - commission
+      
+      if (!isNaN(netPnL)) {
+        if (netPnL > 0) {
+          winningValues.push(netPnL)
+        } else if (netPnL < 0) {
+          losingValues.push(Math.abs(netPnL))
+        }
+      }
+    })
+
+    // Calculate averages (use net P&L after commission)
+    const avgWin = winningValues.length > 0
+      ? winningValues.reduce((sum, val) => sum + val, 0) / winningValues.length
       : 0
 
-    const avgLoss = losingTrades.length > 0
-      ? losingTrades.reduce((sum, trade) => sum + trade.pnl, 0) / losingTrades.length
+    const avgLoss = losingValues.length > 0
+      ? losingValues.reduce((sum, val) => sum + val, 0) / losingValues.length
       : 0
 
     // Calculate Risk-Reward ratio
-    const riskRewardRatio = Math.abs(avgLoss) > 0 
-      ? Number((avgWin / Math.abs(avgLoss)).toFixed(2)) 
+    const riskRewardRatio = avgLoss > 0 
+      ? Number((avgWin / avgLoss).toFixed(2)) 
       : 0
     
     // Calculate progress percentage for visualization
-    const totalValue = Math.abs(avgLoss) + Math.abs(avgWin)
+    const totalValue = avgLoss + avgWin
     const profitPercentage = totalValue > 0 
-      ? (Math.abs(avgWin) / totalValue) * 100 
+      ? (avgWin / totalValue) * 100 
       : 50
 
     return { avgWin, avgLoss, riskRewardRatio, profitPercentage }

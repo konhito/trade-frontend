@@ -30,6 +30,8 @@ import {
 import { signOut } from "@/lib/auth"
 import Link from 'next/link'
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { formatAvatarUrl, getUserInitials, getUserDisplayName } from "@/lib/user-utils"
+import { useAuth } from "@/context/auth-provider"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,7 +75,10 @@ const timezones = [
 
 export default function SettingsPage() {
   const { theme, setTheme, intensity, setIntensity } = useTheme()
-  const user = useUserStore(state => state.supabaseUser)
+  const { user: authUser } = useAuth()
+  const storeUser = useUserStore(state => state.user)
+  // Use auth user if available, otherwise fall back to store user
+  const user = authUser || storeUser
   const timezone = useUserStore(state => state.timezone)
   const setTimezone = useUserStore(state => state.setTimezone)
   
@@ -106,11 +111,20 @@ export default function SettingsPage() {
   // Load user businesses on component mount
   useEffect(() => {
     const loadBusinesses = async () => {
-      const result = await getUserBusinesses()
-      if (result.success && result.ownedBusinesses && result.joinedBusinesses) {
+      try {
+        const result = await getUserBusinesses()
+        if (result.success && result.ownedBusinesses && result.joinedBusinesses) {
+          setUserBusinesses({
+            ownedBusinesses: result.ownedBusinesses || [],
+            joinedBusinesses: result.joinedBusinesses || [],
+          })
+        }
+      } catch (error) {
+        console.error('Error loading businesses:', error)
+        // Set empty businesses on error to prevent UI crash
         setUserBusinesses({
-          ownedBusinesses: result.ownedBusinesses,
-          joinedBusinesses: result.joinedBusinesses,
+          ownedBusinesses: [],
+          joinedBusinesses: [],
         })
       }
     }

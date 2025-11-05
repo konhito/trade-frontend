@@ -28,6 +28,7 @@ import { listGroups as listGroupsApi, createGroup as createGroupApi, renameGroup
 import { savePayout as savePayoutApi, deletePayout as deletePayoutApi } from '@/lib/services/payouts'
 import { useAuth } from '@/context/auth-provider'
 import { listTrades } from '@/lib/services/trades'
+import { listStrategies } from '@/lib/services/strategies'
 import { useUserStore } from '@/store/user-store';
 import { useTickDetailsStore } from '@/store/tick-details-store';
 import { useFinancialEventsStore } from '@/store/financial-events-store';
@@ -466,6 +467,7 @@ export const DataProvider: React.FC<{
   const [hourFilter, setHourFilter] = useState<HourFilter>({ hour: null });
   const [tagFilter, setTagFilter] = useState<TagFilter>({ tags: [] });
   const [isFirstConnection, setIsFirstConnection] = useState(false);
+  const [strategies, setStrategies] = useState<any[]>([]);
 
   // Load data from the server - always fetch fresh data
   const loadData = useCallback(async (forceRefresh: boolean = false) => {
@@ -490,11 +492,17 @@ export const DataProvider: React.FC<{
       const userId = String(authUser.id)
 
       // Always fetch fresh data
-      const [freshTradesResult] = await Promise.all([
+      const [freshTradesResult, strategiesResult] = await Promise.all([
         listTrades({ userId, forceRefresh: true }),
+        listStrategies({ userId }).catch(() => ({ strategies: [] })), // Don't fail if strategies fail
       ])
       
       const freshTrades = freshTradesResult?.trades || []
+      
+      // Set strategies
+      if (strategiesResult?.strategies) {
+        setStrategies(strategiesResult.strategies)
+      }
       
       if (Array.isArray(freshTrades)) {
         // Transform backend format to frontend format
@@ -892,9 +900,11 @@ export const DataProvider: React.FC<{
   const statistics = useMemo(() => {
     // Ensure formattedTrades is always an array
     const trades = (formattedTrades || []) as any[];
-    const stats = calculateStatistics(trades, accounts);
+    
+    // Calculate statistics including strategies
+    const stats = calculateStatistics(trades, accounts, strategies);
 
-    // Calculate gross profits and gross losses including commissions
+    // Calculate gross profits and gross losses including commissions (trades only)
     const grossProfits = trades.reduce((sum, trade) => {
       const totalPnL = (trade.pnl || 0) - (trade.commission || 0);
       return totalPnL > 0 ? sum + totalPnL : sum;
@@ -905,16 +915,54 @@ export const DataProvider: React.FC<{
       return totalPnL < 0 ? sum + totalPnL : sum;
     }, 0));
 
+    // Calculate profit factor including strategies
+    // Add strategy P&L to gross profits and losses
+    let strategyGrossProfits = 0
+    let strategyGrossLosses = 0
+    
+    if (strategies && strategies.length > 0) {
+      strategies.forEach((strategy: any) => {
+        if (!strategy.historicalData) return
+        
+        let historicalData = strategy.historicalData
+        if (typeof historicalData === 'string') {
+          try {
+            historicalData = JSON.parse(historicalData)
+          } catch {
+            return
+          }
+        }
+        
+        if (historicalData && historicalData.entries && Array.isArray(historicalData.entries)) {
+          historicalData.entries.forEach((entry: any) => {
+            if (entry.live === undefined || entry.live === null) return
+            
+            const pnl = typeof entry.live === 'number' ? entry.live : parseFloat(String(entry.live)) || 0
+            if (!isNaN(pnl)) {
+              if (pnl > 0) {
+                strategyGrossProfits += pnl
+              } else if (pnl < 0) {
+                strategyGrossLosses += Math.abs(pnl)
+              }
+            }
+          })
+        }
+      })
+    }
+    
+    const totalGrossProfits = grossProfits + strategyGrossProfits
+    const totalGrossLosses = grossLosses + strategyGrossLosses
+    
     // Calculate profit factor (handle division by zero)
-    const profitFactor = grossLosses === 0 ?
-      grossProfits > 0 ? Number.POSITIVE_INFINITY : 1 :
-      grossProfits / grossLosses;
+    const totalProfitFactor = totalGrossLosses === 0 ?
+      totalGrossProfits > 0 ? Number.POSITIVE_INFINITY : 1 :
+      totalGrossProfits / totalGrossLosses;
 
     return {
       ...stats,
-      profitFactor
+      profitFactor: totalProfitFactor
     };
-  }, [formattedTrades, accounts]);
+  }, [formattedTrades, accounts, strategies]);
 
   const calendarData = useMemo(() => formatCalendarData(formattedTrades || [], accounts), [formattedTrades, accounts]);
 

@@ -44,6 +44,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [activeItem, setActiveItem] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true) // Default to collapsed
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detect mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Redirect to signin if not authenticated
   useEffect(() => {
@@ -116,7 +127,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={(e) => {
+            // Don't close if clicking on dropdown menu
+            const target = e.target as HTMLElement
+            if (target.closest('[role="menu"]') || target.closest('[data-radix-portal]')) {
+              return
+            }
+            setSidebarOpen(false)
+          }}
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
         />
       )}
@@ -203,7 +221,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* User Info and Dropdown Menu */}
           <div className={`border-t border-sidebar-border ${sidebarCollapsed ? 'md:p-2' : 'p-3 md:p-4'}`}>
-            <DropdownMenu>
+            <DropdownMenu onOpenChange={(open) => {
+              // On mobile, close sidebar when dropdown opens
+              if (open && isMobile) {
+                // Delay closing to allow dropdown to render
+                setTimeout(() => setSidebarOpen(false), 100)
+              }
+            }}>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -261,9 +285,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent 
-                align={sidebarCollapsed ? "start" : "end"} 
-                side={sidebarCollapsed ? "right" : "top"}
+                align={isMobile ? "start" : (sidebarCollapsed ? "start" : "end")} 
+                side={isMobile ? "right" : (sidebarCollapsed ? "right" : "top")}
                 className="w-56 bg-popover border-border text-popover-foreground"
+                style={{ zIndex: 9999 }}
+                onCloseAutoFocus={(e) => {
+                  // Prevent focus trap on mobile
+                  if (isMobile) {
+                    e.preventDefault()
+                  }
+                }}
+                onClick={(e) => {
+                  // Prevent click from closing sidebar overlay
+                  e.stopPropagation()
+                }}
               >
                 <DropdownMenuLabel className="text-foreground">
                   {user?.firstName || user?.lastName 
@@ -293,7 +328,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-border" />
                 <DropdownMenuItem
-                  onClick={logout}
+                  onClick={() => {
+                    logout()
+                    setSidebarOpen(false)
+                  }}
                   className="cursor-pointer text-destructive focus:text-destructive hover:bg-destructive/10 focus:bg-destructive/10"
                 >
                   <LogOut className="mr-2 h-4 w-4" />

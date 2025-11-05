@@ -1,4 +1,4 @@
-'use client'
+  'use client'
 
 import React from 'react'
 import { ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
@@ -26,6 +26,18 @@ interface EquityCurveProps {
 }
 
 export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: EquityCurveProps) {
+  // Detect mobile screen size
+  const [isMobile, setIsMobile] = React.useState(false)
+  
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
   // Robust numeric parser
   const parseNumeric = (value: any): number => {
     if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -223,7 +235,10 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart data={dataWithSegments} margin={{ top: 10, right: 20, left: 5, bottom: 40 }}>
+      <ComposedChart 
+        data={dataWithSegments} 
+        margin={isMobile ? { top: 10, right: 10, left: 50, bottom: 50 } : { top: 10, right: 20, left: 5, bottom: 40 }}
+      >
         <defs>
           <linearGradient id="positiveGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#22c55e" stopOpacity={0.4}/>
@@ -237,20 +252,20 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
         <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
         <XAxis
           dataKey="date"
-          tick={{ fontSize: 9, fill: '#9ca3af' }}
+          tick={{ fontSize: isMobile ? 8 : 9, fill: '#9ca3af' }}
           tickFormatter={(value) => {
-            try { return format(new Date(value), 'dd MMM') } catch { return value }
+            try { return format(new Date(value), isMobile ? 'dd/MM' : 'dd MMM') } catch { return value }
           }}
-          angle={-45}
-          textAnchor="end"
-          height={60}
+          angle={isMobile ? -90 : -45}
+          textAnchor={isMobile ? 'middle' : 'end'}
+          height={isMobile ? 80 : 60}
           interval="preserveStartEnd"
         />
         <YAxis
-          label={{ value: 'Total MTM (₹)', angle: -90, position: 'insideLeft', style: { fill: '#9ca3af', fontSize: 11 } }}
+          label={isMobile ? undefined : { value: 'Total MTM (₹)', angle: -90, position: 'insideLeft', style: { fill: '#9ca3af', fontSize: 11 } }}
           domain={[yPadMin, yPadMax]}
-          tick={{ fontSize: 9, fill: '#9ca3af' }}
-          width={45}
+          tick={{ fontSize: isMobile ? 8 : 9, fill: '#9ca3af' }}
+          width={isMobile ? 50 : 45}
           tickFormatter={(value: number) => {
             if (Math.abs(value) >= 1000000) return `₹${(value/1000000).toFixed(1)}M`
             if (Math.abs(value) >= 1000) return `₹${(value/1000).toFixed(1)}K`
@@ -259,23 +274,47 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
         />
         <ReferenceLine y={0} stroke="#f59e0b" strokeWidth={3} label={{ value: '₹0 Baseline', position: 'insideTopRight', fill: '#f59e0b', fontSize: 12, fontWeight: 'bold' }} />
         <Tooltip
-          contentStyle={{ backgroundColor: 'rgba(17, 24, 39, 0.98)', color: '#fff', borderRadius: 8, border: '1px solid #374151', padding: 12 }}
-          formatter={(value: any, name, props: any) => {
-            // Hide areaPositive and areaNegative from tooltip
-            if (name === 'areaPositive' || name === 'areaNegative') {
-              return [null, null]
+          content={({ active, payload, label }) => {
+            if (!active || !payload || payload.length === 0) return null
+            
+            // Filter out areaPositive and areaNegative from payload
+            const filteredPayload = payload.filter((item: any) => 
+              item.dataKey !== 'areaPositive' && item.dataKey !== 'areaNegative'
+            )
+            
+            if (filteredPayload.length === 0) return null
+            
+            const cumulativeItem = filteredPayload.find((item: any) => item.dataKey === 'cumulative')
+            if (!cumulativeItem) return null
+            
+            const cumulative = cumulativeItem.payload?.cumulative || 0
+            const sign = cumulative >= 0 ? '+' : '-'
+            const formattedValue = `${sign}₹${Math.abs(Number(cumulative)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            
+            let formattedLabel = label
+            try {
+              formattedLabel = format(new Date(label), 'EEEE, dd MMM yyyy')
+            } catch {
+              // Keep original label if parsing fails
             }
-            const { cumulative } = props.payload
-            if (name === 'cumulative') {
-              return [
-                `${cumulative >= 0 ? '+' : ''}₹${Number(cumulative).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                'Cumulative'
-              ]
-            }
-            return [null, null]
-          }}
-          labelFormatter={(label) => {
-            try { return format(new Date(label), 'EEEE, dd MMM yyyy') } catch { return label }
+            
+            return (
+              <div style={{
+                backgroundColor: 'rgba(17, 24, 39, 0.98)',
+                color: '#fff',
+                borderRadius: 8,
+                border: '1px solid #374151',
+                padding: 12,
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)'
+              }}>
+                <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 4 }}>
+                  {formattedLabel}
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>
+                  {formattedValue}
+                </div>
+              </div>
+            )
           }}
         />
         <Area type="monotone" dataKey="areaPositive" fill="url(#positiveGradient)" stroke="none" fillOpacity={1} baseValue={0} />

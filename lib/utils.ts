@@ -28,61 +28,14 @@ export function parsePositionTime(timeInSeconds: number): string {
   return formattedTime;
 }
 
-export function calculateStatistics(trades: Trade[], accounts: Account[] = []): StatisticsProps {
-  if (!trades.length) {
-    return {
-      cumulativeFees: 0,
-      cumulativePnl: 0,
-      winningStreak: 0,
-      winRate: 0,
-      nbTrades: 0,
-      nbBe: 0,
-      nbWin: 0,
-      nbLoss: 0,
-      totalPositionTime: 0,
-      averagePositionTime: '0s',
-      profitFactor: 1,
-      grossLosses: 0,
-      grossWin: 0,
-      // Payout statistics
-      totalPayouts: 0,
-      nbPayouts: 0,
-    }
-  }
-
-  // Create a map of accounts for quick lookup
-  const accountMap = new Map(accounts.map(account => [account.number, account]));
-
-  // Filter trades based on reset dates for each account
-  const filteredTrades = trades.filter(trade => {
-    const account = accountMap.get(trade.accountNumber);
-    if (!account || !account.resetDate) {
-      return true; // Include trade if no account found or no reset date
-    }
-    
-    // Only include trades that occurred after the reset date
-    return new Date(trade.entryDate) >= new Date(account.resetDate);
-  });
-
-  if (!filteredTrades.length) {
-    return {
-      cumulativeFees: 0,
-      cumulativePnl: 0,
-      winningStreak: 0,
-      winRate: 0,
-      nbTrades: 0,
-      nbBe: 0,
-      nbWin: 0,
-      nbLoss: 0,
-      totalPositionTime: 0,
-      averagePositionTime: '0s',
-      profitFactor: 1,
-      grossLosses: 0,
-      grossWin: 0,
-      // Payout statistics
-      totalPayouts: 0,
-      nbPayouts: 0,
-    }
+export function calculateStatistics(trades: Trade[], accounts: Account[] = [], strategies: any[] = []): StatisticsProps {
+  // Helper function to parse numeric values
+  const parseNumeric = (value: any): number => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (!value) return 0
+    const str = String(value).replace(/[^0-9.+-]/g, '')
+    const num = Number(str)
+    return Number.isFinite(num) ? num : 0
   }
 
   const initialStatistics: StatisticsProps = {
@@ -99,68 +52,135 @@ export function calculateStatistics(trades: Trade[], accounts: Account[] = []): 
     profitFactor: 1,
     grossLosses: 0,
     grossWin: 0,
-    // Payout statistics
     totalPayouts: 0,
     nbPayouts: 0,
   };
 
-  const statistics = filteredTrades.reduce((acc: StatisticsProps, trade: Trade) => {
-    // Ensure P&L is properly parsed as a number (handles negative values correctly)
-    const pnl = typeof trade.pnl === 'number' ? trade.pnl : (trade.pnl !== undefined && trade.pnl !== null ? parseFloat(String(trade.pnl)) : 0)
-    // Ensure commission is properly parsed as a number
-    const commission = typeof trade.commission === 'number' ? trade.commission : (trade.commission !== undefined && trade.commission !== null ? parseFloat(String(trade.commission)) : 0)
+  // Process trades first
+  if (trades.length > 0) {
+    // Create a map of accounts for quick lookup
+    const accountMap = new Map(accounts.map(account => [account.number, account]));
+
+    // Filter trades based on reset dates for each account
+    const filteredTrades = trades.filter(trade => {
+      const account = accountMap.get(trade.accountNumber);
+      if (!account || !account.resetDate) {
+        return true; // Include trade if no account found or no reset date
+      }
+      // Only include trades that occurred after the reset date
+      return new Date(trade.entryDate) >= new Date(account.resetDate);
+    });
+
+    // Process trades
+    filteredTrades.forEach((trade: Trade) => {
+      // Ensure P&L is properly parsed as a number (handles negative values correctly)
+      const pnl = typeof trade.pnl === 'number' ? trade.pnl : (trade.pnl !== undefined && trade.pnl !== null ? parseFloat(String(trade.pnl)) : 0)
+      // Ensure commission is properly parsed as a number
+      const commission = typeof trade.commission === 'number' ? trade.commission : (trade.commission !== undefined && trade.commission !== null ? parseFloat(String(trade.commission)) : 0)
+      
+      // Skip if P&L is invalid (NaN)
+      if (isNaN(pnl)) {
+        console.warn('[calculateStatistics] Invalid P&L value:', trade.pnl, 'for trade:', trade.id)
+        return
+      }
+      
+      initialStatistics.nbTrades++;
+      initialStatistics.cumulativePnl += pnl;
+      initialStatistics.cumulativeFees += commission;
+      initialStatistics.totalPositionTime += trade.timeInPosition || 0;
+
+      if (pnl === 0) {
+        initialStatistics.nbBe++;
+      } else if (pnl > 0) {
+        initialStatistics.nbWin++;
+        initialStatistics.winningStreak++;
+        initialStatistics.grossWin += pnl;
+      } else {
+        initialStatistics.nbLoss++;
+        initialStatistics.winningStreak = 0;
+        initialStatistics.grossLosses += Math.abs(pnl);
+      }
+    });
+
+    // Get unique account numbers from the filtered trades
+    const tradeAccountNumbers = new Set(filteredTrades.map(trade => trade.accountNumber));
     
-    // Skip if P&L is invalid (NaN)
-    if (isNaN(pnl)) {
-      console.warn('[calculateStatistics] Invalid P&L value:', trade.pnl, 'for trade:', trade.id)
-      return acc
-    }
-    
-    acc.nbTrades++;
-    acc.cumulativePnl += pnl;
-    acc.cumulativeFees += commission;
-    acc.totalPositionTime += trade.timeInPosition || 0;
+    // Calculate total payouts only from accounts that have trades in the current dataset
+    accounts.forEach(account => {
+      if (tradeAccountNumbers.has(account.number)) {
+        const payouts = account.payouts || [];
+        payouts.forEach(payout => {
+          // Only include payouts that occurred after the reset date
+          if (!account.resetDate || new Date(payout.date) >= new Date(account.resetDate)) {
+            initialStatistics.totalPayouts += payout.amount;
+            initialStatistics.nbPayouts++;
+          }
+        });
+      }
+    });
+  }
 
-    if (pnl === 0) {
-      acc.nbBe++;
-    } else if (pnl > 0) {
-      acc.nbWin++;
-      acc.winningStreak++;
-      acc.grossWin += pnl;
-    } else {
-      acc.nbLoss++;
-      acc.winningStreak = 0;
-      acc.grossLosses += Math.abs(pnl);
-    }
-
-    const totalTrades = acc.nbWin + acc.nbLoss;
-    acc.winRate = totalTrades > 0 ? (acc.nbWin / totalTrades) * 100 : 0;
-
-    return acc;
-  }, initialStatistics);
-
-  // Get unique account numbers from the filtered trades
-  const tradeAccountNumbers = new Set(filteredTrades.map(trade => trade.accountNumber));
-  
-  // Calculate total payouts only from accounts that have trades in the current dataset
-  // and only include payouts that occurred after the reset date
-  accounts.forEach(account => {
-    if (tradeAccountNumbers.has(account.number)) {
-      const payouts = account.payouts || [];
-      payouts.forEach(payout => {
-        // Only include payouts that occurred after the reset date
-        if (!account.resetDate || new Date(payout.date) >= new Date(account.resetDate)) {
-          statistics.totalPayouts += payout.amount;
-          statistics.nbPayouts++;
+  // Process strategies historical data
+  if (strategies && strategies.length > 0) {
+    strategies.forEach((strategy: any) => {
+      if (!strategy.historicalData) return
+      
+      let historicalData = strategy.historicalData
+      if (typeof historicalData === 'string') {
+        try {
+          historicalData = JSON.parse(historicalData)
+        } catch {
+          return
         }
-      });
+      }
+      
+      if (historicalData && historicalData.entries && Array.isArray(historicalData.entries)) {
+        historicalData.entries.forEach((entry: any) => {
+          if (!entry.date || entry.live === undefined || entry.live === null) return
+          
+          const livePnL = parseNumeric(entry.live)
+          
+          // Skip if P&L is invalid (NaN)
+          if (isNaN(livePnL)) return
+          
+          // Add strategy P&L to cumulative (no commission for strategies)
+          initialStatistics.cumulativePnl += livePnL
+          initialStatistics.nbTrades++
+          
+          if (livePnL === 0) {
+            initialStatistics.nbBe++
+          } else if (livePnL > 0) {
+            initialStatistics.nbWin++
+            initialStatistics.winningStreak++
+            initialStatistics.grossWin += livePnL
+          } else {
+            initialStatistics.nbLoss++
+            initialStatistics.winningStreak = 0
+            initialStatistics.grossLosses += Math.abs(livePnL)
+          }
+        })
+      }
+    })
+  }
+
+  // Calculate win rate from all trades (trades + strategies)
+  const totalTrades = initialStatistics.nbWin + initialStatistics.nbLoss
+  initialStatistics.winRate = totalTrades > 0 ? (initialStatistics.nbWin / totalTrades) * 100 : 0
+
+  // Calculate average position time (only for trades, not strategies)
+  if (initialStatistics.nbTrades > 0) {
+    const tradesOnly = trades.filter(t => {
+      const account = accounts.find(a => a.number === t.accountNumber)
+      if (!account || !account.resetDate) return true
+      return new Date(t.entryDate) >= new Date(account.resetDate)
+    }).length
+    if (tradesOnly > 0) {
+      const averageTimeInSeconds = Math.round(initialStatistics.totalPositionTime / tradesOnly)
+      initialStatistics.averagePositionTime = parsePositionTime(averageTimeInSeconds)
     }
-  });
+  }
 
-  const averageTimeInSeconds = Math.round(statistics.totalPositionTime / filteredTrades.length);
-  statistics.averagePositionTime = parsePositionTime(averageTimeInSeconds);
-
-  return statistics;
+  return initialStatistics
 }
 
 export function formatCalendarData(trades: Trade[], accounts: Account[] = []) {

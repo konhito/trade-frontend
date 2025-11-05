@@ -860,7 +860,9 @@ export default function Home() {
                         const payload = props?.payload && props.payload.length > 0 ? props.payload[0] : null
                         const date = props?.label || ''
                         const value = typeof payload?.value === 'number' ? payload.value : Number(payload?.value || 0)
-                        const formatted = `${value >= 0 ? '+' : ''}₹${Math.abs(value).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                        // Properly format with + for positive and - for negative
+                        const sign = value >= 0 ? '+' : '-'
+                        const formatted = `${sign}₹${Math.abs(value).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                         if (!payload) return null
                         return (
                           <div style={{
@@ -872,7 +874,10 @@ export default function Home() {
                             boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)'
                           }}>
                             <div style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))', marginBottom: 4 }}>{date}</div>
-                            <div style={{ fontWeight: 700 }}>{formatted}</div>
+                            <div style={{ 
+                              fontWeight: 700,
+                              color: value >= 0 ? '#10b981' : '#ef4444'
+                            }}>{formatted}</div>
                           </div>
                         )
                       }}

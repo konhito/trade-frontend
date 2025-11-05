@@ -55,10 +55,9 @@ export function signOut() {
     localStorage.removeItem('token')
     localStorage.removeItem('userId')
     localStorage.removeItem('userEmail')
-  }
-  // Use window.location for client-side redirect
-  if (typeof window !== 'undefined') {
-    window.location.href = '/login'
+    localStorage.removeItem('deltalytix_user_data')
+    // Use window.location for client-side redirect
+    window.location.href = '/signin'
   }
 }
 

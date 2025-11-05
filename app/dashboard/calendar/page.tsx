@@ -67,21 +67,10 @@ export default function CalendarPage() {
 
   // Merge strategy historical data and trades data into calendar data
   const calendarData = useMemo(() => {
-    // Start with base calendar data (which should already have trades from formatCalendarData)
-    const enhanced: CalendarData = baseCalendarData ? { ...baseCalendarData } : {}
+    // Start fresh - build calendar data from scratch to ensure trades are always included
+    const enhanced: CalendarData = {}
     
-    // Ensure each date entry has proper structure
-    Object.keys(enhanced).forEach(dateKey => {
-      if (!enhanced[dateKey].trades) {
-        enhanced[dateKey].trades = []
-      }
-      if (!enhanced[dateKey].strategies) {
-        enhanced[dateKey].strategies = []
-      }
-    })
-    
-    // Add trades data explicitly to ensure it's included (only if baseCalendarData is missing trades)
-    // This ensures trades are always included even if baseCalendarData doesn't have them
+    // FIRST: Process all trades to build the base calendar data
     if (formattedTrades && Array.isArray(formattedTrades)) {
       formattedTrades.forEach((trade: any) => {
         if (!trade.entryDate) return
@@ -123,23 +112,14 @@ export default function CalendarPage() {
               enhanced[dateKey].shortNumber++
             }
             
-            // Add trade P&L (net of commission) if this date entry doesn't have P&L from baseCalendarData
-            // Check if baseCalendarData already has this date with P&L calculated
-            const basePnL = baseCalendarData?.[dateKey]?.pnl || 0
-            const currentPnL = enhanced[dateKey].pnl || 0
-            
-            // If the current P&L matches base P&L, it means we need to add this trade's P&L
-            // Otherwise, baseCalendarData already calculated it, so we don't double-count
-            if (basePnL === currentPnL || !baseCalendarData?.[dateKey]) {
-              const tradePnL = (parseFloat(String(trade.pnl)) || 0) - (parseFloat(String(trade.commission)) || 0)
+            // Add trade P&L (net of commission)
+            const tradePnL = (parseFloat(String(trade.pnl)) || 0) - (parseFloat(String(trade.commission)) || 0)
+            if (!isNaN(tradePnL)) {
               enhanced[dateKey].pnl += tradePnL
             }
             
             // Add strategy from trade if available
-            if (trade.strategy && !enhanced[dateKey].strategies?.includes(trade.strategy)) {
-              if (!enhanced[dateKey].strategies) {
-                enhanced[dateKey].strategies = []
-              }
+            if (trade.strategy && !enhanced[dateKey].strategies.includes(trade.strategy)) {
               enhanced[dateKey].strategies.push(trade.strategy)
             }
           }
@@ -149,7 +129,7 @@ export default function CalendarPage() {
       })
     }
     
-    // Add strategy historical data P&L to calendar data
+    // SECOND: Add strategy historical data P&L to calendar data (on top of trades)
     strategies.forEach((strategy) => {
       if (!strategy.historicalData) return
       
@@ -173,6 +153,7 @@ export default function CalendarPage() {
             const dateKey = formatInTimeZone(entryDate, 'UTC', 'yyyy-MM-dd')
             const livePnL = parseFloat(String(entry.live)) || 0
             
+            // Initialize date entry if it doesn't exist (preserve trades if they exist)
             if (!enhanced[dateKey]) {
               enhanced[dateKey] = {
                 pnl: 0,
@@ -184,8 +165,15 @@ export default function CalendarPage() {
               }
             }
             
-            // Add strategy P&L to existing P&L (which includes trades)
-            enhanced[dateKey].pnl += livePnL
+            // Calculate trades P&L separately (don't overwrite)
+            const tradesPnL = enhanced[dateKey].trades.reduce((sum: number, trade: any) => {
+              const pnl = (parseFloat(String(trade.pnl)) || 0) - (parseFloat(String(trade.commission)) || 0)
+              return sum + (isNaN(pnl) ? 0 : pnl)
+            }, 0)
+            
+            // Add strategy P&L to trades P&L (not replace)
+            enhanced[dateKey].pnl = tradesPnL + livePnL
+            
             if (strategy.name && !enhanced[dateKey].strategies.includes(strategy.name)) {
               enhanced[dateKey].strategies.push(strategy.name)
             }
@@ -197,7 +185,7 @@ export default function CalendarPage() {
     })
     
     return enhanced
-  }, [baseCalendarData, strategies, formattedTrades])
+  }, [strategies, formattedTrades])
   const [searchTerm, setSearchTerm] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedType, setSelectedType] = useState('All')

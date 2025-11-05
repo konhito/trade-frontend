@@ -203,8 +203,11 @@ export function useAuth() {
       localStorage.removeItem('token')
       localStorage.removeItem('userId')
       localStorage.removeItem('userEmail')
+      localStorage.removeItem('deltalytix_user_data')
       // Dispatch logout event
       window.dispatchEvent(new Event('auth-logout'))
+      // Redirect to login page after logout
+      window.location.href = '/signin'
     }
     setState({ token: null, user: null })
     setError(null)
