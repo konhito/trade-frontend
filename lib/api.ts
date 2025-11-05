@@ -1,4 +1,23 @@
-export const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://trade-backend-production-b0a3.up.railway.app'
+// Get backend URL - must be set in production!
+const getBackendUrl = () => {
+  const envUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+  const defaultUrl = 'https://trade-backend-production-b0a3.up.railway.app'
+  
+  if (!envUrl) {
+    console.warn('[api.ts] WARNING: NEXT_PUBLIC_BACKEND_URL is not set! Using default:', defaultUrl)
+    console.warn('[api.ts] Please set NEXT_PUBLIC_BACKEND_URL in your deployment platform environment variables')
+  }
+  
+  return envUrl || defaultUrl
+}
+
+export const backendBaseUrl = getBackendUrl()
+
+// Log the backend URL for debugging
+if (typeof window !== 'undefined') {
+  console.log('[api.ts] Backend base URL:', backendBaseUrl)
+  console.log('[api.ts] NEXT_PUBLIC_BACKEND_URL env:', process.env.NEXT_PUBLIC_BACKEND_URL || 'NOT SET')
+}
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
@@ -27,7 +46,11 @@ export async function apiFetch<T>(path: string, options: {
   // Use provided token or try to get from localStorage
   const token = providedToken || getAuthToken()
   
-  console.log('[apiFetch]', method, path, 'token:', token ? 'exists' : 'missing')
+  // Construct full URL
+  const fullUrl = `${backendBaseUrl}${path}`
+  console.log('[apiFetch]', method, fullUrl, 'token:', token ? 'exists' : 'missing')
+  console.log('[apiFetch] Backend base URL:', backendBaseUrl)
+  console.log('[apiFetch] Path:', path)
   
   // Build headers
   const requestHeaders: Record<string, string> = {
@@ -43,7 +66,7 @@ export async function apiFetch<T>(path: string, options: {
     console.warn('[apiFetch] No token available - request may fail if auth is required')
   }
   
-  const res = await fetch(`${backendBaseUrl}${path}`, {
+  const res = await fetch(fullUrl, {
     method,
     headers: requestHeaders,
     credentials: 'include', // Include cookies in the request
