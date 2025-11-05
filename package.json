@@ -78,7 +78,6 @@
     "@tiptap/starter-kit": "^3.6.5",
     "@types/canvas-confetti": "^1.9.0",
     "ai": "^5.0.56",
-    "canvas": "^3.1.0",
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
