@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Icons } from "@/components/icons"
-import { signInWithDiscord, signInWithGoogle } from "@/lib/auth"
+import { signInWithGoogle } from "@/lib/auth"
 import { useAuth } from "@/context/auth-provider"
 import { z } from 'zod';
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -29,7 +29,7 @@ const loginFormSchema = z.object({
 
 interface SignInFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-type AuthMethod = 'email' | 'discord' | 'google' | null
+type AuthMethod = 'email' | 'google' | null
 
 export function SignInForm({ className, ...props }: SignInFormProps) {
     const [isLoading, setIsLoading] = React.useState<boolean>(false)
@@ -82,21 +82,6 @@ export function SignInForm({ className, ...props }: SignInFormProps) {
         }
     }
 
-    async function handleDiscordSignIn() {
-        setIsLoading(true)
-        setAuthMethod('discord')
-        try {
-            await signInWithDiscord(nextUrl)
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Discord sign-in is not available yet.",
-                variant: "destructive",
-            })
-            setAuthMethod(null)
-            setIsLoading(false)
-        }
-    }
 
     async function handleGoogleSignIn() {
         setIsLoading(true)
@@ -189,7 +174,7 @@ export function SignInForm({ className, ...props }: SignInFormProps) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3">
                 <Button
                     type="button"
                     variant="outline"
@@ -204,21 +189,6 @@ export function SignInForm({ className, ...props }: SignInFormProps) {
                     )}
                     <span className="hidden sm:inline">Google</span>
                     <span className="sm:hidden">Continue with Google</span>
-                </Button>
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleDiscordSignIn}
-                    disabled={isLoading || authMethod !== null}
-                    className="w-full"
-                >
-                    {authMethod === 'discord' ? (
-                        <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        <Icons.discord className="mr-2 h-4 w-4" />
-                    )}
-                    <span className="hidden sm:inline">Discord</span>
-                    <span className="sm:hidden">Continue with Discord</span>
                 </Button>
             </div>
         </div>

@@ -30,6 +30,22 @@ function SignInContent() {
     return nextUrl
   }
 
+  // Handle OAuth callback token
+  useEffect(() => {
+    const token = searchParams.get('token')
+    if (token && typeof window !== 'undefined') {
+      // Store token from OAuth callback
+      localStorage.setItem('token', token)
+      // Dispatch event to notify auth system
+      window.dispatchEvent(new Event('auth-token-stored'))
+      // Remove token from URL
+      const newUrl = window.location.pathname + (searchParams.get('next') ? `?next=${encodeURIComponent(searchParams.get('next')!)}` : '')
+      window.history.replaceState({}, '', newUrl)
+      // Redirect will happen via auth-token-stored event
+      return
+    }
+  }, [searchParams])
+
   useEffect(() => {
     // If already authenticated, redirect to dashboard or next URL
     // Only redirect if we're actually authenticated (not just loading state)

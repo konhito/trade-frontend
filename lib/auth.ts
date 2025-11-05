@@ -191,18 +191,23 @@ export async function register(email: string, password: string, name?: string) {
   }
 }
 
-// OAuth functions (placeholders)
+// OAuth functions
 export function signInWithDiscord(next?: string | null) {
-  console.log('signInWithDiscord called - not implemented')
+  // Discord sign-in removed
+  console.log('Discord sign-in has been removed')
   if (typeof window !== 'undefined') {
-    window.location.href = '/authentication?error=not_implemented'
+    window.location.href = '/authentication?error=discord_removed'
   }
 }
 
 export function signInWithGoogle(next?: string | null) {
-  console.log('signInWithGoogle called - not implemented')
-  if (typeof window !== 'undefined') {
-    window.location.href = '/authentication?error=not_implemented'
-  }
+  if (typeof window === 'undefined') return
+  
+  const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://trade-backend-production-b0a3.up.railway.app'
+  const nextUrl = next || '/dashboard'
+  const redirectUrl = `${apiUrl}/api/auth/google?next=${encodeURIComponent(nextUrl)}`
+  
+  // Redirect to backend OAuth endpoint
+  window.location.href = redirectUrl
 }
 

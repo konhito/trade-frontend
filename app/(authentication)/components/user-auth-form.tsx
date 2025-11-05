@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Icons } from "@/components/icons"
-import { signInWithDiscord, signInWithEmail, verifyOtp, signInWithGoogle } from "@/server/auth"
+import { signInWithEmail, verifyOtp, signInWithGoogle } from "@/server/auth"
 import { z } from 'zod';
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -38,7 +38,7 @@ const otpFormSchema = z.object({
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-type AuthMethod = 'email' | 'discord' | 'google' | null
+type AuthMethod = 'email' | 'google' | null
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const [isLoading, setIsLoading] = React.useState<boolean>(false)
@@ -124,19 +124,6 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         }
     }
 
-    async function onSubmitDiscord(event: React.SyntheticEvent) {
-        event.preventDefault()
-        setIsLoading(true)
-        setAuthMethod('discord')
-
-        try {
-            await signInWithDiscord(isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : nextUrl)
-        } catch (error) {
-            console.error(error)
-            setAuthMethod(null)
-            setIsLoading(false)
-        }
-    }
 
     async function onSubmitGoogle(event: React.SyntheticEvent) {
         event.preventDefault()
@@ -314,19 +301,6 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                     </span>
                 </div>
             </div>
-            <Button 
-                variant="outline" 
-                type="button" 
-                disabled={isLoading || authMethod === 'email'} 
-                onClick={onSubmitDiscord}
-            >
-                {isLoading && authMethod === 'discord' ? (
-                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                    <Icons.discord className="mr-2 h-4 w-4" />
-                )}{" "}
-                {t('auth.signInWithDiscord')}
-            </Button>
             <Button 
                 variant="outline" 
                 type="button" 
