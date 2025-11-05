@@ -31,8 +31,15 @@ export default function LandingPage() {
     useEffect(() => {
         if (hasProcessedToken.current) return;
         
-        const token = searchParams.get('token')
+        // Check URL params directly (more reliable than searchParams)
+        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+        const token = searchParams.get('token') || urlParams?.get('token') || null
+        
         console.log('[LandingPage] Checking for token in URL:', token ? 'FOUND' : 'NOT FOUND')
+        console.log('[LandingPage] Full URL:', typeof window !== 'undefined' ? window.location.href : 'N/A')
+        console.log('[LandingPage] URL search:', typeof window !== 'undefined' ? window.location.search : 'N/A')
+        console.log('[LandingPage] searchParams.get("token"):', searchParams.get('token'))
+        console.log('[LandingPage] urlParams.get("token"):', urlParams?.get('token'))
         
         if (token && typeof window !== 'undefined') {
             console.log('[LandingPage] ✅ Processing OAuth token from URL...')
@@ -127,14 +134,29 @@ export default function LandingPage() {
         }
     }, [searchParams])
     
+    // Also check URL on mount for token (in case it was missed)
+    useEffect(() => {
+        // Double-check URL for token on mount
+        if (!hasProcessedToken.current && typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search)
+            const urlToken = urlParams.get('token')
+            if (urlToken && !hasProcessedToken.current) {
+                console.log('[LandingPage] 🔍 Found token in URL on mount check! Processing...')
+                // The token processing will happen in the main useEffect
+            }
+        }
+    }, [])
+    
     // Wait for auth validation to complete before redirecting
     useEffect(() => {
+        const urlHasToken = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('token') !== null : false
         console.log('[LandingPage] Auth state check:', { 
             hasToken: hasProcessedToken.current, 
             authLoading, 
             isAuthenticated, 
             hasRedirectUrl: !!redirectUrlRef.current,
-            tokenInStorage: typeof window !== 'undefined' ? !!localStorage.getItem('token') : false
+            tokenInStorage: typeof window !== 'undefined' ? !!localStorage.getItem('token') : false,
+            urlHasToken
         })
         
         // If we processed the token and have a redirect URL
