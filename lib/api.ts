@@ -12,15 +12,21 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 // Get auth token from localStorage or cookies
 function getAuthToken(): string | undefined {
-  if (typeof window === 'undefined') return undefined
+  if (typeof window === 'undefined') {
+    console.warn('[getAuthToken] Running server-side - cannot access localStorage')
+    return undefined
+  }
   // Try localStorage first (client-side auth)
   const token = localStorage.getItem('token')
   if (token) {
-    console.log('[getAuthToken] Found token in localStorage, length:', token.length)
+    console.log('[getAuthToken] ✅ Found token in localStorage, length:', token.length)
+    console.log('[getAuthToken] Token preview:', token.substring(0, 30) + '...')
     return token
   }
   // Log what keys are available for debugging
-  console.warn('[getAuthToken] No token found. localStorage keys:', Object.keys(localStorage))
+  console.error('[getAuthToken] ❌ No token found in localStorage!')
+  console.error('[getAuthToken] localStorage keys:', Object.keys(localStorage))
+  console.error('[getAuthToken] localStorage.getItem("token"):', localStorage.getItem('token'))
   // Fallback: try to get from cookies (this won't work in client-side JS, but keep for completeness)
   return undefined
 }
@@ -69,9 +75,17 @@ export async function apiFetch<T>(path: string, options: {
     requestHeaders['Authorization'] = `Bearer ${token}`
     console.log('[apiFetch] ✅ Authorization header added, token length:', token.length)
     console.log('[apiFetch] Token preview:', token.substring(0, 30) + '...')
+    console.log('[apiFetch] Full Authorization header:', `Bearer ${token.substring(0, 20)}...`)
   } else {
     console.error('[apiFetch] ❌ No token available - request may fail if auth is required')
-    console.error('[apiFetch] localStorage token check:', typeof window !== 'undefined' ? localStorage.getItem('token') : 'N/A')
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('token')
+      console.error('[apiFetch] localStorage token check:', storedToken ? `Found (length: ${storedToken.length})` : 'NOT FOUND')
+      console.error('[apiFetch] All localStorage keys:', Object.keys(localStorage))
+      console.error('[apiFetch] Provided token?', !!providedToken)
+    } else {
+      console.error('[apiFetch] Running server-side - localStorage not available')
+    }
   }
   
   // Final URL - ensure it's the backend URL (triple check)
@@ -90,6 +104,9 @@ export async function apiFetch<T>(path: string, options: {
   
   console.error('🚨 [apiFetch] FINAL URL BEING FETCHED:', finalUrl)
   console.error('🚨 [apiFetch] URL is correct?', finalUrl.includes('trade-backend-production'))
+  console.error('🚨 [apiFetch] Request headers:', JSON.stringify(requestHeaders, null, 2))
+  console.error('🚨 [apiFetch] Has Authorization header?', !!requestHeaders['Authorization'])
+  console.error('🚨 [apiFetch] Token exists?', !!token)
   console.error('🚨 [apiFetch] Full URL object:', { fullUrl, finalUrl, cleanPath, BACKEND_BASE_URL })
   
   const res = await fetch(finalUrl, {
@@ -99,6 +116,10 @@ export async function apiFetch<T>(path: string, options: {
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     cache: 'no-store',
   })
+  
+  // Log response headers for debugging
+  console.log('[apiFetch] Response status:', res.status)
+  console.log('[apiFetch] Response headers:', Object.fromEntries(res.headers.entries()))
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')

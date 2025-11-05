@@ -38,15 +38,28 @@ export default function LandingPage() {
             console.log('[LandingPage] ✅ Processing OAuth token from URL...')
             hasProcessedToken.current = true;
             
+            // Decode token if it's URL encoded
+            let decodedToken = token
+            try {
+                decodedToken = decodeURIComponent(token)
+            } catch (e) {
+                console.warn('[LandingPage] Token decode failed, using as-is')
+            }
+            
             // Store token from OAuth callback IMMEDIATELY
-            localStorage.setItem('token', token)
+            localStorage.setItem('token', decodedToken)
             // Mark this as a fresh OAuth token so validation doesn't clear it too early
             localStorage.setItem('oauth_token_fresh', 'true')
-            // Remove the flag after 5 seconds (enough time for validation)
+            // Store timestamp for debugging
+            localStorage.setItem('oauth_token_timestamp', Date.now().toString())
+            // Remove the flag after 10 seconds (enough time for validation)
             setTimeout(() => {
                 localStorage.removeItem('oauth_token_fresh')
-            }, 5000)
-            console.log('[LandingPage] ✅ Token stored in localStorage, length:', token.length)
+                localStorage.removeItem('oauth_token_timestamp')
+            }, 10000)
+            
+            console.log('[LandingPage] ✅ Token stored in localStorage, length:', decodedToken.length)
+            console.log('[LandingPage] ✅ Token preview:', decodedToken.substring(0, 30) + '...')
             console.log('[LandingPage] ✅ Verifying storage - token in localStorage:', !!localStorage.getItem('token'))
             
             // Get redirect URL
@@ -98,9 +111,15 @@ export default function LandingPage() {
                     console.warn('[LandingPage] ⚠️ Timeout: Redirecting with token - dashboard will validate')
                     const url = redirectUrlRef.current
                     redirectUrlRef.current = null
+                    // Clear the timeout reference
+                    // @ts-ignore
+                    if (redirectUrlRef.current?._timeout) {
+                        // @ts-ignore
+                        clearTimeout(redirectUrlRef.current._timeout)
+                    }
                     router.replace(url)
                 }
-            }, 2000) // 2 second timeout - give validation a chance but don't wait forever
+            }, 3000) // 3 second timeout - give validation more time
             
             // Store timeout ID so we can clear it if redirect happens earlier
             // @ts-ignore

@@ -24,10 +24,11 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null)
 
   // Validate token and fetch user
-  const validateToken = useCallback(async (token: string): Promise<boolean> => {
+  const validateToken = useCallback(async (token: string, retryCount = 0): Promise<boolean> => {
     try {
-      console.log('[useAuth] Validating token, length:', token?.length)
+      console.log('[useAuth] Validating token, length:', token?.length, 'retry:', retryCount)
       console.log('[useAuth] Token preview:', token ? `${token.substring(0, 20)}...` : 'null')
+      
       const user = await apiFetch<AuthUser>('/api/auth/me', { token })
       console.log('[useAuth] ✅ Token validated successfully, user:', user)
       setState({ token, user })
@@ -35,6 +36,8 @@ export function useAuth() {
       if (typeof window !== 'undefined' && user) {
         localStorage.setItem('userId', String(user.id))
         localStorage.setItem('userEmail', user.email)
+        localStorage.removeItem('oauth_token_fresh')
+        localStorage.removeItem('oauth_token_timestamp')
       }
       return true
     } catch (err: any) {
@@ -42,45 +45,41 @@ export function useAuth() {
       console.error('[useAuth] Error details:', {
         message: err?.message,
         status: err?.status,
-        stack: err?.stack
+        retryCount
       })
       
-      // Don't clear token on 401 if it's a fresh OAuth token
-      // The token might be valid but validation is timing out
-      const errorMessage = err?.message || ''
+      // Check if this is a fresh OAuth token
       const isFreshToken = typeof window !== 'undefined' && 
         (window.location.search.includes('token=') || 
          localStorage.getItem('oauth_token_fresh') === 'true')
       
-      if (isFreshToken && (errorMessage.includes('401') || errorMessage.includes('Unauthorized'))) {
-        console.warn('[useAuth] ⚠️ Got 401 but token is fresh from OAuth - retrying validation in 500ms')
-        // Retry validation after a short delay - might be a timing issue
-        await new Promise(resolve => setTimeout(resolve, 500))
-        try {
-          const retryUser = await apiFetch<AuthUser>('/api/auth/me', { token })
-          console.log('[useAuth] ✅ Retry successful, user:', retryUser)
-          setState({ token, user: retryUser })
-          if (typeof window !== 'undefined' && retryUser) {
-            localStorage.setItem('userId', String(retryUser.id))
-            localStorage.setItem('userEmail', retryUser.email)
-            localStorage.removeItem('oauth_token_fresh')
-          }
-          return true
-        } catch (retryErr) {
-          console.error('[useAuth] ❌ Retry also failed:', retryErr)
-          // Keep the token anyway - let dashboard handle it
-          console.warn('[useAuth] ⚠️ Keeping token despite validation failure - dashboard will retry')
-          return false
-        }
+      const errorMessage = err?.message || ''
+      const is401 = errorMessage.includes('401') || errorMessage.includes('Unauthorized') || err?.status === 401
+      
+      // If it's a fresh token and 401, retry up to 3 times with increasing delays
+      if (isFreshToken && is401 && retryCount < 3) {
+        const delay = (retryCount + 1) * 500 // 500ms, 1000ms, 1500ms
+        console.warn(`[useAuth] ⚠️ Got 401 but token is fresh from OAuth - retrying in ${delay}ms (attempt ${retryCount + 1}/3)`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        return validateToken(token, retryCount + 1)
       }
       
-      // Clear invalid token only if it's definitely invalid
+      // If it's a fresh token but we've exhausted retries, keep the token anyway
+      // The dashboard will handle final validation
+      if (isFreshToken) {
+        console.warn('[useAuth] ⚠️ Keeping token despite validation failure - dashboard will retry')
+        // Don't clear state - let dashboard handle it
+        return false
+      }
+      
+      // Clear invalid token only if it's definitely invalid (not fresh)
       if (typeof window !== 'undefined' && !isFreshToken) {
         console.warn('[useAuth] Clearing invalid token from localStorage')
         localStorage.removeItem('token')
         localStorage.removeItem('userId')
         localStorage.removeItem('userEmail')
         localStorage.removeItem('oauth_token_fresh')
+        localStorage.removeItem('oauth_token_timestamp')
       }
       setState({ token: null, user: null })
       return false

@@ -62,23 +62,35 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
       const isFreshOAuthToken = typeof window !== 'undefined' ? localStorage.getItem('oauth_token_fresh') === 'true' : false
       
-      // If we have a fresh OAuth token, wait a bit longer before redirecting
+      // If we have a fresh OAuth token, wait much longer before redirecting
       if (token && isFreshOAuthToken) {
         console.log('[DashboardLayout] Waiting for OAuth token validation before redirecting...')
         const timeout = setTimeout(() => {
           // Only redirect if still not authenticated after waiting
           if (!isAuthenticated) {
-            console.log('[DashboardLayout] OAuth token validation timeout, redirecting to signin')
+            console.log('[DashboardLayout] ⚠️ OAuth token validation timeout after 5s, but keeping user on dashboard')
+            // Don't redirect - keep them on dashboard and let them try again
+            // The token is still in localStorage, so they can refresh
+          }
+        }, 5000) // Wait 5 seconds for validation
+        
+        return () => clearTimeout(timeout)
+      } else if (!token) {
+        // No token - redirect immediately
+        console.log('[DashboardLayout] No token found, redirecting to signin')
+        const signInUrl = `/signin?next=${encodeURIComponent(pathname || '/dashboard')}`
+        router.replace(signInUrl)
+      }
+      // If token exists but not fresh, wait a moment before redirecting (might be validating)
+      else {
+        const timeout = setTimeout(() => {
+          if (!isAuthenticated) {
+            console.log('[DashboardLayout] Token exists but validation failed, redirecting to signin')
             const signInUrl = `/signin?next=${encodeURIComponent(pathname || '/dashboard')}`
             router.replace(signInUrl)
           }
-        }, 3000) // Wait 3 seconds for validation
-        
+        }, 2000)
         return () => clearTimeout(timeout)
-      } else {
-        // No token or not fresh - redirect immediately
-        const signInUrl = `/signin?next=${encodeURIComponent(pathname || '/dashboard')}`
-        router.replace(signInUrl)
       }
     }
   }, [isAuthenticated, isLoading, router, pathname])
@@ -130,9 +142,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       const isFreshOAuthToken = localStorage.getItem('oauth_token_fresh') === 'true'
       
       if (token && isFreshOAuthToken) {
-        console.log('[DashboardLayout] Token exists but not authenticated - retrying validation')
+        console.log('[DashboardLayout] Token exists but not authenticated - triggering validation')
         // Trigger validation by dispatching event
         window.dispatchEvent(new Event('auth-token-stored'))
+        
+        // Also try direct validation after a short delay
+        setTimeout(() => {
+          if (!isAuthenticated && token) {
+            console.log('[DashboardLayout] Still not authenticated, retrying validation')
+            window.dispatchEvent(new Event('auth-token-stored'))
+          }
+        }, 1000)
       }
     }
   }, [isAuthenticated, isLoading])
