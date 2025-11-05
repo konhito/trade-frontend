@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Link from "next/link"
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { useTheme } from '@/context/theme-provider'
 import Features from './components/features'
@@ -12,12 +13,54 @@ import { useDashboardPrefetch } from '@/hooks/use-prefetch'
 
 export default function LandingPage() {
     const { theme, effectiveTheme } = useTheme();
+    const router = useRouter()
+    const searchParams = useSearchParams()
     const [videoLoaded, setVideoLoaded] = useState(false);
     const [videoError, setVideoError] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const hasProcessedToken = useRef(false);
     
     // Prefetch dashboard data if user is authenticated
     useDashboardPrefetch();
+    
+    // Handle OAuth callback token from URL
+    useEffect(() => {
+        if (hasProcessedToken.current) return;
+        
+        const token = searchParams.get('token')
+        if (token && typeof window !== 'undefined') {
+            hasProcessedToken.current = true;
+            
+            // Store token from OAuth callback
+            localStorage.setItem('token', token)
+            
+            // Get redirect URL
+            const next = searchParams.get('next') || '/dashboard'
+            let nextUrl = '/dashboard'
+            if (next) {
+                try {
+                    const decoded = decodeURIComponent(next)
+                    if (decoded.startsWith('/')) {
+                        nextUrl = decoded
+                    }
+                } catch {
+                    // Invalid encoding, use default
+                }
+            }
+            
+            // Dispatch event to notify auth system
+            window.dispatchEvent(new Event('auth-token-stored'))
+            
+            // Remove token from URL
+            const newUrl = window.location.pathname
+            window.history.replaceState({}, '', newUrl)
+            
+            // Redirect to dashboard after a short delay to ensure auth state is updated
+            setTimeout(() => {
+                router.replace(nextUrl)
+            }, 300)
+        }
+    }, [searchParams, router])
 
     useEffect(() => {
         setVideoLoaded(false);

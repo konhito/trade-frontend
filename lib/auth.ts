@@ -64,7 +64,7 @@ export function signOut() {
 // Simple login with email/password
 export async function login(email: string, password: string) {
   try {
-    const response = await fetch(`${BACKEND_URL}/auth/login`, {
+    const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -91,12 +91,12 @@ export async function login(email: string, password: string) {
 
     const data = await response.json()
 
-    // Get user info from /auth/me
+    // Get user info from /api/auth/me
     let userId = ''
     let userEmail = email
     if (data.token) {
       try {
-        const meResponse = await fetch(`${BACKEND_URL}/auth/me`, {
+        const meResponse = await fetch(`${BACKEND_URL}/api/auth/me`, {
           headers: { 'Authorization': `Bearer ${data.token}` },
         })
         if (meResponse.ok) {
@@ -128,7 +128,7 @@ export async function login(email: string, password: string) {
 // Register new user
 export async function register(email: string, password: string, name?: string) {
   try {
-    const response = await fetch(`${BACKEND_URL}/auth/register`, {
+    const response = await fetch(`${BACKEND_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, name }),
@@ -162,7 +162,7 @@ export async function register(email: string, password: string, name?: string) {
     let userEmail = email
     if (data.token) {
       try {
-        const meResponse = await fetch(`${BACKEND_URL}/auth/me`, {
+        const meResponse = await fetch(`${BACKEND_URL}/api/auth/me`, {
           headers: { 'Authorization': `Bearer ${data.token}` },
         })
         if (meResponse.ok) {

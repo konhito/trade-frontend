@@ -26,7 +26,7 @@ export function useAuth() {
   // Validate token and fetch user
   const validateToken = useCallback(async (token: string): Promise<boolean> => {
     try {
-      const user = await apiFetch<AuthUser>('/auth/me', { token })
+      const user = await apiFetch<AuthUser>('/api/auth/me', { token })
       setState({ token, user })
       return true
     } catch (err) {
@@ -114,7 +114,7 @@ export function useAuth() {
     setError(null)
     setLoading(true)
     try {
-      const res = await apiFetch<{ token: string }>('/auth/login', {
+      const res = await apiFetch<{ token: string }>('/api/auth/login', {
         method: 'POST',
         body: { email, password },
       })
@@ -129,7 +129,7 @@ export function useAuth() {
       }
 
       // Fetch user info
-      const user = await apiFetch<AuthUser>('/auth/me', { token: res.token })
+      const user = await apiFetch<AuthUser>('/api/auth/me', { token: res.token })
       
       // Store user info
       if (typeof window !== 'undefined') {
@@ -158,7 +158,7 @@ export function useAuth() {
     setError(null)
     setLoading(true)
     try {
-      const res = await apiFetch<{ token: string }>('/auth/register', {
+      const res = await apiFetch<{ token: string }>('/api/auth/register', {
         method: 'POST',
         body: { email, password, name },
       })
@@ -173,7 +173,7 @@ export function useAuth() {
       }
 
       // Fetch user info
-      const user = await apiFetch<AuthUser>('/auth/me', { token: res.token })
+      const user = await apiFetch<AuthUser>('/api/auth/me', { token: res.token })
       
       // Store user info
       if (typeof window !== 'undefined') {
