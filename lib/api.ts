@@ -36,23 +36,27 @@ export async function apiFetch<T>(path: string, options: {
   const token = providedToken || getAuthToken()
   
   // HARDCODED: Always use this exact backend URL - no environment variables
-  const BACKEND_BASE_URL = 'https://trade-backend-production-b0a3.up.railway.app'
+  // Using const to ensure it's never modified
+  const BACKEND_BASE_URL: string = 'https://trade-backend-production-b0a3.up.railway.app'
   
   // Ensure path starts with /
   const cleanPath = path.startsWith('/') ? path : `/${path}`
   
-  // Construct absolute URL - NO relative paths allowed
-  const fullUrl = BACKEND_BASE_URL + cleanPath
+  // Construct absolute URL using string concatenation (not template literal to avoid any issues)
+  const fullUrl: string = BACKEND_BASE_URL + cleanPath
   
-  // CRITICAL: Validate URL is absolute
-  if (!fullUrl.startsWith('https://')) {
-    const errorMsg = `FATAL: URL is not absolute! URL: "${fullUrl}", Path: "${path}"`
+  // CRITICAL: Validate URL is absolute - throw error if not
+  if (!fullUrl.startsWith('https://trade-backend-production')) {
+    const errorMsg = `FATAL: URL is not pointing to backend! URL: "${fullUrl}", Path: "${path}", Backend: "${BACKEND_BASE_URL}"`
     console.error('🚨 [apiFetch]', errorMsg)
+    console.error('🚨 [apiFetch] Full URL type:', typeof fullUrl, 'Value:', JSON.stringify(fullUrl))
     throw new Error(errorMsg)
   }
   
-  // Log for debugging
-  console.log('[apiFetch]', method, '→', fullUrl)
+  // Log for debugging - use console.error to ensure it shows up
+  console.error('✅ [apiFetch] Making request:', method, '→', fullUrl)
+  console.error('✅ [apiFetch] Backend URL constant:', BACKEND_BASE_URL)
+  console.error('✅ [apiFetch] Path:', cleanPath)
   
   // Build headers
   const requestHeaders: Record<string, string> = {
@@ -68,11 +72,23 @@ export async function apiFetch<T>(path: string, options: {
     console.warn('[apiFetch] No token available - request may fail if auth is required')
   }
   
-  // Final URL - already validated as absolute above
-  const finalUrl = fullUrl
+  // Final URL - ensure it's the backend URL (triple check)
+  let finalUrl = fullUrl
+  
+  // Last resort: if somehow the URL is wrong, force it to be correct
+  if (!finalUrl.includes('trade-backend-production')) {
+    console.error('🚨 [apiFetch] URL CORRUPTED! Forcing correct URL.')
+    finalUrl = 'https://trade-backend-production-b0a3.up.railway.app' + cleanPath
+  }
+  
+  // Final validation
+  if (!finalUrl.startsWith('https://trade-backend-production')) {
+    throw new Error(`CRITICAL: URL is wrong! Expected backend URL but got: ${finalUrl}`)
+  }
   
   console.error('🚨 [apiFetch] FINAL URL BEING FETCHED:', finalUrl)
-  console.error('🚨 [apiFetch] URL type check:', typeof finalUrl, 'starts with https?', finalUrl.startsWith('https://'))
+  console.error('🚨 [apiFetch] URL is correct?', finalUrl.includes('trade-backend-production'))
+  console.error('🚨 [apiFetch] Full URL object:', { fullUrl, finalUrl, cleanPath, BACKEND_BASE_URL })
   
   const res = await fetch(finalUrl, {
     method,

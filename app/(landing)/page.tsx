@@ -62,11 +62,8 @@ export default function LandingPage() {
             window.history.replaceState({}, '', newUrl)
             
             // Dispatch event to notify auth system (this will trigger validation)
-            // Use a small delay to ensure the auth provider is ready
-            setTimeout(() => {
-                console.log('[LandingPage] Dispatching auth-token-stored event')
-                window.dispatchEvent(new Event('auth-token-stored'))
-            }, 100)
+            console.log('[LandingPage] Dispatching auth-token-stored event')
+            window.dispatchEvent(new Event('auth-token-stored'))
             
             // Fallback: Also trigger a storage event in case the event listener doesn't work
             // This ensures the auth hook picks up the token change
@@ -79,29 +76,79 @@ export default function LandingPage() {
                     })
                     window.dispatchEvent(storageEvent)
                 }
-            }, 200)
+            }, 100)
+            
+            // Aggressive redirect: If auth validation fails or takes too long, redirect anyway
+            // The dashboard will handle authentication with the token in localStorage
+            const redirectTimeout = setTimeout(() => {
+                if (redirectUrlRef.current) {
+                    console.warn('[LandingPage] ⚠️ Timeout: Redirecting with token - dashboard will validate')
+                    const url = redirectUrlRef.current
+                    redirectUrlRef.current = null
+                    router.replace(url)
+                }
+            }, 2000) // 2 second timeout - give validation a chance but don't wait forever
+            
+            // Store timeout ID so we can clear it if redirect happens earlier
+            // @ts-ignore
+            redirectUrlRef.current._timeout = redirectTimeout
         }
     }, [searchParams])
     
     // Wait for auth validation to complete before redirecting
     useEffect(() => {
-        console.log('[LandingPage] Auth state:', { hasToken: hasProcessedToken.current, authLoading, isAuthenticated, hasRedirectUrl: !!redirectUrlRef.current })
-        if (hasProcessedToken.current && !authLoading && isAuthenticated && redirectUrlRef.current) {
-            // Auth validation completed successfully, now redirect
-            const nextUrl = redirectUrlRef.current
-            console.log('[LandingPage] Authentication complete, redirecting to:', nextUrl)
-            redirectUrlRef.current = null
-            router.replace(nextUrl)
+        console.log('[LandingPage] Auth state check:', { 
+            hasToken: hasProcessedToken.current, 
+            authLoading, 
+            isAuthenticated, 
+            hasRedirectUrl: !!redirectUrlRef.current,
+            tokenInStorage: typeof window !== 'undefined' ? !!localStorage.getItem('token') : false
+        })
+        
+        // If we processed the token and have a redirect URL
+        if (hasProcessedToken.current && redirectUrlRef.current) {
+            // Wait for auth loading to complete (success or failure)
+            if (!authLoading) {
+                const nextUrl = redirectUrlRef.current
+                
+                // Clear timeout if we're redirecting now
+                // @ts-ignore
+                if (redirectUrlRef.current?._timeout) {
+                    // @ts-ignore
+                    clearTimeout(redirectUrlRef.current._timeout)
+                }
+                
+                // If authenticated, redirect immediately
+                if (isAuthenticated) {
+                    console.log('[LandingPage] ✅ Authentication complete, redirecting to:', nextUrl)
+                    redirectUrlRef.current = null
+                    router.replace(nextUrl)
+                    return
+                }
+                
+                // If not authenticated but we have a token, redirect anyway
+                // The dashboard will handle authentication validation
+                const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+                if (token) {
+                    console.log('[LandingPage] ⏳ Token exists but auth state not ready, redirecting anyway')
+                    // Redirect immediately - dashboard will validate the token
+                    const url = redirectUrlRef.current
+                    redirectUrlRef.current = null
+                    router.replace(url)
+                    return
+                }
+            }
         }
     }, [authLoading, isAuthenticated, router])
     
     // Show loading state while processing OAuth token
-    if (hasProcessedToken.current && authLoading) {
+    if (hasProcessedToken.current && (authLoading || !isAuthenticated)) {
         return (
             <div className="flex min-h-screen items-center justify-center">
                 <div className="flex flex-col items-center space-y-4">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">Signing you in...</p>
+                    <p className="text-xs text-muted-foreground">Please wait while we verify your account</p>
                 </div>
             </div>
         )

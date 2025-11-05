@@ -111,7 +111,7 @@ export default function StrategiesPage() {
       if (token) {
         try {
           const { apiFetch } = await import('@/lib/api')
-          const fetchedUser = await apiFetch<{ id: number; email: string }>('/auth/me', { token })
+          const fetchedUser = await apiFetch<{ id: number; email: string }>('/api/auth/me', { token })
           if (fetchedUser?.id) {
             console.log('[Strategies] Fetched userId from token:', fetchedUser.id)
             const data = await createStrategyApi({
