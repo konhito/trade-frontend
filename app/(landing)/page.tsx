@@ -32,14 +32,35 @@ export default function LandingPage() {
         if (hasProcessedToken.current) return;
         
         // Check URL params directly (more reliable than searchParams)
-        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-        const token = searchParams.get('token') || urlParams?.get('token') || null
+        // Use window.location.search directly as it's the most reliable
+        const currentUrl = typeof window !== 'undefined' ? window.location.href : ''
+        const currentSearch = typeof window !== 'undefined' ? window.location.search : ''
+        const urlParams = currentSearch ? new URLSearchParams(currentSearch) : null
+        
+        // Try multiple methods to get the token
+        const tokenFromSearchParams = searchParams.get('token')
+        const tokenFromUrlParams = urlParams?.get('token')
+        const tokenFromUrl = currentSearch.includes('token=') 
+            ? currentSearch.split('token=')[1]?.split('&')[0] 
+            : null
+        
+        // Decode token if found in URL string
+        let token = tokenFromSearchParams || tokenFromUrlParams || tokenFromUrl
+        if (token && token.includes('%')) {
+            try {
+                token = decodeURIComponent(token)
+            } catch (e) {
+                console.warn('[LandingPage] Token decode failed, using as-is')
+            }
+        }
         
         console.log('[LandingPage] Checking for token in URL:', token ? 'FOUND' : 'NOT FOUND')
-        console.log('[LandingPage] Full URL:', typeof window !== 'undefined' ? window.location.href : 'N/A')
-        console.log('[LandingPage] URL search:', typeof window !== 'undefined' ? window.location.search : 'N/A')
-        console.log('[LandingPage] searchParams.get("token"):', searchParams.get('token'))
-        console.log('[LandingPage] urlParams.get("token"):', urlParams?.get('token'))
+        console.log('[LandingPage] Full URL:', currentUrl)
+        console.log('[LandingPage] URL search:', currentSearch)
+        console.log('[LandingPage] searchParams.get("token"):', tokenFromSearchParams)
+        console.log('[LandingPage] urlParams.get("token"):', tokenFromUrlParams)
+        console.log('[LandingPage] tokenFromUrl:', tokenFromUrl)
+        console.log('[LandingPage] Final token:', token ? `${token.substring(0, 30)}...` : null)
         
         if (token && typeof window !== 'undefined') {
             console.log('[LandingPage] ✅ Processing OAuth token from URL...')
@@ -134,18 +155,44 @@ export default function LandingPage() {
         }
     }, [searchParams])
     
-    // Also check URL on mount for token (in case it was missed)
+    // Also check URL on mount for token (in case it was missed) - run immediately
     useEffect(() => {
-        // Double-check URL for token on mount
+        // Double-check URL for token on mount - run this immediately
         if (!hasProcessedToken.current && typeof window !== 'undefined') {
-            const urlParams = new URLSearchParams(window.location.search)
-            const urlToken = urlParams.get('token')
-            if (urlToken && !hasProcessedToken.current) {
-                console.log('[LandingPage] 🔍 Found token in URL on mount check! Processing...')
-                // The token processing will happen in the main useEffect
+            const currentSearch = window.location.search
+            const urlParams = currentSearch ? new URLSearchParams(currentSearch) : null
+            const urlToken = urlParams?.get('token')
+            
+            if (urlToken) {
+                console.log('[LandingPage] 🔍 Found token in URL on mount check! Processing immediately...')
+                // Process token immediately
+                hasProcessedToken.current = true
+                
+                let decodedToken = urlToken
+                try {
+                    decodedToken = decodeURIComponent(urlToken)
+                } catch (e) {
+                    console.warn('[LandingPage] Token decode failed on mount, using as-is')
+                }
+                
+                localStorage.setItem('token', decodedToken)
+                localStorage.setItem('oauth_token_fresh', 'true')
+                localStorage.setItem('oauth_token_timestamp', Date.now().toString())
+                
+                setTimeout(() => {
+                    localStorage.removeItem('oauth_token_fresh')
+                    localStorage.removeItem('oauth_token_timestamp')
+                }, 10000)
+                
+                console.log('[LandingPage] ✅ Token stored from mount check, length:', decodedToken.length)
+                
+                // Dispatch event to trigger validation
+                setTimeout(() => {
+                    window.dispatchEvent(new Event('auth-token-stored'))
+                }, 50)
             }
         }
-    }, [])
+    }, []) // Empty deps - run once on mount
     
     // Wait for auth validation to complete before redirecting
     useEffect(() => {

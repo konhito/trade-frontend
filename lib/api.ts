@@ -16,17 +16,43 @@ function getAuthToken(): string | undefined {
     console.warn('[getAuthToken] Running server-side - cannot access localStorage')
     return undefined
   }
+  
   // Try localStorage first (client-side auth)
-  const token = localStorage.getItem('token')
+  let token = localStorage.getItem('token')
+  
+  // If no token in localStorage, check URL (might be from OAuth redirect)
+  if (!token && typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search)
+    const urlToken = urlParams.get('token')
+    if (urlToken) {
+      console.log('[getAuthToken] 🔍 Found token in URL! Storing in localStorage...')
+      try {
+        token = decodeURIComponent(urlToken)
+        localStorage.setItem('token', token)
+        localStorage.setItem('oauth_token_fresh', 'true')
+        // Dispatch event to trigger validation
+        setTimeout(() => {
+          window.dispatchEvent(new Event('auth-token-stored'))
+        }, 50)
+      } catch (e) {
+        console.warn('[getAuthToken] Failed to decode token from URL')
+        token = urlToken
+        localStorage.setItem('token', token)
+      }
+    }
+  }
+  
   if (token) {
-    console.log('[getAuthToken] ✅ Found token in localStorage, length:', token.length)
+    console.log('[getAuthToken] ✅ Found token, length:', token.length)
     console.log('[getAuthToken] Token preview:', token.substring(0, 30) + '...')
     return token
   }
+  
   // Log what keys are available for debugging
-  console.error('[getAuthToken] ❌ No token found in localStorage!')
+  console.error('[getAuthToken] ❌ No token found in localStorage or URL!')
   console.error('[getAuthToken] localStorage keys:', Object.keys(localStorage))
   console.error('[getAuthToken] localStorage.getItem("token"):', localStorage.getItem('token'))
+  console.error('[getAuthToken] URL search:', window.location.search)
   // Fallback: try to get from cookies (this won't work in client-side JS, but keep for completeness)
   return undefined
 }
