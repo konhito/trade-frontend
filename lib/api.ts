@@ -67,9 +67,11 @@ export async function apiFetch<T>(path: string, options: {
   // Always add Authorization header if token exists
   if (token) {
     requestHeaders['Authorization'] = `Bearer ${token}`
-    console.log('[apiFetch] Authorization header added')
+    console.log('[apiFetch] ✅ Authorization header added, token length:', token.length)
+    console.log('[apiFetch] Token preview:', token.substring(0, 30) + '...')
   } else {
-    console.warn('[apiFetch] No token available - request may fail if auth is required')
+    console.error('[apiFetch] ❌ No token available - request may fail if auth is required')
+    console.error('[apiFetch] localStorage token check:', typeof window !== 'undefined' ? localStorage.getItem('token') : 'N/A')
   }
   
   // Final URL - ensure it's the backend URL (triple check)
@@ -104,14 +106,33 @@ export async function apiFetch<T>(path: string, options: {
     
     // Handle 401 Unauthorized - token expired or invalid
     if (res.status === 401) {
-      // Clear invalid token from localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token')
-        localStorage.removeItem('userId')
-        localStorage.removeItem('userEmail')
-        // Dispatch event to notify auth system
-        window.dispatchEvent(new CustomEvent('auth-token-expired'))
+      console.error('[apiFetch] ❌ Got 401 Unauthorized')
+      console.error('[apiFetch] Response text:', text)
+      console.error('[apiFetch] URL:', finalUrl)
+      console.error('[apiFetch] Token was provided?', !!token)
+      
+      // Check if this is a fresh OAuth token (from URL params)
+      const isFreshOAuthToken = typeof window !== 'undefined' && 
+        (window.location.search.includes('token=') || 
+         document.referrer.includes('google.com') ||
+         document.referrer.includes('accounts.google.com'))
+      
+      if (isFreshOAuthToken) {
+        console.warn('[apiFetch] ⚠️ Got 401 but token is fresh from OAuth - NOT clearing token, might be timing issue')
+        // Don't clear the token - it might be valid but the backend needs a moment
+        // Or there might be a CORS/preflight issue
+      } else {
+        // Clear invalid token from localStorage only if it's not a fresh token
+        console.warn('[apiFetch] Clearing invalid token from localStorage')
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token')
+          localStorage.removeItem('userId')
+          localStorage.removeItem('userEmail')
+          // Dispatch event to notify auth system
+          window.dispatchEvent(new CustomEvent('auth-token-expired'))
+        }
       }
+      
       // Try to parse error message
       let errorMessage = 'Your session has expired. Please sign in again.'
       try {

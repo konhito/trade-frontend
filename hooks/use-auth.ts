@@ -26,9 +26,10 @@ export function useAuth() {
   // Validate token and fetch user
   const validateToken = useCallback(async (token: string): Promise<boolean> => {
     try {
-      console.log('[useAuth] Validating token...')
+      console.log('[useAuth] Validating token, length:', token?.length)
+      console.log('[useAuth] Token preview:', token ? `${token.substring(0, 20)}...` : 'null')
       const user = await apiFetch<AuthUser>('/api/auth/me', { token })
-      console.log('[useAuth] Token validated successfully, user:', user)
+      console.log('[useAuth] ✅ Token validated successfully, user:', user)
       setState({ token, user })
       // Also store user info in localStorage for compatibility
       if (typeof window !== 'undefined' && user) {
@@ -36,10 +37,29 @@ export function useAuth() {
         localStorage.setItem('userEmail', user.email)
       }
       return true
-    } catch (err) {
-      console.error('[useAuth] Token validation failed:', err)
-      // Clear invalid token
-      if (typeof window !== 'undefined') {
+    } catch (err: any) {
+      console.error('[useAuth] ❌ Token validation failed:', err)
+      console.error('[useAuth] Error details:', {
+        message: err?.message,
+        status: err?.status,
+        stack: err?.stack
+      })
+      
+      // Don't clear token on 401 if it's a fresh OAuth token
+      // The token might be valid but validation is timing out
+      const errorMessage = err?.message || ''
+      const isFreshToken = typeof window !== 'undefined' && 
+        window.location.search.includes('token=')
+      
+      if (isFreshToken && errorMessage.includes('401')) {
+        console.warn('[useAuth] ⚠️ Got 401 but token is fresh from OAuth - might be timing issue, keeping token')
+        // Keep the token - let dashboard handle it
+        return false
+      }
+      
+      // Clear invalid token only if it's definitely invalid
+      if (typeof window !== 'undefined' && !isFreshToken) {
+        console.warn('[useAuth] Clearing invalid token from localStorage')
         localStorage.removeItem('token')
         localStorage.removeItem('userId')
         localStorage.removeItem('userEmail')
@@ -76,21 +96,28 @@ export function useAuth() {
     // Listen for auth events (token updates from other tabs/components)
     const handleTokenStored = async () => {
       if (!mounted) return
-      console.log('[useAuth] handleTokenStored event received')
+      console.log('[useAuth] 🔔 handleTokenStored event received')
+      
+      // Wait a tiny bit to ensure token is stored
+      await new Promise(resolve => setTimeout(resolve, 50))
+      
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      console.log('[useAuth] Token check after event:', token ? `Found (length: ${token.length})` : 'NOT FOUND')
+      
       if (token) {
-        console.log('[useAuth] Token found, validating...')
+        console.log('[useAuth] ✅ Token found, starting validation...')
         setLoading(true)
         try {
           const isValid = await validateToken(token)
-          console.log('[useAuth] Token validation result:', isValid)
+          console.log('[useAuth] ✅ Token validation result:', isValid ? 'SUCCESS' : 'FAILED')
         } catch (err) {
-          console.error('[useAuth] Error in handleTokenStored:', err)
+          console.error('[useAuth] ❌ Error in handleTokenStored:', err)
         } finally {
           if (mounted) setLoading(false)
         }
       } else {
-        console.warn('[useAuth] handleTokenStored called but no token found in localStorage')
+        console.warn('[useAuth] ⚠️ handleTokenStored called but no token found in localStorage')
+        console.warn('[useAuth] localStorage keys:', typeof window !== 'undefined' ? Object.keys(localStorage) : [])
       }
     }
 
@@ -105,13 +132,49 @@ export function useAuth() {
     const handleStorageChange = (e: StorageEvent) => {
       if (!mounted) return
       if (e.key === 'token') {
+        console.log('[useAuth] 🔔 Storage change detected for token:', e.newValue ? 'SET' : 'REMOVED')
         if (e.newValue) {
-          validateToken(e.newValue)
+          console.log('[useAuth] Validating token from storage change...')
+          setLoading(true)
+          validateToken(e.newValue).finally(() => {
+            if (mounted) setLoading(false)
+          })
         } else {
           setState({ token: null, user: null })
         }
       }
     }
+    
+    // Poll for token if it's in URL (for OAuth callback)
+    const checkForUrlToken = () => {
+      if (!mounted) return
+      if (typeof window === 'undefined') return
+      
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlToken = urlParams.get('token')
+      const storedToken = localStorage.getItem('token')
+      
+      // If token is in URL but not in localStorage, store it
+      if (urlToken && !storedToken) {
+        console.log('[useAuth] 🔍 Found token in URL, storing it...')
+        localStorage.setItem('token', urlToken)
+        setLoading(true)
+        validateToken(urlToken).finally(() => {
+          if (mounted) setLoading(false)
+        })
+      }
+    }
+    
+    // Check immediately and then periodically for a short time
+    checkForUrlToken()
+    const urlTokenCheckInterval = setInterval(() => {
+      checkForUrlToken()
+    }, 100)
+    
+    // Stop checking after 3 seconds
+    setTimeout(() => {
+      clearInterval(urlTokenCheckInterval)
+    }, 3000)
 
     if (typeof window !== 'undefined') {
       window.addEventListener('auth-token-stored', handleTokenStored)

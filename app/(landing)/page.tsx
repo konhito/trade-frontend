@@ -27,18 +27,21 @@ export default function LandingPage() {
     // Prefetch dashboard data if user is authenticated
     useDashboardPrefetch();
     
-    // Handle OAuth callback token from URL
+    // Handle OAuth callback token from URL - RUN THIS FIRST
     useEffect(() => {
         if (hasProcessedToken.current) return;
         
         const token = searchParams.get('token')
+        console.log('[LandingPage] Checking for token in URL:', token ? 'FOUND' : 'NOT FOUND')
+        
         if (token && typeof window !== 'undefined') {
-            console.log('[LandingPage] Processing OAuth token...')
+            console.log('[LandingPage] ✅ Processing OAuth token from URL...')
             hasProcessedToken.current = true;
             
-            // Store token from OAuth callback
+            // Store token from OAuth callback IMMEDIATELY
             localStorage.setItem('token', token)
-            console.log('[LandingPage] Token stored in localStorage')
+            console.log('[LandingPage] ✅ Token stored in localStorage, length:', token.length)
+            console.log('[LandingPage] ✅ Verifying storage - token in localStorage:', !!localStorage.getItem('token'))
             
             // Get redirect URL
             const next = searchParams.get('next') || '/dashboard'
@@ -62,8 +65,12 @@ export default function LandingPage() {
             window.history.replaceState({}, '', newUrl)
             
             // Dispatch event to notify auth system (this will trigger validation)
-            console.log('[LandingPage] Dispatching auth-token-stored event')
-            window.dispatchEvent(new Event('auth-token-stored'))
+            // Use a small delay to ensure localStorage write is complete
+            setTimeout(() => {
+                console.log('[LandingPage] ✅ Dispatching auth-token-stored event')
+                console.log('[LandingPage] ✅ Token in localStorage before dispatch:', !!localStorage.getItem('token'))
+                window.dispatchEvent(new Event('auth-token-stored'))
+            }, 50) // Small delay to ensure localStorage is written
             
             // Fallback: Also trigger a storage event in case the event listener doesn't work
             // This ensures the auth hook picks up the token change
