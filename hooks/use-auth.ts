@@ -67,11 +67,16 @@ export function useAuth() {
     initializeAuth()
 
     // Listen for auth events (token updates from other tabs/components)
-    const handleTokenStored = () => {
+    const handleTokenStored = async () => {
       if (!mounted) return
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
       if (token) {
-        validateToken(token)
+        setLoading(true)
+        try {
+          await validateToken(token)
+        } finally {
+          if (mounted) setLoading(false)
+        }
       }
     }
 

@@ -5,20 +5,24 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { useTheme } from '@/context/theme-provider'
+import { useAuth } from '@/context/auth-provider'
 import Features from './components/features'
 import Partners from './components/partners'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDashboardPrefetch } from '@/hooks/use-prefetch'
+import { Loader2 } from 'lucide-react'
 
 
 export default function LandingPage() {
     const { theme, effectiveTheme } = useTheme();
     const router = useRouter()
     const searchParams = useSearchParams()
+    const { isAuthenticated, isLoading: authLoading } = useAuth()
     const [videoLoaded, setVideoLoaded] = useState(false);
     const [videoError, setVideoError] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const hasProcessedToken = useRef(false);
+    const redirectUrlRef = useRef<string | null>(null);
     
     // Prefetch dashboard data if user is authenticated
     useDashboardPrefetch();
@@ -48,19 +52,38 @@ export default function LandingPage() {
                 }
             }
             
-            // Dispatch event to notify auth system
+            redirectUrlRef.current = nextUrl
+            
+            // Dispatch event to notify auth system (this will trigger validation)
             window.dispatchEvent(new Event('auth-token-stored'))
             
             // Remove token from URL
             const newUrl = window.location.pathname
             window.history.replaceState({}, '', newUrl)
-            
-            // Redirect to dashboard after a short delay to ensure auth state is updated
-            setTimeout(() => {
-                router.replace(nextUrl)
-            }, 300)
         }
-    }, [searchParams, router])
+    }, [searchParams])
+    
+    // Wait for auth validation to complete before redirecting
+    useEffect(() => {
+        if (hasProcessedToken.current && !authLoading && isAuthenticated && redirectUrlRef.current) {
+            // Auth validation completed successfully, now redirect
+            const nextUrl = redirectUrlRef.current
+            redirectUrlRef.current = null
+            router.replace(nextUrl)
+        }
+    }, [authLoading, isAuthenticated, router])
+    
+    // Show loading state while processing OAuth token
+    if (hasProcessedToken.current && authLoading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center">
+                <div className="flex flex-col items-center space-y-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Signing you in...</p>
+                </div>
+            </div>
+        )
+    }
 
     useEffect(() => {
         setVideoLoaded(false);
