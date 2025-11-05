@@ -102,7 +102,7 @@ export default function AdminDashboard() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'
+  const backendUrl = 'https://trade-backend-production-b0a3.up.railway.app'
 
   useEffect(() => {
     // Check if we're on admin subdomain

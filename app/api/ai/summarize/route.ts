@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 // Initialize the Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
-const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://trade-backend-production-b0a3.up.railway.app'
+const backendBaseUrl = 'https://trade-backend-production-b0a3.up.railway.app'
 
 // Helper to get auth token from cookies or headers
 async function getAuthToken(req: Request): Promise<string | null> {

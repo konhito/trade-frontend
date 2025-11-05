@@ -46,8 +46,8 @@ export function createClient() {
   return null
 }
 
-// Backend auth functions
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://trade-backend-production-b0a3.up.railway.app'
+// Backend auth functions - hardcoded for closed repo
+const BACKEND_URL = 'https://trade-backend-production-b0a3.up.railway.app'
 
 // Sign out - clear localStorage and redirect
 export function signOut() {
@@ -203,7 +203,7 @@ export function signInWithDiscord(next?: string | null) {
 export function signInWithGoogle(next?: string | null) {
   if (typeof window === 'undefined') return
   
-  const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://trade-backend-production-b0a3.up.railway.app'
+  const apiUrl = 'https://trade-backend-production-b0a3.up.railway.app'
   const nextUrl = next || '/dashboard'
   const redirectUrl = `${apiUrl}/api/auth/google?next=${encodeURIComponent(nextUrl)}`
   

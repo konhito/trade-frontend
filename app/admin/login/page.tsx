@@ -39,7 +39,7 @@ export default function AdminLoginPage() {
     setLoading(true)
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'
+      const backendUrl = 'https://trade-backend-production-b0a3.up.railway.app'
       const response = await fetch(`${backendUrl}/admin/login`, {
         method: 'POST',
         headers: {
