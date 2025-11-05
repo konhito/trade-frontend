@@ -52,7 +52,7 @@ export async function getAuthenticatedUserFromBackend(): Promise<{ id: string | 
   if (!token) return null
   
   try {
-    const res = await fetch(`${backendBaseUrl}/auth/me`, {
+    const res = await fetch(`${backendBaseUrl}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` }
     })
     if (!res.ok) return null

@@ -48,7 +48,7 @@ async function getAuthenticatedUser(req: Request): Promise<{ id: string | number
   
   // Fallback: verify token with backend to get user info
   try {
-    const res = await fetch(`${backendBaseUrl}/auth/me`, {
+    const res = await fetch(`${backendBaseUrl}/api/auth/me`, {
       headers: { Authorization: `Bearer ${authToken}` }
     })
     if (!res.ok) {

@@ -44,9 +44,19 @@ import { formatInTimeZone } from 'date-fns-tz'
 export default function CalendarPage() {
   const { effectiveTheme } = useTheme()
   const { user } = useAuth()
-  const { calendarData: baseCalendarData, statistics, isLoading, formattedTrades } = useData()
+  const { calendarData: baseCalendarData, statistics, isLoading, formattedTrades, refreshTrades } = useData()
   const [strategies, setStrategies] = useState<any[]>([])
   const [strategiesLoading, setStrategiesLoading] = useState(false)
+  
+  // Ensure trades are loaded when user is available
+  useEffect(() => {
+    if (user?.id && (!formattedTrades || formattedTrades.length === 0) && !isLoading) {
+      console.log('[Calendar] No trades found, refreshing...')
+      refreshTrades(true, String(user.id)).catch(err => {
+        console.error('[Calendar] Error refreshing trades:', err)
+      })
+    }
+  }, [user?.id, formattedTrades?.length, isLoading, refreshTrades])
 
   // Fetch strategies
   useEffect(() => {
@@ -67,11 +77,19 @@ export default function CalendarPage() {
 
   // Merge strategy historical data and trades data into calendar data
   const calendarData = useMemo(() => {
+    console.log('[Calendar] Building calendar data from:', {
+      formattedTradesLength: formattedTrades?.length || 0,
+      formattedTradesIsArray: Array.isArray(formattedTrades),
+      strategiesLength: strategies?.length || 0,
+      isLoading
+    })
+    
     // Start fresh - build calendar data from scratch to ensure trades are always included
     const enhanced: CalendarData = {}
     
     // FIRST: Process all trades to build the base calendar data
-    if (formattedTrades && Array.isArray(formattedTrades)) {
+    if (formattedTrades && Array.isArray(formattedTrades) && formattedTrades.length > 0) {
+      console.log('[Calendar] Processing', formattedTrades.length, 'trades for calendar')
       formattedTrades.forEach((trade: any) => {
         if (!trade.entryDate) return
         
@@ -182,6 +200,12 @@ export default function CalendarPage() {
           }
         })
       }
+    })
+    
+    console.log('[Calendar] Final calendar data:', {
+      datesCount: Object.keys(enhanced).length,
+      sampleDates: Object.keys(enhanced).slice(0, 5),
+      totalTrades: Object.values(enhanced).reduce((sum, day) => sum + day.trades.length, 0)
     })
     
     return enhanced

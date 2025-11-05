@@ -87,7 +87,7 @@ export default function ProfilePage() {
           avatar?: string | null
           preferences?: any
           createdAt: string
-        }>('/auth/me', { token })
+        }>('/api/auth/me', { token })
         
         setProfileData(prev => ({
           ...prev,
@@ -159,7 +159,7 @@ export default function ProfilePage() {
         company?: string | null
         avatar?: string | null
         preferences?: any
-      }>('/auth/profile', {
+      }>('/api/auth/profile', {
         method: 'PUT',
         token,
         body: updateData
@@ -213,7 +213,7 @@ export default function ProfilePage() {
         company?: string | null
         avatar?: string | null
         preferences?: any
-      }>('/auth/me', { token })
+      }>('/api/auth/me', { token })
         .then(userData => {
           setProfileData(prev => ({
             ...prev,
