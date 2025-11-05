@@ -18,3 +18,4 @@ DISCORD_WEBHOOK_URL=your_discord_webhook_url_here
 $envContent | Out-File -FilePath ".env.local" -Encoding utf8 -NoNewline
 Write-Host ".env.local file created with production values!" -ForegroundColor Green
 
+
