@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "tradovate:debug": "bun run scripts/tradovate-debug.ts"
+    "tradovate:debug": "bun run scripts/tradovate-debug.ts",
+    "test:google-signin": "node test-google-signin.js",
+    "test:auth": "node test-auth.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.38",

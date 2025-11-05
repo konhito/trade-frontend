@@ -56,11 +56,30 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Redirect to signin if not authenticated
+  // Redirect to signin if not authenticated (but wait if we have a fresh OAuth token)
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      const signInUrl = `/signin?next=${encodeURIComponent(pathname || '/dashboard')}`
-      router.replace(signInUrl)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      const isFreshOAuthToken = typeof window !== 'undefined' ? localStorage.getItem('oauth_token_fresh') === 'true' : false
+      
+      // If we have a fresh OAuth token, wait a bit longer before redirecting
+      if (token && isFreshOAuthToken) {
+        console.log('[DashboardLayout] Waiting for OAuth token validation before redirecting...')
+        const timeout = setTimeout(() => {
+          // Only redirect if still not authenticated after waiting
+          if (!isAuthenticated) {
+            console.log('[DashboardLayout] OAuth token validation timeout, redirecting to signin')
+            const signInUrl = `/signin?next=${encodeURIComponent(pathname || '/dashboard')}`
+            router.replace(signInUrl)
+          }
+        }, 3000) // Wait 3 seconds for validation
+        
+        return () => clearTimeout(timeout)
+      } else {
+        // No token or not fresh - redirect immediately
+        const signInUrl = `/signin?next=${encodeURIComponent(pathname || '/dashboard')}`
+        router.replace(signInUrl)
+      }
     }
   }, [isAuthenticated, isLoading, router, pathname])
 
@@ -104,6 +123,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }
 
+  // Retry validation if we have a token but aren't authenticated yet (OAuth callback case)
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading && typeof window !== 'undefined') {
+      const token = localStorage.getItem('token')
+      const isFreshOAuthToken = localStorage.getItem('oauth_token_fresh') === 'true'
+      
+      if (token && isFreshOAuthToken) {
+        console.log('[DashboardLayout] Token exists but not authenticated - retrying validation')
+        // Trigger validation by dispatching event
+        window.dispatchEvent(new Event('auth-token-stored'))
+      }
+    }
+  }, [isAuthenticated, isLoading])
+
   // Show loading state while checking authentication
   if (isLoading) {
     return (
@@ -117,7 +150,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   // Don't render dashboard if not authenticated (redirect will happen)
+  // But wait a bit longer if we have a fresh OAuth token
   if (!isAuthenticated) {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+    const isFreshOAuthToken = typeof window !== 'undefined' ? localStorage.getItem('oauth_token_fresh') === 'true' : false
+    
+    // If we have a fresh OAuth token, show loading instead of redirecting immediately
+    if (token && isFreshOAuthToken) {
+      return (
+        <div className="flex h-screen bg-background text-foreground items-center justify-center">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="text-sm text-muted-foreground">Signing you in...</p>
+          </div>
+        </div>
+      )
+    }
+    
     return null
   }
 

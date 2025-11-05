@@ -49,12 +49,29 @@ export function useAuth() {
       // The token might be valid but validation is timing out
       const errorMessage = err?.message || ''
       const isFreshToken = typeof window !== 'undefined' && 
-        window.location.search.includes('token=')
+        (window.location.search.includes('token=') || 
+         localStorage.getItem('oauth_token_fresh') === 'true')
       
-      if (isFreshToken && errorMessage.includes('401')) {
-        console.warn('[useAuth] ⚠️ Got 401 but token is fresh from OAuth - might be timing issue, keeping token')
-        // Keep the token - let dashboard handle it
-        return false
+      if (isFreshToken && (errorMessage.includes('401') || errorMessage.includes('Unauthorized'))) {
+        console.warn('[useAuth] ⚠️ Got 401 but token is fresh from OAuth - retrying validation in 500ms')
+        // Retry validation after a short delay - might be a timing issue
+        await new Promise(resolve => setTimeout(resolve, 500))
+        try {
+          const retryUser = await apiFetch<AuthUser>('/api/auth/me', { token })
+          console.log('[useAuth] ✅ Retry successful, user:', retryUser)
+          setState({ token, user: retryUser })
+          if (typeof window !== 'undefined' && retryUser) {
+            localStorage.setItem('userId', String(retryUser.id))
+            localStorage.setItem('userEmail', retryUser.email)
+            localStorage.removeItem('oauth_token_fresh')
+          }
+          return true
+        } catch (retryErr) {
+          console.error('[useAuth] ❌ Retry also failed:', retryErr)
+          // Keep the token anyway - let dashboard handle it
+          console.warn('[useAuth] ⚠️ Keeping token despite validation failure - dashboard will retry')
+          return false
+        }
       }
       
       // Clear invalid token only if it's definitely invalid
@@ -63,6 +80,7 @@ export function useAuth() {
         localStorage.removeItem('token')
         localStorage.removeItem('userId')
         localStorage.removeItem('userEmail')
+        localStorage.removeItem('oauth_token_fresh')
       }
       setState({ token: null, user: null })
       return false

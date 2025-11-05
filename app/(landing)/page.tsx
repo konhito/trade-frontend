@@ -40,6 +40,12 @@ export default function LandingPage() {
             
             // Store token from OAuth callback IMMEDIATELY
             localStorage.setItem('token', token)
+            // Mark this as a fresh OAuth token so validation doesn't clear it too early
+            localStorage.setItem('oauth_token_fresh', 'true')
+            // Remove the flag after 5 seconds (enough time for validation)
+            setTimeout(() => {
+                localStorage.removeItem('oauth_token_fresh')
+            }, 5000)
             console.log('[LandingPage] ✅ Token stored in localStorage, length:', token.length)
             console.log('[LandingPage] ✅ Verifying storage - token in localStorage:', !!localStorage.getItem('token'))
             

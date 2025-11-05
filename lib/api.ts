@@ -111,14 +111,16 @@ export async function apiFetch<T>(path: string, options: {
       console.error('[apiFetch] URL:', finalUrl)
       console.error('[apiFetch] Token was provided?', !!token)
       
-      // Check if this is a fresh OAuth token (from URL params)
+      // Check if this is a fresh OAuth token (from URL params or localStorage flag)
       const isFreshOAuthToken = typeof window !== 'undefined' && 
         (window.location.search.includes('token=') || 
+         localStorage.getItem('oauth_token_fresh') === 'true' ||
          document.referrer.includes('google.com') ||
          document.referrer.includes('accounts.google.com'))
       
       if (isFreshOAuthToken) {
         console.warn('[apiFetch] ⚠️ Got 401 but token is fresh from OAuth - NOT clearing token, might be timing issue')
+        console.warn('[apiFetch] ⚠️ Token will be kept - validation will retry')
         // Don't clear the token - it might be valid but the backend needs a moment
         // Or there might be a CORS/preflight issue
       } else {
