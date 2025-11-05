@@ -1,6 +1,13 @@
 // Hardcoded backend URL (closed repo - no need for env vars)
 export const backendBaseUrl = 'https://trade-backend-production-b0a3.up.railway.app'
 
+// Force log on module load to verify it's being used
+if (typeof window !== 'undefined') {
+  console.log('🔧 [api.ts] MODULE LOADED - Backend URL is:', backendBaseUrl)
+  console.log('🔧 [api.ts] Type:', typeof backendBaseUrl)
+  console.log('🔧 [api.ts] Length:', backendBaseUrl?.length)
+}
+
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 // Get auth token from localStorage or cookies
@@ -28,29 +35,24 @@ export async function apiFetch<T>(path: string, options: {
   // Use provided token or try to get from localStorage
   const token = providedToken || getAuthToken()
   
-  // Construct full URL - ensure it's absolute
-  let fullUrl: string
-  if (backendBaseUrl && backendBaseUrl.trim()) {
-    // Remove trailing slash from backendBaseUrl and leading slash from path
-    const base = backendBaseUrl.replace(/\/+$/, '')
-    const cleanPath = path.startsWith('/') ? path : `/${path}`
-    fullUrl = `${base}${cleanPath}`
-  } else {
-    // Fallback to absolute URL if backendBaseUrl is empty
-    console.error('[apiFetch] ERROR: backendBaseUrl is empty! Using hardcoded fallback')
-    fullUrl = `https://trade-backend-production-b0a3.up.railway.app${path.startsWith('/') ? path : `/${path}`}`
+  // HARDCODED: Always use this exact backend URL - no environment variables
+  const BACKEND_BASE_URL = 'https://trade-backend-production-b0a3.up.railway.app'
+  
+  // Ensure path starts with /
+  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  
+  // Construct absolute URL - NO relative paths allowed
+  const fullUrl = BACKEND_BASE_URL + cleanPath
+  
+  // CRITICAL: Validate URL is absolute
+  if (!fullUrl.startsWith('https://')) {
+    const errorMsg = `FATAL: URL is not absolute! URL: "${fullUrl}", Path: "${path}"`
+    console.error('🚨 [apiFetch]', errorMsg)
+    throw new Error(errorMsg)
   }
   
-  console.log('[apiFetch]', method, fullUrl, 'token:', token ? 'exists' : 'missing')
-  console.log('[apiFetch] Backend base URL:', backendBaseUrl)
-  console.log('[apiFetch] Path:', path)
-  console.log('[apiFetch] Full URL:', fullUrl)
-  
-  // Validate URL is absolute (starts with http:// or https://)
-  if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
-    console.error('[apiFetch] ERROR: URL is not absolute!', fullUrl)
-    throw new Error(`Invalid backend URL: ${fullUrl}`)
-  }
+  // Log for debugging
+  console.log('[apiFetch]', method, '→', fullUrl)
   
   // Build headers
   const requestHeaders: Record<string, string> = {
@@ -66,7 +68,13 @@ export async function apiFetch<T>(path: string, options: {
     console.warn('[apiFetch] No token available - request may fail if auth is required')
   }
   
-  const res = await fetch(fullUrl, {
+  // Final URL - already validated as absolute above
+  const finalUrl = fullUrl
+  
+  console.error('🚨 [apiFetch] FINAL URL BEING FETCHED:', finalUrl)
+  console.error('🚨 [apiFetch] URL type check:', typeof finalUrl, 'starts with https?', finalUrl.startsWith('https://'))
+  
+  const res = await fetch(finalUrl, {
     method,
     headers: requestHeaders,
     credentials: 'include', // Include cookies in the request
