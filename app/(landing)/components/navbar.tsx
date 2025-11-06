@@ -234,7 +234,7 @@ export default function Component() {
             <span className={`h-14 fixed top-0 left-0 right-0 bg-background z-50 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}></span>
             <header className={`max-w-7xl mx-auto fixed top-0 left-0 right-0 px-4 lg:px-6 h-14 flex items-center justify-between z-50  text-foreground transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
                 <Link href="/" className="flex items-center space-x-2">
-                    <Logo width={64} height={64} />
+                    <Logo width={80} height={80} />
                     <span className="font-bold text-xl">MyTradeJournal</span>
                 </Link>
                 <div className="hidden lg:block">
@@ -440,7 +440,7 @@ export default function Component() {
                             transition={{ duration: 0.1 }}
                         >
                             <span className="sr-only">MyTradeJournal Logo</span>
-                            <Logo width={64} height={64} />
+                            <Logo width={80} height={80} />
                         </motion.button>
 
                         <motion.button
