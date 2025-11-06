@@ -31,13 +31,24 @@ export function useAuth() {
       
       const user = await apiFetch<AuthUser>('/api/auth/me', { token })
       console.log('[useAuth] ✅ Token validated successfully, user:', user)
-      setState({ token, user })
-      // Also store user info in localStorage for compatibility
-      if (typeof window !== 'undefined' && user) {
-        localStorage.setItem('userId', String(user.id))
-        localStorage.setItem('userEmail', user.email)
-        localStorage.removeItem('oauth_token_fresh')
-        localStorage.removeItem('oauth_token_timestamp')
+      
+      // Safely update state - wrap in try-catch to prevent errors during navigation
+      try {
+        setState({ token, user })
+        // Also store user info in localStorage for compatibility
+        if (typeof window !== 'undefined' && user) {
+          try {
+            localStorage.setItem('userId', String(user.id))
+            localStorage.setItem('userEmail', user.email)
+            localStorage.removeItem('oauth_token_fresh')
+            localStorage.removeItem('oauth_token_timestamp')
+          } catch (storageError) {
+            console.warn('[useAuth] localStorage error (non-critical):', storageError)
+          }
+        }
+      } catch (stateError) {
+        console.error('[useAuth] Error updating state (component may be unmounting):', stateError)
+        // Don't throw - state update errors shouldn't break the flow
       }
       return true
     } catch (err: any) {
@@ -75,13 +86,24 @@ export function useAuth() {
       // Clear invalid token only if it's definitely invalid (not fresh)
       if (typeof window !== 'undefined' && !isFreshToken) {
         console.warn('[useAuth] Clearing invalid token from localStorage')
-        localStorage.removeItem('token')
-        localStorage.removeItem('userId')
-        localStorage.removeItem('userEmail')
-        localStorage.removeItem('oauth_token_fresh')
-        localStorage.removeItem('oauth_token_timestamp')
+        try {
+          localStorage.removeItem('token')
+          localStorage.removeItem('userId')
+          localStorage.removeItem('userEmail')
+          localStorage.removeItem('oauth_token_fresh')
+          localStorage.removeItem('oauth_token_timestamp')
+        } catch (storageError) {
+          console.warn('[useAuth] localStorage error during cleanup:', storageError)
+        }
       }
-      setState({ token: null, user: null })
+      
+      // Safely update state - wrap in try-catch to prevent errors during navigation
+      try {
+        setState({ token: null, user: null })
+      } catch (stateError) {
+        console.error('[useAuth] Error updating state (component may be unmounting):', stateError)
+        // Don't throw - state update errors shouldn't break the flow
+      }
       return false
     }
   }, [])
@@ -113,28 +135,48 @@ export function useAuth() {
     // Listen for auth events (token updates from other tabs/components)
     const handleTokenStored = async () => {
       if (!mounted) return
-      console.log('[useAuth] 🔔 handleTokenStored event received')
-      
-      // Wait a tiny bit to ensure token is stored
-      await new Promise(resolve => setTimeout(resolve, 50))
-      
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-      console.log('[useAuth] Token check after event:', token ? `Found (length: ${token.length})` : 'NOT FOUND')
-      
-      if (token) {
-        console.log('[useAuth] ✅ Token found, starting validation...')
-        setLoading(true)
-        try {
-          const isValid = await validateToken(token)
-          console.log('[useAuth] ✅ Token validation result:', isValid ? 'SUCCESS' : 'FAILED')
-        } catch (err) {
-          console.error('[useAuth] ❌ Error in handleTokenStored:', err)
-        } finally {
-          if (mounted) setLoading(false)
+      try {
+        console.log('[useAuth] 🔔 handleTokenStored event received')
+        
+        // Wait a tiny bit to ensure token is stored
+        await new Promise(resolve => setTimeout(resolve, 50))
+        if (!mounted) return // Check again after delay
+        
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+        console.log('[useAuth] Token check after event:', token ? `Found (length: ${token.length})` : 'NOT FOUND')
+        
+        if (token) {
+          console.log('[useAuth] ✅ Token found, starting validation...')
+          if (mounted) {
+            try {
+              setLoading(true)
+            } catch (e) {
+              console.warn('[useAuth] Error setting loading state:', e)
+              return
+            }
+          }
+          try {
+            const isValid = await validateToken(token)
+            console.log('[useAuth] ✅ Token validation result:', isValid ? 'SUCCESS' : 'FAILED')
+          } catch (err) {
+            console.error('[useAuth] ❌ Error in handleTokenStored:', err)
+            // Don't throw - just log the error
+          } finally {
+            if (mounted) {
+              try {
+                setLoading(false)
+              } catch (e) {
+                console.warn('[useAuth] Error setting loading state in finally:', e)
+              }
+            }
+          }
+        } else {
+          console.warn('[useAuth] ⚠️ handleTokenStored called but no token found in localStorage')
+          console.warn('[useAuth] localStorage keys:', typeof window !== 'undefined' ? Object.keys(localStorage) : [])
         }
-      } else {
-        console.warn('[useAuth] ⚠️ handleTokenStored called but no token found in localStorage')
-        console.warn('[useAuth] localStorage keys:', typeof window !== 'undefined' ? Object.keys(localStorage) : [])
+      } catch (error) {
+        console.error('[useAuth] Error in handleTokenStored:', error)
+        // Don't throw - prevent error from bubbling up
       }
     }
 
