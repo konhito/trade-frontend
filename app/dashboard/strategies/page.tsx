@@ -29,6 +29,7 @@ import {
   BarChart4,
   Calendar,
   ImagePlus,
+  FileText,
   X,
   Download
 } from "lucide-react"
@@ -614,18 +615,24 @@ export default function StrategiesPage() {
                             // Handle base64 data URL
                             const base64Data = strategy.image
                             
-                            // Determine file extension from data URL or default to png
-                            let extension = 'png'
-                            let mimeType = 'image/png'
-                            if (base64Data.includes('data:image/jpeg') || base64Data.includes('data:image/jpg')) {
-                              extension = 'jpg'
-                              mimeType = 'image/jpeg'
-                            } else if (base64Data.includes('data:image/webp')) {
-                              extension = 'webp'
-                              mimeType = 'image/webp'
-                            } else if (base64Data.includes('data:image/png')) {
-                              extension = 'png'
-                              mimeType = 'image/png'
+                            // Determine file type from data URL or default to pdf
+                            let extension = 'pdf'
+                            let mimeType = 'application/pdf'
+                            if (base64Data.includes('data:application/pdf')) {
+                              extension = 'pdf'
+                              mimeType = 'application/pdf'
+                            } else if (base64Data.includes('data:image/')) {
+                              // Legacy support for old image data
+                              if (base64Data.includes('data:image/jpeg') || base64Data.includes('data:image/jpg')) {
+                                extension = 'jpg'
+                                mimeType = 'image/jpeg'
+                              } else if (base64Data.includes('data:image/webp')) {
+                                extension = 'webp'
+                                mimeType = 'image/webp'
+                              } else if (base64Data.includes('data:image/png')) {
+                                extension = 'png'
+                                mimeType = 'image/png'
+                              }
                             }
                             
                             // Convert base64 to blob
@@ -642,21 +649,21 @@ export default function StrategiesPage() {
                             const url = URL.createObjectURL(blob)
                             const link = document.createElement('a')
                             link.href = url
-                            link.download = `${(strategy.name || 'strategy').replace(/[^a-z0-9]/gi, '_').toLowerCase()}-image.${extension}`
+                            link.download = `${(strategy.name || 'strategy').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.${extension}`
                             document.body.appendChild(link)
                             link.click()
                             document.body.removeChild(link)
                             URL.revokeObjectURL(url)
                             
-                            toast.success('Image downloaded successfully')
+                            toast.success(`${extension.toUpperCase()} downloaded successfully`)
                           } catch (error) {
-                            console.error('Error downloading image:', error)
-                            toast.error('Failed to download image')
+                            console.error('Error downloading file:', error)
+                            toast.error('Failed to download file')
                           }
                         }}
                       >
                         <Download className="w-4 h-4 mr-2" />
-                        Download Image
+                        Download PDF
                       </Button>
                     )}
                   </div>
@@ -786,19 +793,19 @@ function AddStrategyModal({
     }
   }, [initialData, open])
 
-  const handleImageUpload = async (file: File) => {
+  const handleFileUpload = async (file: File) => {
     if (!file) return
 
-    const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
-    const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB for PDFs
+    const ACCEPTED_FILE_TYPES = ['application/pdf']
 
     if (file.size > MAX_FILE_SIZE) {
-      toast.error('Image size must be less than 5MB')
+      toast.error('PDF size must be less than 10MB')
       return
     }
 
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      toast.error('Please upload a valid image (JPEG, PNG, or WebP)')
+    if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
+      toast.error('Please upload a valid PDF file')
       return
     }
 
@@ -808,21 +815,21 @@ function AddStrategyModal({
       reader.onloadend = () => {
         const base64String = reader.result as string
         setFormData(prev => ({ ...prev, image: base64String }))
-        toast.success('Image uploaded successfully')
+        toast.success('PDF uploaded successfully')
         setIsUploading(false)
       }
       reader.onerror = () => {
-        toast.error('Failed to read image file')
+        toast.error('Failed to read PDF file')
         setIsUploading(false)
       }
       reader.readAsDataURL(file)
     } catch (error) {
-      toast.error('Failed to upload image')
+      toast.error('Failed to upload PDF')
       setIsUploading(false)
     }
   }
 
-  const removeImage = () => {
+  const removeFile = () => {
     setFormData(prev => ({ ...prev, image: null }))
   }
 
@@ -836,9 +843,9 @@ function AddStrategyModal({
 
     try {
       setSaving(true)
-      // Log image data before sending
-      console.log('[AddStrategyModal] Image data:', formData.image ? `Base64 string (${formData.image.length} chars)` : 'null')
-      console.log('[AddStrategyModal] Image preview (first 100 chars):', formData.image ? formData.image.substring(0, 100) : 'null')
+      // Log PDF data before sending
+      console.log('[AddStrategyModal] PDF data:', formData.image ? `Base64 string (${formData.image.length} chars)` : 'null')
+      console.log('[AddStrategyModal] PDF preview (first 100 chars):', formData.image ? formData.image.substring(0, 100) : 'null')
       
       const strategyPayload = {
         name: formData.name,
@@ -846,7 +853,7 @@ function AddStrategyModal({
         category: formData.category,
         rules: formData.rules,
         parameters: formData.parameters,
-        image: formData.image && formData.image.trim().length > 0 ? formData.image : null // Ensure null instead of empty string
+        image: formData.image && formData.image.trim().length > 0 ? formData.image : null // Store PDF as base64 in image field (no DB migration needed)
       }
       
       console.log('[AddStrategyModal] Calling onSave with data:', {
@@ -947,37 +954,36 @@ function AddStrategyModal({
           </div>
 
           <div>
-            <Label className="text-foreground">Strategy Image (Optional)</Label>
-            <p className="text-xs text-muted-foreground mb-2">Upload a screenshot or image of your strategy to download later</p>
+            <Label className="text-foreground">Strategy PDF (Optional)</Label>
+            <p className="text-xs text-muted-foreground mb-2">Upload a PDF document of your strategy to download later</p>
             {formData.image ? (
-              <div className="relative">
-                <img 
-                  src={formData.image} 
-                  alt="Strategy preview" 
-                  className="w-full h-48 object-contain rounded-md border border-input bg-muted"
-                />
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  className="absolute top-2 right-2"
-                  onClick={removeImage}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+              <div className="relative flex items-center justify-center p-8 border border-input bg-muted rounded-md">
+                <div className="flex flex-col items-center gap-2">
+                  <FileText className="w-12 h-12 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">PDF file uploaded</p>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={removeFile}
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Remove PDF
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="flex items-center">
                 <Input
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  accept="application/pdf"
                   onChange={(e) => {
                     const file = e.target.files?.[0]
-                    if (file) handleImageUpload(file)
+                    if (file) handleFileUpload(file)
                     e.target.value = ''
                   }}
                   className="hidden"
-                  id="strategy-image-upload"
+                  id="strategy-pdf-upload"
                   disabled={isUploading}
                 />
                 <Button
@@ -987,9 +993,9 @@ function AddStrategyModal({
                   className="w-full"
                   disabled={isUploading}
                 >
-                  <label htmlFor="strategy-image-upload" className="cursor-pointer">
-                    <ImagePlus className="mr-2 h-4 w-4" />
-                    {isUploading ? 'Uploading...' : 'Upload Image'}
+                  <label htmlFor="strategy-pdf-upload" className="cursor-pointer">
+                    <FileText className="mr-2 h-4 w-4" />
+                    {isUploading ? 'Uploading...' : 'Upload PDF'}
                   </label>
                 </Button>
               </div>

@@ -582,29 +582,44 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
                       </div>
                       <div className="flex-1 flex flex-col justify-end gap-0.5">
                         {dayData ? (
-                          <div className={cn(
-                            "text-[9px] sm:text-[11px] font-semibold truncate text-center",
-                            dayData.pnl >= 0
-                              ? "text-green-600 dark:text-green-400"
-                              : "text-red-600 dark:text-red-400",
-                            !isCurrentMonth && "opacity-50"
-                          )}>
-                            {formatCurrency(dayData.pnl)}
-                          </div>
+                          <>
+                            {/* Show cumulative P&L (running total) */}
+                            <div className={cn(
+                              "text-[9px] sm:text-[11px] font-bold truncate text-center",
+                              (dayData.cumulativePnl ?? dayData.pnl) >= 0
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-red-600 dark:text-red-400",
+                              !isCurrentMonth && "opacity-50"
+                            )}>
+                              {formatCurrency(dayData.cumulativePnl ?? dayData.pnl)}
+                            </div>
+                            {/* Show daily P&L in smaller text below */}
+                            {dayData.pnl !== 0 && (
+                              <div className={cn(
+                                "text-[8px] sm:text-[10px] font-medium truncate text-center",
+                                dayData.pnl >= 0
+                                  ? "text-green-500 dark:text-green-500"
+                                  : "text-red-500 dark:text-red-500",
+                                !isCurrentMonth && "opacity-50"
+                              )}>
+                                {dayData.pnl >= 0 ? '+' : ''}{formatCurrency(dayData.pnl)}
+                              </div>
+                            )}
+                            {/* Show trade/strategy count */}
+                            {(dayData.tradeNumber > 0 || (dayData.strategies && dayData.strategies.length > 0)) && (
+                              <div className="text-[8px] text-muted-foreground text-center">
+                                {dayData.tradeNumber > 0 && `${dayData.tradeNumber}T`}
+                                {dayData.tradeNumber > 0 && dayData.strategies && dayData.strategies.length > 0 && '/'}
+                                {dayData.strategies && dayData.strategies.length > 0 && `${dayData.strategies.length}S`}
+                              </div>
+                            )}
+                          </>
                         ) : (
                           <div className={cn(
                             "text-[9px] sm:text-[11px] font-semibold invisible text-center",
                             !isCurrentMonth && "opacity-50"
                           )}>{formatCurrency(0)}</div>
                         )}
-                        <div className={cn(
-                          "text-[7px] sm:text-[9px] text-muted-foreground truncate text-center",
-                          !isCurrentMonth && "opacity-50"
-                        )}>
-                          {dayData
-                            ? `${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? 'trades' : 'trade'}`
-                            : 'No trades'}
-                        </div>
                         {dayData && (
                           <>
                             <div className={cn(

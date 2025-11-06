@@ -2,6 +2,7 @@ import { Trade } from "@/lib/types";
 
 export interface CalendarEntry {
   pnl: number;
+  cumulativePnl?: number;
   tradeNumber: number;
   longNumber: number;
   shortNumber: number;

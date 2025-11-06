@@ -15,7 +15,7 @@ interface Entry {
   live: string
   backtest: string
   lotSize: string
-  deployedDate: string
+  deployedCapital: string
   note: string
 }
 
@@ -53,7 +53,7 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
           live: String(e.live || ''),
           backtest: String(e.backtest || ''),
           lotSize: String(e.lotSize || ''),
-          deployedDate: e.deployedDate || '',
+          deployedCapital: String(e.deployedCapital || e.deployedDate || ''), // Migrate from deployedDate if exists
           note: e.note || '-'
         }))
         
@@ -96,7 +96,7 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
     if (!data) return
     setData(prev => prev ? {
       ...prev,
-      entries: [...prev.entries, { date: '', day: '', live: '', backtest: '', lotSize: '', deployedDate: '', note: '-' }],
+      entries: [...prev.entries, { date: '', day: '', live: '', backtest: '', lotSize: '', deployedCapital: '', note: '-' }],
       total: { live: prev.total.live, backtest: prev.total.backtest, lotSize: prev.total.lotSize }
     } : null)
   }
@@ -193,7 +193,7 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
               <TableHead className="bg-muted text-right font-bold">Live P&L</TableHead>
               <TableHead className="bg-muted text-right font-bold">Backtest P&L</TableHead>
               <TableHead className="bg-muted text-right font-bold">Lot Size</TableHead>
-              <TableHead className="bg-muted font-bold">Deployed Date</TableHead>
+              <TableHead className="bg-muted text-right font-bold">Deployed Capital</TableHead>
               <TableHead className="bg-muted font-bold">Note</TableHead>
               <TableHead className="bg-muted w-20 text-center font-bold">Action</TableHead>
             </TableRow>
@@ -282,37 +282,15 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
                       type="number"
                     />
                   </TableCell>
-                  <TableCell className="p-1">
-                    <div className="flex items-center gap-1">
-                      <Input
-                        value={entry.deployedDate}
-                        onChange={(e) => updateEntry(idx, 'deployedDate', e.target.value)}
-                        className="h-8 border-input bg-background focus-visible:ring-1 focus-visible:ring-ring flex-1"
-                        placeholder="YYYY-MM-DD"
-                        type="date"
-                      />
-                      <Popover open={openDatePicker === idx + 1000} onOpenChange={(open) => setOpenDatePicker(open ? idx + 1000 : null)}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                            <CalendarIcon className="h-4 w-4" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={entry.deployedDate ? new Date(entry.deployedDate) : undefined}
-                            onSelect={(date) => {
-                              if (date && data) {
-                                const formattedDate = format(date, 'yyyy-MM-dd')
-                                updateEntry(idx, 'deployedDate', formattedDate)
-                                setOpenDatePicker(null)
-                              }
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
+                  <TableCell className="p-1 text-right">
+                    <Input
+                      value={entry.deployedCapital}
+                      onChange={(e) => updateEntry(idx, 'deployedCapital', e.target.value)}
+                      className="h-8 border-input bg-background focus-visible:ring-1 focus-visible:ring-ring text-right"
+                      placeholder="0"
+                      type="number"
+                      step="0.01"
+                    />
                   </TableCell>
                   <TableCell className="p-1">
                     <Input
@@ -382,7 +360,7 @@ export function HistoricalDataTable({ data: initialData, onDataChange, strategyN
                 live: '', 
                 backtest: '', 
                 lotSize: '', 
-                deployedDate: '', 
+                deployedCapital: '', 
                 note: '-' 
               }],
               total: { live: prev.total.live, backtest: prev.total.backtest, lotSize: prev.total.lotSize }

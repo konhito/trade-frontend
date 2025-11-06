@@ -75,7 +75,7 @@ export default function CalendarPage() {
     fetchStrategies()
   }, [user?.id])
 
-  // Merge strategy historical data and trades data into calendar data
+  // Merge strategy historical data and trades data into calendar data with cumulative P&L
   const calendarData = useMemo(() => {
     console.log('[Calendar] Building calendar data from:', {
       formattedTradesLength: formattedTrades?.length || 0,
@@ -103,6 +103,7 @@ export default function CalendarPage() {
           if (!enhanced[dateKey]) {
             enhanced[dateKey] = {
               pnl: 0,
+              cumulativePnl: 0,
               tradeNumber: 0,
               longNumber: 0,
               shortNumber: 0,
@@ -148,64 +149,94 @@ export default function CalendarPage() {
     }
     
     // SECOND: Add strategy historical data P&L to calendar data (on top of trades)
-    strategies.forEach((strategy) => {
-      if (!strategy.historicalData) return
-      
-      let historicalData = strategy.historicalData
-      if (typeof historicalData === 'string') {
-        try {
-          historicalData = JSON.parse(historicalData)
-        } catch {
+    if (strategies && strategies.length > 0) {
+      console.log('[Calendar] Processing', strategies.length, 'strategies for calendar')
+      strategies.forEach((strategy) => {
+        if (!strategy.historicalData) {
+          console.log('[Calendar] Strategy', strategy.name, 'has no historicalData')
           return
         }
-      }
-      
-      if (historicalData && historicalData.entries && Array.isArray(historicalData.entries)) {
-        historicalData.entries.forEach((entry: any) => {
-          if (!entry.date || !entry.live) return
-          
+        
+        let historicalData = strategy.historicalData
+        if (typeof historicalData === 'string') {
           try {
-            const entryDate = new Date(entry.date)
-            if (isNaN(entryDate.getTime())) return
-            
-            const dateKey = formatInTimeZone(entryDate, 'UTC', 'yyyy-MM-dd')
-            const livePnL = parseFloat(String(entry.live)) || 0
-            
-            // Initialize date entry if it doesn't exist (preserve trades if they exist)
-            if (!enhanced[dateKey]) {
-              enhanced[dateKey] = {
-                pnl: 0,
-                tradeNumber: 0,
-                longNumber: 0,
-                shortNumber: 0,
-                trades: [],
-                strategies: []
-              }
-            }
-            
-            // Calculate trades P&L separately (don't overwrite)
-            const tradesPnL = enhanced[dateKey].trades.reduce((sum: number, trade: any) => {
-              const pnl = (parseFloat(String(trade.pnl)) || 0) - (parseFloat(String(trade.commission)) || 0)
-              return sum + (isNaN(pnl) ? 0 : pnl)
-            }, 0)
-            
-            // Add strategy P&L to trades P&L (not replace)
-            enhanced[dateKey].pnl = tradesPnL + livePnL
-            
-            if (strategy.name && !enhanced[dateKey].strategies.includes(strategy.name)) {
-              enhanced[dateKey].strategies.push(strategy.name)
-            }
+            historicalData = JSON.parse(historicalData)
           } catch (error) {
-            console.error('[Calendar] Error processing strategy entry:', error)
+            console.error('[Calendar] Error parsing strategy historicalData JSON:', error)
+            return
           }
-        })
-      }
+        }
+        
+        if (historicalData && historicalData.entries && Array.isArray(historicalData.entries)) {
+          console.log('[Calendar] Strategy', strategy.name, 'has', historicalData.entries.length, 'entries')
+          historicalData.entries.forEach((entry: any) => {
+            if (!entry.date || entry.live === undefined || entry.live === null) {
+              console.log('[Calendar] Skipping strategy entry - missing date or live:', entry)
+              return
+            }
+            
+            try {
+              const entryDate = new Date(entry.date)
+              if (isNaN(entryDate.getTime())) {
+                console.error('[Calendar] Invalid date for strategy entry:', entry.date)
+                return
+              }
+              
+              const dateKey = formatInTimeZone(entryDate, 'UTC', 'yyyy-MM-dd')
+              const livePnL = parseFloat(String(entry.live)) || 0
+              
+              // Initialize date entry if it doesn't exist (preserve trades if they exist)
+              if (!enhanced[dateKey]) {
+                enhanced[dateKey] = {
+                  pnl: 0,
+                  cumulativePnl: 0,
+                  tradeNumber: 0,
+                  longNumber: 0,
+                  shortNumber: 0,
+                  trades: [],
+                  strategies: []
+                }
+              }
+              
+              // Calculate trades P&L separately (don't overwrite)
+              const tradesPnL = enhanced[dateKey].trades.reduce((sum: number, trade: any) => {
+                const pnl = (parseFloat(String(trade.pnl)) || 0) - (parseFloat(String(trade.commission)) || 0)
+                return sum + (isNaN(pnl) ? 0 : pnl)
+              }, 0)
+              
+              // Add strategy P&L to trades P&L (not replace)
+              enhanced[dateKey].pnl = tradesPnL + livePnL
+              
+              if (strategy.name && !enhanced[dateKey].strategies.includes(strategy.name)) {
+                enhanced[dateKey].strategies.push(strategy.name)
+              }
+            } catch (error) {
+              console.error('[Calendar] Error processing strategy entry:', error, entry)
+            }
+          })
+        } else {
+          console.log('[Calendar] Strategy', strategy.name, 'has no entries array')
+        }
+      })
+    }
+    
+    // THIRD: Calculate cumulative P&L by sorting dates and accumulating
+    const sortedDates = Object.keys(enhanced).sort((a, b) => {
+      return new Date(a).getTime() - new Date(b).getTime()
+    })
+    
+    let cumulativeTotal = 0
+    sortedDates.forEach((dateKey) => {
+      cumulativeTotal += enhanced[dateKey].pnl
+      enhanced[dateKey].cumulativePnl = cumulativeTotal
     })
     
     console.log('[Calendar] Final calendar data:', {
       datesCount: Object.keys(enhanced).length,
       sampleDates: Object.keys(enhanced).slice(0, 5),
-      totalTrades: Object.values(enhanced).reduce((sum, day) => sum + day.trades.length, 0)
+      totalTrades: Object.values(enhanced).reduce((sum, day) => sum + day.trades.length, 0),
+      totalStrategies: Object.values(enhanced).reduce((sum, day) => sum + day.strategies.length, 0),
+      finalCumulativePnl: cumulativeTotal
     })
     
     return enhanced
