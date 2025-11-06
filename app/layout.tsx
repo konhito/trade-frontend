@@ -10,9 +10,12 @@ import { ReactNode } from "react";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "MyTradeJournal",
-  description: "Record, Review and Refine your trading journey",
-  metadataBase: new URL('https://mytradejournal.app'),
+  title: {
+    default: "MyTradeJournal - Professional Trading Journal & Analytics Platform",
+    template: "%s | MyTradeJournal"
+  },
+  description: "Record, Review and Refine your trading journey. Track, analyze, and improve your trading performance with powerful AI-powered analytics across multiple brokers.",
+  metadataBase: new URL('https://www.mytradejournal.co.in'),
   openGraph: {
     title: "MyTradeJournal",
     description: "Record, Review and Refine your trading journey. Advanced analytics platform for modern traders.",

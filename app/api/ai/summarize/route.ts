@@ -7,6 +7,9 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 const backendBaseUrl = 'https://trade-backend-production-b0a3.up.railway.app'
 
+// Allow up to 60 seconds for AI generation
+export const maxDuration = 60
+
 // Helper to get auth token from cookies or headers
 async function getAuthToken(req: Request): Promise<string | null> {
   // Try to get from Authorization header first
@@ -108,168 +111,140 @@ export async function POST(req: Request) {
     
     console.log('[AI Summarize] Using token for API calls:', token ? 'token exists' : 'no token')
 
-    // Fetch recent trades for analysis from backend API
-    const tradesResponse = await fetch(`${backendBaseUrl}/trades?userId=${String(user.id)}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    if (!tradesResponse.ok) {
-      throw new Error('Failed to fetch trades')
-    }
-    const tradesResponseData = await tradesResponse.json()
-    const allTrades = tradesResponseData.trades || []
+    // Fetch recent trades for analysis from backend API with timeout
+    const tradesController = new AbortController()
+    const tradesTimeout = setTimeout(() => tradesController.abort(), 10000) // 10 second timeout
     
-    // Get recent 50 trades, sorted by entryDate
+    let allTrades: any[] = []
+    try {
+      const tradesResponse = await fetch(`${backendBaseUrl}/trades?userId=${String(user.id)}&limit=50`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: tradesController.signal
+      })
+      clearTimeout(tradesTimeout)
+      
+      if (!tradesResponse.ok) {
+        throw new Error('Failed to fetch trades')
+      }
+      const tradesResponseData = await tradesResponse.json()
+      allTrades = tradesResponseData.trades || []
+    } catch (error: any) {
+      clearTimeout(tradesTimeout)
+      if (error.name === 'AbortError') {
+        console.error('[AI Summarize] Trades fetch timeout')
+      } else {
+        console.error('[AI Summarize] Error fetching trades:', error)
+      }
+      // Continue with empty trades array rather than failing completely
+    }
+    
+    // Get recent 30 trades (reduced from 50 for faster processing), sorted by entryDate
     const recentTrades = allTrades
       .sort((a: any, b: any) => {
         const dateA = new Date(a.entryDate || a.createdAt || 0).getTime()
         const dateB = new Date(b.entryDate || b.createdAt || 0).getTime()
         return dateB - dateA
       })
-      .slice(0, 50)
+      .slice(0, 30) // Reduced from 50 to 30 for faster processing
       .map((trade: any) => ({
-        symbol: trade.symbol || trade.instrument,
-        direction: trade.direction || trade.side,
-        pnl: trade.pnl || 0,
-        pnlPercent: trade.pnlPercent || 0,
-        entryDate: trade.entryDate || trade.createdAt,
-        entryPrice: trade.entryPrice || 0,
-        closePrice: trade.exitPrice || trade.closePrice || 0,
-        quantity: trade.quantity || 0,
-        strategy: trade.strategy || null,
+        s: trade.symbol || trade.instrument, // Shortened keys
+        d: trade.direction || trade.side,
+        p: trade.pnl || 0,
+        pp: trade.pnlPercent || 0,
+        ed: trade.entryDate || trade.createdAt,
+        ep: trade.entryPrice || 0,
+        cp: trade.exitPrice || trade.closePrice || 0,
+        q: trade.quantity || 0,
+        st: trade.strategy || null,
       }))
 
-    // Fetch strategies for strategy analysis from backend API
-    const strategiesResponse = await fetch(`${backendBaseUrl}/strategies?userId=${String(user.id)}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    if (!strategiesResponse.ok) {
-      throw new Error('Failed to fetch strategies')
+    // Fetch strategies for strategy analysis from backend API with timeout
+    const strategiesController = new AbortController()
+    const strategiesTimeout = setTimeout(() => strategiesController.abort(), 10000) // 10 second timeout
+    
+    let strategies: any[] = []
+    try {
+      const strategiesResponse = await fetch(`${backendBaseUrl}/strategies?userId=${String(user.id)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: strategiesController.signal
+      })
+      clearTimeout(strategiesTimeout)
+      
+      if (!strategiesResponse.ok) {
+        throw new Error('Failed to fetch strategies')
+      }
+      const strategiesResponseData = await strategiesResponse.json()
+      strategies = (strategiesResponseData.strategies || []).slice(0, 10).map((strategy: any) => ({ // Limit to 10 strategies
+        id: strategy.id,
+        n: strategy.name, // Shortened keys
+        d: strategy.description,
+        c: strategy.category,
+        a: strategy.isActive ?? true,
+      }))
+    } catch (error: any) {
+      clearTimeout(strategiesTimeout)
+      if (error.name === 'AbortError') {
+        console.error('[AI Summarize] Strategies fetch timeout')
+      } else {
+        console.error('[AI Summarize] Error fetching strategies:', error)
+      }
+      // Continue with empty strategies array
     }
-    const strategiesResponseData = await strategiesResponse.json()
-    const strategies = (strategiesResponseData.strategies || []).map((strategy: any) => ({
-      id: strategy.id,
-      name: strategy.name,
-      description: strategy.description,
-      category: strategy.category,
-      historicalData: strategy.historicalData,
-      isActive: strategy.isActive ?? true,
-      createdAt: strategy.createdAt
-    }))
 
-    // Get the model
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+    // Get the model with optimized settings
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.5-flash',
+      generationConfig: {
+        maxOutputTokens: 2048, // Limit response length for faster generation
+        temperature: 0.7,
+      }
+    })
 
-    // Create prompts based on summary type
-    const tradesData = JSON.stringify(recentTrades, null, 2)
-    const strategiesData = JSON.stringify(strategies, null, 2)
+    // Create prompts based on summary type - use compact JSON
+    const tradesData = JSON.stringify(recentTrades) // Compact format (no pretty print)
+    const strategiesData = JSON.stringify(strategies) // Compact format
 
       const prompts: Record<string, string> = {
-        daily: `You are an expert trading analyst. Based on the following recent trading data, provide a comprehensive daily trading summary:
-      
-      Recent Trades (last 50):
-      ${tradesData}
-      
-      Generate a detailed analysis including:
-      - Performance overview (win rate, total P&L, best/worst trades)
-      - Key patterns and insights from recent trading activity
-      - Specific recommendations for improvement
-      - Risk assessment and position sizing analysis
-      
-      Format your response as clean, well-structured markdown with:
-      - Clear headings using ## and ###
-      - Bullet points using - or *
-      - Bold text for important metrics using **text**
-      - Tables for data comparison when relevant
-      - Horizontal rules (---) to separate sections
-      - Professional formatting that's easy to read
-      
-      Be specific about the data and provide actionable insights.`,
+        daily: `Analyze these trades and provide a concise daily summary. Data: ${tradesData}
 
-        strategy: `You are an expert trading analyst. Analyze the following trading strategies:
-      
-      Strategies Data:
-      ${strategiesData}
-      
-      Recent Trades Data:
-      ${tradesData}
-      
-      Provide a comprehensive strategy review including:
-      - Overall performance metrics for each strategy (win rate, profit factor, P&L)
-      - Comparison between different strategies
-      - Strengths and weaknesses analysis
-      - Market condition impact on strategy performance
-      - Specific optimization recommendations
-      - Risk management assessment
-      
-      Format your response as clean, well-structured markdown with:
-      - Clear headings using ## and ###
-      - Bullet points using - or *
-      - Bold text for important metrics using **text**
-      - Tables for strategy comparison when relevant
-      - Horizontal rules (---) to separate sections
-      - Professional formatting that's easy to read
-      
-      Be specific about the data and provide actionable recommendations.`,
+Provide: Performance overview (win rate, P&L), key patterns, improvement recommendations, and risk assessment. Use markdown with headings (##), bullets, and bold text. Keep it focused and actionable.`,
 
-        market: `You are a market analyst. Based on the trading data and market conditions:
-      
-      Recent Trades:
-      ${tradesData}
-      
-      Generate a comprehensive market analysis including:
-      - Market conditions inference from your trading patterns
-      - Asset/symbol performance trends from your trades
-      - Technical analysis insights from your trade data
-      - Market sentiment based on your trading activity
-      - Trading opportunities and market outlook
-      - Recommendations based on current market patterns
-      
-      Format your response as clean, well-structured markdown with:
-      - Clear headings using ## and ###
-      - Bullet points using - or *
-      - Bold text for important metrics using **text**
-      - Tables for market data when relevant
-      - Horizontal rules (---) to separate sections
-      - Professional formatting that's easy to read
-      
-      Be specific about the data and provide actionable insights.`,
+        strategy: `Analyze strategies and trades. Strategies: ${strategiesData}. Trades: ${tradesData}
 
-        risk: `You are a risk management expert. Analyze the following trading data for risk assessment:
-      
-      Recent Trades:
-      ${tradesData}
-      
-      Strategies:
-      ${strategiesData}
-      
-      Provide a detailed risk analysis including:
-      - Current risk level and metrics (drawdown, Sharpe ratio, volatility)
-      - Risk factors identified from your trading patterns
-      - Position sizing analysis and recommendations
-      - Diversification assessment (by strategy, symbol, timeframe)
-      - Specific risk mitigation recommendations
-      - Action items to improve risk management
-      - Stop-loss and take-profit recommendations
-      
-      Format your response as clean, well-structured markdown with:
-      - Clear headings using ## and ###
-      - Bullet points using - or *
-      - Bold text for important metrics using **text**
-      - Tables for risk metrics when relevant
-      - Horizontal rules (---) to separate sections
-      - Professional formatting that's easy to read
-      
-      Be specific about the data and provide actionable recommendations.`
+Provide: Performance metrics per strategy, comparison, strengths/weaknesses, optimization recommendations, and risk assessment. Use markdown with headings (##), bullets, bold text, and tables. Keep it focused.`,
+
+        market: `Analyze market conditions from trading data: ${tradesData}
+
+Provide: Market conditions inference, asset performance trends, technical insights, market sentiment, trading opportunities, and outlook. Use markdown with headings (##), bullets, bold text, and tables. Keep it concise.`,
+
+        risk: `Analyze risk from trading data. Trades: ${tradesData}. Strategies: ${strategiesData}
+
+Provide: Risk metrics (drawdown, Sharpe, volatility), risk factors, position sizing recommendations, diversification assessment, risk mitigation actions, and stop-loss/take-profit advice. Use markdown with headings (##), bullets, bold text, and tables. Keep it focused.`
     }
 
     const prompt = prompts[type] || prompts.daily
 
-    // Generate content
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const text = response.text()
+    // Generate content - timeout is handled by maxDuration
+    const startTime = Date.now()
+    try {
+      const result = await model.generateContent(prompt)
+      const response = await result.response
+      const text = response.text()
+      const elapsed = Date.now() - startTime
+      console.log(`[AI Summarize] Generation completed in ${elapsed}ms`)
 
-    return NextResponse.json({ summary: text })
+      return NextResponse.json({ summary: text })
+    } catch (error: any) {
+      const elapsed = Date.now() - startTime
+      console.error(`[AI Summarize] Generation error after ${elapsed}ms:`, error)
+      if (error.message?.includes('timeout') || elapsed > 50000) {
+        return NextResponse.json(
+          { error: 'Generation took too long. Please try again with fewer trades.' },
+          { status: 408 }
+        )
+      }
+      throw error
+    }
   } catch (error) {
     console.error('Gemini API error:', error)
     return NextResponse.json(

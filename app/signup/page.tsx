@@ -1,15 +1,53 @@
 'use client'
 
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { SignUpForm } from '../authentication/components/sign-up-form'
 import { useAuth } from '@/context/auth-provider'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Quote } from 'lucide-react'
+import { Logo } from '@/components/logo'
+
+// Trading quotes for the overlay
+const tradingQuotes = [
+  {
+    quote: "The goal of a successful trader is to make the best trades. Money is secondary.",
+    author: "Alexander Elder"
+  },
+  {
+    quote: "Risk comes from not knowing what you're doing.",
+    author: "Warren Buffett"
+  },
+  {
+    quote: "The market can remain irrational longer than you can remain solvent.",
+    author: "John Maynard Keynes"
+  },
+  {
+    quote: "In trading, consistency beats perfection every time.",
+    author: "Professional Trader"
+  },
+  {
+    quote: "The best traders have no ego. You have to swallow your pride and get out of a losing position.",
+    author: "Paul Tudor Jones"
+  },
+  {
+    quote: "It's not whether you're right or wrong that's important, but how much money you make when you're right and how much you lose when you're wrong.",
+    author: "George Soros"
+  },
+  {
+    quote: "The most important thing in trading is to preserve capital. Profits will follow.",
+    author: "Trading Wisdom"
+  },
+  {
+    quote: "Plan your trade and trade your plan. Discipline is the bridge between goals and accomplishment.",
+    author: "Trading Mantra"
+  }
+]
 
 function SignUpContent() {
   const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0)
 
   useEffect(() => {
     // If already authenticated, redirect to dashboard or next URL
@@ -32,6 +70,15 @@ function SignUpContent() {
       router.replace(nextUrl)
     }
   }, [isAuthenticated, isLoading, router, searchParams])
+
+  // Rotate trading quotes every 5 seconds
+  useEffect(() => {
+    const quoteInterval = setInterval(() => {
+      setCurrentQuoteIndex((prev) => (prev + 1) % tradingQuotes.length)
+    }, 5000)
+
+    return () => clearInterval(quoteInterval)
+  }, [])
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -57,32 +104,73 @@ function SignUpContent() {
           <img
             src="/auth-background.jpeg"
             alt="Authentication background"
-            className="h-full w-full object-cover opacity-80"
+            className="h-full w-full object-cover"
           />
         </div>
-        <div className="absolute inset-0 bg-zinc-900/60" />
+        {/* Overlay with gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-zinc-900/90 via-zinc-900/80 to-zinc-900/90" />
+        
+        {/* Additional overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40" />
+        
         <div className="relative z-20 flex items-center text-lg font-medium">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="mr-2 h-6 w-6"
-          >
-            <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
-          </svg>
-          MyTradeJournal
+          <Logo width={64} height={64} className="mr-2" />
+          <span className="text-white">MyTradeJournal</span>
         </div>
-        <div className="relative z-20 mt-auto">
-          <blockquote className="space-y-2">
-            <p className="text-lg">
-              &ldquo;Elevate your trading performance with comprehensive analytics and intelligent insights.&rdquo;
-            </p>
-            <footer className="text-sm">Trading Journal Platform</footer>
-          </blockquote>
+        
+        {/* Trading Quotes Overlay */}
+        <div className="relative z-20 flex-1 flex items-center justify-center">
+          <div className="max-w-lg px-4">
+            <div className="mb-6 flex items-center justify-center">
+              <Quote className="h-8 w-8 text-white/60" />
+            </div>
+            <div 
+              key={currentQuoteIndex}
+              className="quote-slide"
+            >
+              <blockquote className="space-y-4">
+                <p className="text-xl md:text-2xl font-medium leading-relaxed text-white drop-shadow-lg">
+                  &ldquo;{tradingQuotes[currentQuoteIndex].quote}&rdquo;
+                </p>
+                <footer className="text-sm md:text-base text-white/70 italic">
+                  — {tradingQuotes[currentQuoteIndex].author}
+                </footer>
+              </blockquote>
+            </div>
+            
+            <style>{`
+              .quote-slide {
+                animation: fadeInUp 0.6s ease-in-out;
+              }
+              
+              @keyframes fadeInUp {
+                from {
+                  opacity: 0;
+                  transform: translateY(20px);
+                }
+                to {
+                  opacity: 1;
+                  transform: translateY(0);
+                }
+              }
+            `}</style>
+            
+            {/* Quote indicators */}
+            <div className="flex justify-center gap-2 mt-8">
+              {tradingQuotes.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentQuoteIndex(index)}
+                  className={`h-2 w-2 rounded-full transition-all duration-300 ${
+                    index === currentQuoteIndex
+                      ? 'bg-white w-8'
+                      : 'bg-white/40 hover:bg-white/60'
+                  }`}
+                  aria-label={`Go to quote ${index + 1}`}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
       <div className="w-full p-4 md:p-8 lg:p-8">

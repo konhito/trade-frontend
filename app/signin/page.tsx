@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { SignInForm } from '../authentication/components/sign-in-form'
 import { useAuth } from '@/context/auth-provider'
 import { Loader2, Quote } from 'lucide-react'
+import { Logo } from '@/components/logo'
 
 // Trading quotes for the overlay
 const tradingQuotes = [
@@ -166,19 +167,8 @@ function SignInContent() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40" />
         
         <div className="relative z-20 flex items-center text-lg font-medium">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="mr-2 h-6 w-6"
-          >
-            <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
-          </svg>
-          MyTradeJournal
+          <Logo width={64} height={64} className="mr-2" />
+          <span className="text-white">MyTradeJournal</span>
         </div>
         
         {/* Trading Quotes Overlay */}

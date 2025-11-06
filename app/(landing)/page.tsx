@@ -11,6 +11,7 @@ import Partners from './components/partners'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDashboardPrefetch } from '@/hooks/use-prefetch'
 import { Loader2 } from 'lucide-react'
+import { StructuredData } from './components/structured-data'
 
 
 export default function LandingPage() {
@@ -360,8 +361,10 @@ export default function LandingPage() {
     };
 
     return (
-        <div className="flex flex-col min-h-[100dvh] text-gray-900 dark:text-white transition-colors duration-300">
-            <main className="flex-1">
+        <>
+            <StructuredData />
+            <div className="flex flex-col min-h-[100dvh] text-gray-900 dark:text-white transition-colors duration-300">
+                <main className="flex-1">
                 <section className="w-full py-14 md:py-12 lg:py-16 xl:py-24">
                     <div className="container px-4 md:px-6 mx-auto">
                         <div className="flex flex-col w-full gap-y-16 md:gap-y-20 lg:gap-y-24">
@@ -433,6 +436,7 @@ export default function LandingPage() {
                                         muted
                                         autoPlay
                                         playsInline
+                                        aria-label="MyTradeJournal platform demonstration video"
                                         className={`w-full h-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] dark:border-gray-800 ${videoLoaded ? 'block' : 'hidden'}`}
                                         onLoadedData={handleVideoLoad}
                                         onError={handleVideoError}
@@ -454,7 +458,8 @@ export default function LandingPage() {
                 <section id="features" className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
                     <Features />
                 </section>
-            </main>
-        </div>
+                </main>
+            </div>
+        </>
     )
 }
