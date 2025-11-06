@@ -15,7 +15,7 @@ export function Logo({ className, width, height }: { className?: string; width?:
             className={cn("object-contain", className)}
             priority
             style={{
-                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.1))',
+                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15)) drop-shadow(0 0 10px rgba(255, 255, 255, 0.25)) drop-shadow(0 0 20px rgba(255, 255, 255, 0.2)) drop-shadow(0 0 30px rgba(255, 255, 255, 0.15))',
             }}
         />
     )

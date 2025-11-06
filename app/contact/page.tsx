@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import Navbar from '@/app/(landing)/components/navbar'
 import { 
   Mail, 
   Phone, 
@@ -110,7 +111,8 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+      <Navbar />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-12 sm:pb-16">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
