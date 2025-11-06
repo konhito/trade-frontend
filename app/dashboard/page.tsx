@@ -118,28 +118,22 @@ export default function Home() {
     
     // Only fetch once when user becomes available
     if (initialLoadRef.current) {
-      console.log('[Dashboard] Already attempted load, but checking if trades exist...')
-      // If we already attempted but have no trades, allow retry
-      if (formattedTrades && formattedTrades.length === 0 && !isLoading) {
-        console.log('[Dashboard] No trades found after previous load, retrying...')
-        initialLoadRef.current = false // Allow retry
-      } else {
-        return
-      }
+      console.log('[Dashboard] Already loaded, skipping duplicate call')
+      return
     }
     
-    console.log('[Dashboard] User available, calling refreshTrades with forceRefresh: true')
+    console.log('[Dashboard] User available, calling refreshTrades (without forceRefresh to avoid timestamp spam)')
     let mounted = true
     initialLoadRef.current = true
     
     const loadData = async () => {
       try {
         if (mounted) {
-          // Use forceRefresh: true for initial load to ensure we always fetch data
-          // Pass userId explicitly to ensure it's available even if authUser isn't ready yet
+          // Don't use forceRefresh for automatic loads - only use it for manual refresh actions
+          // This prevents the _t= timestamp parameter from being added unnecessarily
           console.log('[Dashboard] About to call refreshTrades for userId:', user.id)
-          await refreshTrades(true, String(user.id))
-          console.log('[Dashboard] Initial data fetch completed, formattedTrades length:', formattedTrades?.length || 0)
+          await refreshTrades(false, String(user.id))
+          console.log('[Dashboard] Initial data fetch completed')
         }
       } catch (error) {
         console.error('[Dashboard] Error refreshing trades:', error)
@@ -156,17 +150,20 @@ export default function Home() {
       mounted = false
       clearTimeout(timeoutId)
     }
-  }, [user?.id, refreshTrades, formattedTrades?.length, isLoading]) // Include more dependencies
+  }, [user?.id, refreshTrades]) // Removed formattedTrades?.length and isLoading to prevent loops
   
-  // Refresh dashboard stats when trades change
+  // Refresh dashboard stats when trades change (debounced to prevent excessive calls)
   useEffect(() => {
     if (!user?.id) return
     
+    // Only refresh stats if we have trades or if stats are not loaded yet
+    // Don't refresh on every length change to avoid loops
     const refreshStats = async () => {
       try {
-        console.log('[Dashboard] Refreshing stats due to trades change, trades count:', formattedTrades?.length || 0)
+        console.log('[Dashboard] Refreshing stats, trades count:', formattedTrades?.length || 0)
         setDashboardStatsLoading(true)
-        const data = await getDashboardStats(String(user.id), 30, true)
+        // Don't force refresh stats - use cache if available
+        const data = await getDashboardStats(String(user.id), 30, false)
         setDashboardStats(data.stats)
         setDashboardStatsLoading(false)
       } catch (error) {
@@ -175,13 +172,13 @@ export default function Home() {
       }
     }
     
-    // Small delay to ensure trades are fully updated
+    // Debounce: Only refresh after trades have stabilized (1 second delay)
     const timeoutId = setTimeout(() => {
       refreshStats()
-    }, 500)
+    }, 1000)
     
     return () => clearTimeout(timeoutId)
-  }, [user?.id, formattedTrades?.length]) // Refresh when trades count changes
+  }, [user?.id]) // Only depend on user.id - stats will update when trades change via useMemo
 
   // This effect is now merged with the one above
 

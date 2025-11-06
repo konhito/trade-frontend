@@ -635,9 +635,9 @@ export const DataProvider: React.FC<{
     try {
       const fetchFreshData = async () => {
         try {
-          console.log('[refreshTrades] Fetching trades for userId:', userId, 'forceRefresh:', true)
+          console.log('[refreshTrades] Fetching trades for userId:', userId, 'forceRefresh:', forceRefresh)
           try {
-            const result = await listTrades({ userId, forceRefresh: true })
+            const result = await listTrades({ userId, forceRefresh: forceRefresh })
             console.log('[refreshTrades] API response received:', {
               hasResult: !!result,
               hasTrades: !!(result?.trades),
