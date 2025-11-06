@@ -1,22 +1,25 @@
-'use client';
-
 import React from 'react';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Terms of Service | MyTradeJournal',
+  description: 'Terms of Service for MyTradeJournal - Read our terms and conditions for using our trading journal platform.',
+};
 
 export default function TermsOfService() {
-
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Terms of Service</h1>
       
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">Company Information</h2>
-        <p>All Trade Diary is a trading journal application provided by Deltalytix.</p>
-        <p>For inquiries, please contact us at <a href="mailto:contact@deltalytix.app">contact@deltalytix.app</a></p>
+        <p>MyTradeJournal is a trading journal application that helps traders record, analyze, and manage their trading activities.</p>
+        <p>For inquiries, please contact us at <a href="mailto:anubhavsingh290@gmail.com" className="text-primary hover:underline">anubhavsingh290@gmail.com</a> or visit our <a href="/contact" className="text-primary hover:underline">contact page</a>.</p>
       </section>
 
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">Services</h2>
-        <p>All Trade Diary provides a platform for traders to record, analyze, and manage their trading activities.</p>
+        <p>MyTradeJournal provides a platform for traders to record, analyze, and manage their trading activities.</p>
       </section>
 
       <section className="mb-6">
@@ -45,7 +48,7 @@ export default function TermsOfService() {
 
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">Intellectual Property</h2>
-        <p>All content, features, and functionality of the service are owned by Deltalytix and are protected by international copyright, trademark, and other intellectual property laws.</p>
+        <p>All content, features, and functionality of the service are owned by MyTradeJournal and are protected by international copyright, trademark, and other intellectual property laws.</p>
       </section>
 
       <section className="mb-6">
@@ -56,7 +59,7 @@ export default function TermsOfService() {
 
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">Liability</h2>
-        <p>All Trade Diary is provided "as is" without warranties of any kind. We are not liable for any losses or damages resulting from use of the service.</p>
+        <p>MyTradeJournal is provided "as is" without warranties of any kind. We are not liable for any losses or damages resulting from use of the service.</p>
       </section>
 
       <section className="mb-6">

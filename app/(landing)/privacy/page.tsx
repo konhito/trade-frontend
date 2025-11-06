@@ -1,4 +1,10 @@
 import React from 'react';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy | MyTradeJournal',
+  description: 'Privacy Policy for MyTradeJournal - Learn how we collect, use, and protect your personal information.',
+};
 
 export default function PrivacyPolicy() {
   return (
@@ -7,7 +13,7 @@ export default function PrivacyPolicy() {
       
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">1. Introduction</h2>
-        <p>Deltalytix (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service.</p>
+        <p>MyTradeJournal (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service.</p>
       </section>
 
       <section className="mb-6">
@@ -16,9 +22,10 @@ export default function PrivacyPolicy() {
         <ul className="list-disc pl-5 mt-2">
           <li>Email address</li>
           <li>Name</li>
-          <li>Discord profile picture URL (if you sign up using Discord OAuth)</li>
+          <li>Profile picture URL (if you sign up using OAuth providers such as Google, Discord, etc.)</li>
         </ul>
         <p className="mt-2">We also collect and store trades data that you provide to us for analysis purposes.</p>
+        <p className="mt-2">When you use Google OAuth to sign in, we collect your Google email address and profile information as provided by Google. This information is used solely for authentication and account management purposes.</p>
       </section>
 
       <section className="mb-6">
@@ -62,7 +69,7 @@ export default function PrivacyPolicy() {
 
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">9. Contact Us</h2>
-        <p>If you have any questions about this Privacy Policy, please contact us at: <a href="mailto:privacy@deltalytix.com" className="text-primary hover:underline">privacy@deltalytix.com</a></p>
+        <p>If you have any questions about this Privacy Policy, please contact us at: <a href="mailto:anubhavsingh290@gmail.com" className="text-primary hover:underline">anubhavsingh290@gmail.com</a> or visit our <a href="/contact" className="text-primary hover:underline">contact page</a>.</p>
       </section>
 
       <p className="mt-8 text-sm">Last updated: {new Date().toISOString().split('T')[0]}</p>

@@ -40,29 +40,29 @@ export const metadata: Metadata = {
   icons: {
     // Default icons
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/icon.png', type: 'image/png', sizes: '32x32' },
+      { url: '/logo12.png', sizes: 'any' },
+      { url: '/logo12.png', type: 'image/png', sizes: '32x32' },
     ],
     // Apple-specific icons
     apple: [
-      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+      { url: '/logo12.png', sizes: '180x180', type: 'image/png' },
     ],
     // Other platform icons
     other: [
       {
         rel: 'mask-icon',
-        url: '/safari-pinned-tab.svg',
+        url: '/logo12.png',
         color: '#000000'
       },
       {
         rel: 'android-chrome',
         sizes: '192x192',
-        url: '/android-chrome-192x192.png',
+        url: '/logo12.png',
       },
       {
         rel: 'android-chrome',
         sizes: '512x512',
-        url: '/android-chrome-512x512.png',
+        url: '/logo12.png',
       }
     ]
   },
