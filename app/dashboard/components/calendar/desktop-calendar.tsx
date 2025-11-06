@@ -507,7 +507,8 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
             </div>
             <div className="grid grid-cols-8 auto-rows-fr rounded-lg h-[calc(100%-20px)]">
               {calendarDays.map((date, index) => {
-                const dateString = format(date, 'yyyy-MM-dd')
+                // Use UTC timezone to match calendar data keys (same as calendar page)
+                const dateString = formatInTimeZone(date, 'UTC', 'yyyy-MM-dd')
                 const dayData = calendarData[dateString]
                 const isLastDayOfWeek = getDay(date) === 6
                 const isCurrentMonth = isSameMonth(date, currentDate)

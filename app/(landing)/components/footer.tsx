@@ -9,7 +9,7 @@ export default function Footer() {
       { name: 'Features', href: '/#features' },
       { name: 'Pricing', href: '/pricing' },
       { name: 'Business', href: '/business' },
-      { name: 'Contact', href: '/dashboard/contact' },
+      { name: 'Contact', href: '/contact' },
     ],
     company: [
       { name: 'About', href: '/about' },

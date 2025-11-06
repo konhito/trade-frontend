@@ -40,11 +40,14 @@ import { toast } from 'sonner'
 import { listStrategies } from '@/lib/services/strategies'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
+import { useTradesStore } from '@/store/trades-store'
 
 export default function CalendarPage() {
   const { effectiveTheme } = useTheme()
   const { user } = useAuth()
   const { calendarData: baseCalendarData, statistics, isLoading, formattedTrades, refreshTrades } = useData()
+  // Get raw trades from store as fallback if formattedTrades is empty (might be filtered out)
+  const rawTrades = useTradesStore(state => state.trades)
   const [strategies, setStrategies] = useState<any[]>([])
   const [strategiesLoading, setStrategiesLoading] = useState(false)
   
@@ -80,11 +83,23 @@ export default function CalendarPage() {
 
   // Merge strategy historical data and trades data into calendar data with cumulative P&L
   const calendarData = useMemo(() => {
+    // Use formattedTrades if available, otherwise fall back to raw trades from store
+    // This ensures calendar works even if formattedTrades filters remove all trades
+    const validTrades = (Array.isArray(formattedTrades) && formattedTrades.length > 0) 
+      ? formattedTrades 
+      : (Array.isArray(rawTrades) ? rawTrades : [])
+    
+    const usingRawTrades = !formattedTrades || formattedTrades.length === 0
     console.log('[Calendar] Building calendar data from:', {
       formattedTradesLength: formattedTrades?.length || 0,
+      rawTradesLength: rawTrades?.length || 0,
+      validTradesLength: validTrades.length,
+      usingRawTrades,
       formattedTradesIsArray: Array.isArray(formattedTrades),
       strategiesLength: strategies?.length || 0,
-      isLoading
+      isLoading,
+      sampleTrade: validTrades[0],
+      allTrades: validTrades.slice(0, 3).map(t => ({ id: t.id, closeDate: t.closeDate, entryDate: t.entryDate, pnl: t.pnl }))
     })
     
     // Start fresh - build calendar data from scratch to ensure trades are always included
@@ -92,16 +107,27 @@ export default function CalendarPage() {
     
     // FIRST: Process all trades to build the base calendar data
     // Use closeDate first (same as dashboard), then fallback to entryDate
-    if (formattedTrades && Array.isArray(formattedTrades) && formattedTrades.length > 0) {
-      console.log('[Calendar] Processing', formattedTrades.length, 'trades for calendar')
-      formattedTrades.forEach((trade: any) => {
+    if (validTrades && validTrades.length > 0) {
+      console.log('[Calendar] Processing', validTrades.length, 'trades for calendar')
+      let processedCount = 0
+      let skippedCount = 0
+      const skippedReasons: { [key: string]: number } = {}
+      validTrades.forEach((trade: any) => {
         // Use closeDate first, then entryDate (same as dashboard calculation)
         const tradeDate = trade.closeDate ? new Date(trade.closeDate) : (trade.entryDate ? new Date(trade.entryDate) : null)
-        if (!tradeDate || isNaN(tradeDate.getTime())) return
+        if (!tradeDate || isNaN(tradeDate.getTime())) {
+          skippedCount++
+          skippedReasons['noValidDate'] = (skippedReasons['noValidDate'] || 0) + 1
+          return
+        }
         
         // Check if P&L is valid (same validation as dashboard)
         const pnl = typeof trade.pnl === 'number' ? trade.pnl : (trade.pnl !== undefined && trade.pnl !== null ? parseFloat(String(trade.pnl)) : null)
-        if (pnl === null || isNaN(pnl)) return
+        if (pnl === null || isNaN(pnl)) {
+          skippedCount++
+          skippedReasons['invalidPnl'] = (skippedReasons['invalidPnl'] || 0) + 1
+          return
+        }
         
         try {
           // Reset time to midnight for consistent date grouping
@@ -148,6 +174,10 @@ export default function CalendarPage() {
             // Check if the value is valid (not NaN) - same as dashboard
             if (!isNaN(netPnL)) {
               enhanced[dateKey].pnl += netPnL
+              processedCount++
+            } else {
+              skippedCount++
+              skippedReasons['invalidNetPnl'] = (skippedReasons['invalidNetPnl'] || 0) + 1
             }
             
             // Add strategy from trade if available
@@ -157,7 +187,17 @@ export default function CalendarPage() {
           }
         } catch (error) {
           console.error('[Calendar] Error processing trade:', error, trade)
+          skippedCount++
+          skippedReasons['error'] = (skippedReasons['error'] || 0) + 1
         }
+      })
+      console.log('[Calendar] Trades processing complete:', {
+        total: validTrades.length,
+        processed: processedCount,
+        skipped: skippedCount,
+        skippedReasons,
+        datesWithData: Object.keys(enhanced).length,
+        sampleDates: Object.keys(enhanced).slice(0, 3)
       })
     }
     
@@ -257,8 +297,17 @@ export default function CalendarPage() {
       finalCumulativePnl: cumulativeTotal
     })
     
+    console.log('[Calendar] Final calendar data:', {
+      datesCount: Object.keys(enhanced).length,
+      sampleDates: Object.keys(enhanced).slice(0, 5),
+      totalTrades: Object.values(enhanced).reduce((sum, day) => sum + day.trades.length, 0),
+      totalStrategies: Object.values(enhanced).reduce((sum, day) => sum + day.strategies.length, 0),
+      finalCumulativePnl: cumulativeTotal,
+      allDates: Object.keys(enhanced).sort()
+    })
+    
     return enhanced
-  }, [strategies, formattedTrades])
+  }, [strategies, formattedTrades, rawTrades])
   const [searchTerm, setSearchTerm] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedType, setSelectedType] = useState('All')
