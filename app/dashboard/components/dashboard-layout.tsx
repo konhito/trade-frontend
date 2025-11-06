@@ -86,8 +86,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         const timeout = setTimeout(() => {
           if (!isAuthenticated) {
             console.log('[DashboardLayout] Token exists but validation failed, redirecting to signin')
-            const signInUrl = `/signin?next=${encodeURIComponent(pathname || '/dashboard')}`
-            router.replace(signInUrl)
+      const signInUrl = `/signin?next=${encodeURIComponent(pathname || '/dashboard')}`
+      router.replace(signInUrl)
           }
         }, 2000)
         return () => clearTimeout(timeout)
@@ -225,15 +225,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Logo Section */}
           <div className={`border-b border-sidebar-border ${sidebarCollapsed ? 'md:p-2' : 'p-4 md:p-6'}`}>
             <div 
-              className={`flex items-center cursor-pointer ${sidebarCollapsed ? 'md:justify-center' : 'space-x-2'}`}
+              className={`cursor-pointer ${sidebarCollapsed ? 'md:flex md:items-center md:justify-center' : 'flex flex-col items-center'}`}
               onClick={() => router.push('/')}
             >
-              <Logo className="fill-white flex-shrink-0 h-7 w-7 md:h-8 md:w-8" />
+              <Logo className={`fill-white flex-shrink-0 ${sidebarCollapsed ? 'h-7 w-7 md:h-8 md:w-8' : 'h-16 w-16 md:h-20 md:w-20 mb-3'}`} />
               {/* Mobile: Always show title */}
-              <h1 className="text-sm md:text-base font-bold text-white whitespace-nowrap overflow-hidden md:hidden tracking-tight leading-tight">MyTradeJournal</h1>
+              <h1 className={`font-bold whitespace-nowrap tracking-tight leading-tight md:hidden ${
+                effectiveTheme === 'light' ? 'text-black' : 'text-white'
+              } ${sidebarCollapsed ? 'text-sm' : 'text-base'}`}>MyTradeJournal</h1>
               {/* Desktop: Show title only when not collapsed */}
               {!sidebarCollapsed && (
-                <h1 className="hidden md:block text-sm font-bold text-white whitespace-nowrap overflow-hidden tracking-tight leading-tight">MyTradeJournal</h1>
+                <h1 className={`hidden md:block text-base font-bold whitespace-nowrap tracking-tight leading-tight ${
+                  effectiveTheme === 'light' ? 'text-black' : 'text-white'
+                }`}>MyTradeJournal</h1>
               )}
             </div>
           </div>

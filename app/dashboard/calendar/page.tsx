@@ -52,7 +52,10 @@ export default function CalendarPage() {
   useEffect(() => {
     if (user?.id && (!formattedTrades || formattedTrades.length === 0) && !isLoading) {
       console.log('[Calendar] No trades found, refreshing...')
-      refreshTrades(true, String(user.id)).catch(err => {
+      // Note: refreshTrades type definition says () => Promise<void> but implementation accepts params
+      // Using type assertion to work around the type mismatch
+      const refreshFn = refreshTrades as unknown as (forceRefresh?: boolean, providedUserId?: string | number) => Promise<void>
+      refreshFn(true, String(user.id)).catch((err: any) => {
         console.error('[Calendar] Error refreshing trades:', err)
       })
     }
@@ -88,16 +91,22 @@ export default function CalendarPage() {
     const enhanced: CalendarData = {}
     
     // FIRST: Process all trades to build the base calendar data
+    // Use closeDate first (same as dashboard), then fallback to entryDate
     if (formattedTrades && Array.isArray(formattedTrades) && formattedTrades.length > 0) {
       console.log('[Calendar] Processing', formattedTrades.length, 'trades for calendar')
       formattedTrades.forEach((trade: any) => {
-        if (!trade.entryDate) return
+        // Use closeDate first, then entryDate (same as dashboard calculation)
+        const tradeDate = trade.closeDate ? new Date(trade.closeDate) : (trade.entryDate ? new Date(trade.entryDate) : null)
+        if (!tradeDate || isNaN(tradeDate.getTime())) return
+        
+        // Check if P&L is valid (same validation as dashboard)
+        const pnl = typeof trade.pnl === 'number' ? trade.pnl : (trade.pnl !== undefined && trade.pnl !== null ? parseFloat(String(trade.pnl)) : null)
+        if (pnl === null || isNaN(pnl)) return
         
         try {
-          const entryDate = new Date(trade.entryDate)
-          if (isNaN(entryDate.getTime())) return
-          
-          const dateKey = formatInTimeZone(entryDate, 'UTC', 'yyyy-MM-dd')
+          // Reset time to midnight for consistent date grouping
+          tradeDate.setHours(0, 0, 0, 0)
+          const dateKey = formatInTimeZone(tradeDate, 'UTC', 'yyyy-MM-dd')
           
           // Initialize date entry if it doesn't exist
           if (!enhanced[dateKey]) {
@@ -123,7 +132,7 @@ export default function CalendarPage() {
             // Update long/short counts
             const isLong = trade.side 
               ? (trade.side.toLowerCase() === 'long' || trade.side.toLowerCase() === 'buy' || trade.side.toLowerCase() === 'b') 
-              : (new Date(trade.entryDate).getTime() < new Date(trade.closeDate || trade.entryDate).getTime())
+              : (new Date(trade.entryDate || trade.closeDate).getTime() < new Date(trade.closeDate || trade.entryDate).getTime())
             
             if (isLong) {
               enhanced[dateKey].longNumber++
@@ -131,10 +140,14 @@ export default function CalendarPage() {
               enhanced[dateKey].shortNumber++
             }
             
-            // Add trade P&L (net of commission)
-            const tradePnL = (parseFloat(String(trade.pnl)) || 0) - (parseFloat(String(trade.commission)) || 0)
-            if (!isNaN(tradePnL)) {
-              enhanced[dateKey].pnl += tradePnL
+            // Calculate trade P&L (net of commission) - same as dashboard
+            const tradePnLValue = typeof trade.pnl === 'number' ? trade.pnl : (trade.pnl !== undefined && trade.pnl !== null ? parseFloat(String(trade.pnl)) : 0)
+            const commission = typeof trade.commission === 'number' ? trade.commission : (trade.commission !== undefined && trade.commission !== null ? parseFloat(String(trade.commission)) : 0)
+            const netPnL = tradePnLValue - commission
+            
+            // Check if the value is valid (not NaN) - same as dashboard
+            if (!isNaN(netPnL)) {
+              enhanced[dateKey].pnl += netPnL
             }
             
             // Add strategy from trade if available
@@ -143,12 +156,13 @@ export default function CalendarPage() {
             }
           }
         } catch (error) {
-          console.error('[Calendar] Error processing trade:', error)
+          console.error('[Calendar] Error processing trade:', error, trade)
         }
       })
     }
     
     // SECOND: Add strategy historical data P&L to calendar data (on top of trades)
+    // Same calculation as dashboard - strategies add to daily P&L
     if (strategies && strategies.length > 0) {
       console.log('[Calendar] Processing', strategies.length, 'strategies for calendar')
       strategies.forEach((strategy) => {
@@ -156,7 +170,7 @@ export default function CalendarPage() {
           console.log('[Calendar] Strategy', strategy.name, 'has no historicalData')
           return
         }
-        
+      
         let historicalData = strategy.historicalData
         if (typeof historicalData === 'string') {
           try {
@@ -166,15 +180,15 @@ export default function CalendarPage() {
             return
           }
         }
-        
+      
         if (historicalData && historicalData.entries && Array.isArray(historicalData.entries)) {
           console.log('[Calendar] Strategy', strategy.name, 'has', historicalData.entries.length, 'entries')
           historicalData.entries.forEach((entry: any) => {
-            if (!entry.date || entry.live === undefined || entry.live === null) {
-              console.log('[Calendar] Skipping strategy entry - missing date or live:', entry)
+            if (!entry.date) {
+              console.log('[Calendar] Skipping strategy entry - missing date:', entry)
               return
             }
-            
+          
             try {
               const entryDate = new Date(entry.date)
               if (isNaN(entryDate.getTime())) {
@@ -182,8 +196,18 @@ export default function CalendarPage() {
                 return
               }
               
+              // Reset time to midnight for consistent date grouping (same as dashboard)
+              entryDate.setHours(0, 0, 0, 0)
               const dateKey = formatInTimeZone(entryDate, 'UTC', 'yyyy-MM-dd')
-              const livePnL = parseFloat(String(entry.live)) || 0
+              
+              // Parse P&L value (same as dashboard)
+              const livePnL = typeof entry.live === 'number' ? entry.live : (entry.live !== undefined && entry.live !== null ? parseFloat(String(entry.live)) : 0)
+              
+              // Skip if P&L is invalid (NaN), but allow negative and zero values (same as dashboard)
+              if (isNaN(livePnL)) {
+                console.log('[Calendar] Entry has invalid P&L value:', entry.live)
+                return
+              }
               
               // Initialize date entry if it doesn't exist (preserve trades if they exist)
               if (!enhanced[dateKey]) {
@@ -198,14 +222,8 @@ export default function CalendarPage() {
                 }
               }
               
-              // Calculate trades P&L separately (don't overwrite)
-              const tradesPnL = enhanced[dateKey].trades.reduce((sum: number, trade: any) => {
-                const pnl = (parseFloat(String(trade.pnl)) || 0) - (parseFloat(String(trade.commission)) || 0)
-                return sum + (isNaN(pnl) ? 0 : pnl)
-              }, 0)
-              
-              // Add strategy P&L to trades P&L (not replace)
-              enhanced[dateKey].pnl = tradesPnL + livePnL
+              // Add strategy P&L to existing daily P&L (same as dashboard - adds to daily P&L map)
+              enhanced[dateKey].pnl += livePnL
               
               if (strategy.name && !enhanced[dateKey].strategies.includes(strategy.name)) {
                 enhanced[dateKey].strategies.push(strategy.name)

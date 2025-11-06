@@ -363,8 +363,8 @@ export default function LandingPage() {
     return (
         <>
             <StructuredData />
-            <div className="flex flex-col min-h-[100dvh] text-gray-900 dark:text-white transition-colors duration-300">
-                <main className="flex-1">
+        <div className="flex flex-col min-h-[100dvh] text-gray-900 dark:text-white transition-colors duration-300">
+            <main className="flex-1">
                 <section className="w-full py-14 md:py-12 lg:py-16 xl:py-24">
                     <div className="container px-4 md:px-6 mx-auto">
                         <div className="flex flex-col w-full gap-y-16 md:gap-y-20 lg:gap-y-24">
@@ -458,8 +458,8 @@ export default function LandingPage() {
                 <section id="features" className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
                     <Features />
                 </section>
-                </main>
-            </div>
+            </main>
+        </div>
         </>
     )
 }

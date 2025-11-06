@@ -623,15 +623,15 @@ export default function StrategiesPage() {
                               mimeType = 'application/pdf'
                             } else if (base64Data.includes('data:image/')) {
                               // Legacy support for old image data
-                              if (base64Data.includes('data:image/jpeg') || base64Data.includes('data:image/jpg')) {
-                                extension = 'jpg'
-                                mimeType = 'image/jpeg'
-                              } else if (base64Data.includes('data:image/webp')) {
-                                extension = 'webp'
-                                mimeType = 'image/webp'
-                              } else if (base64Data.includes('data:image/png')) {
-                                extension = 'png'
-                                mimeType = 'image/png'
+                            if (base64Data.includes('data:image/jpeg') || base64Data.includes('data:image/jpg')) {
+                              extension = 'jpg'
+                              mimeType = 'image/jpeg'
+                            } else if (base64Data.includes('data:image/webp')) {
+                              extension = 'webp'
+                              mimeType = 'image/webp'
+                            } else if (base64Data.includes('data:image/png')) {
+                              extension = 'png'
+                              mimeType = 'image/png'
                               }
                             }
                             
@@ -961,15 +961,15 @@ function AddStrategyModal({
                 <div className="flex flex-col items-center gap-2">
                   <FileText className="w-12 h-12 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">PDF file uploaded</p>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
                     onClick={removeFile}
-                  >
+                >
                     <X className="w-4 h-4 mr-2" />
                     Remove PDF
-                  </Button>
+                </Button>
                 </div>
               </div>
             ) : (
