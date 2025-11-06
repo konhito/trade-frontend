@@ -230,10 +230,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             >
               <Logo className="fill-white flex-shrink-0 h-7 w-7 md:h-8 md:w-8" />
               {/* Mobile: Always show title */}
-              <h1 className="text-base md:text-xl font-bold text-white whitespace-nowrap overflow-hidden md:hidden">My Trade Journal</h1>
+              <h1 className="text-sm md:text-base font-bold text-white whitespace-nowrap overflow-hidden md:hidden tracking-tight leading-tight">MyTradeJournal</h1>
               {/* Desktop: Show title only when not collapsed */}
               {!sidebarCollapsed && (
-                <h1 className="hidden md:block text-xl font-bold text-white whitespace-nowrap overflow-hidden">My Trade Journal</h1>
+                <h1 className="hidden md:block text-sm font-bold text-white whitespace-nowrap overflow-hidden tracking-tight leading-tight">MyTradeJournal</h1>
               )}
             </div>
           </div>
