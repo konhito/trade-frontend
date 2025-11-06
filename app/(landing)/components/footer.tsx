@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { Logo } from '@/components/logo'
-import { Info } from 'lucide-react'
+import { Mail, MessageCircle, Send, Youtube } from 'lucide-react'
 
 export default function Footer() {
   const navigation = {
@@ -20,7 +20,30 @@ export default function Footer() {
       { name: 'Disclaimers', href: '/disclaimers' },
     ],
     social: [
-      { name: 'Contact', href: '/contact', icon: Info },
+      { 
+        name: 'WhatsApp', 
+        href: 'https://wa.me/919977642137', 
+        icon: MessageCircle,
+        external: true
+      },
+      { 
+        name: 'Telegram', 
+        href: 'https://t.me/DECAYHUNTERS', 
+        icon: Send,
+        external: true
+      },
+      { 
+        name: 'Email', 
+        href: 'mailto:MyTradeJournal99@gmail.com', 
+        icon: Mail,
+        external: true
+      },
+      { 
+        name: 'YouTube', 
+        href: 'https://youtube.com/@decayhunters?si=BReRB1o2IXPsD47V', 
+        icon: Youtube,
+        external: true
+      },
     ],
   }
 
@@ -40,12 +63,34 @@ export default function Footer() {
               The comprehensive trading journal that helps you analyze performance and improve your trading decisions.
             </p>
             <div className="flex space-x-6">
-              {navigation.social.map((item) => (
-                <Link key={item.name} href={item.href} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                  <span className="sr-only">{item.name}</span>
-                  <item.icon className="h-6 w-6" aria-hidden="true" />
-                </Link>
-              ))}
+              {navigation.social.map((item) => {
+                const IconComponent = item.icon
+                if (item.external) {
+                  return (
+                    <a 
+                      key={item.name} 
+                      href={item.href} 
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      aria-label={item.name}
+                    >
+                      <span className="sr-only">{item.name}</span>
+                      <IconComponent className="h-6 w-6" aria-hidden="true" />
+                    </a>
+                  )
+                }
+                return (
+                  <Link 
+                    key={item.name} 
+                    href={item.href} 
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  >
+                    <span className="sr-only">{item.name}</span>
+                    <IconComponent className="h-6 w-6" aria-hidden="true" />
+                  </Link>
+                )
+              })}
             </div>
           </div>
           <div className="mt-16 grid grid-cols-2 gap-8 xl:col-span-2 xl:mt-0">

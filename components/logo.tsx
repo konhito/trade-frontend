@@ -3,25 +3,21 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export function Logo({ className, width, height }: { className?: string; width?: number; height?: number }) {
-    const logoWidth = width || 64
-    const logoHeight = height || 64
+    const logoWidth = width || 48
+    const logoHeight = height || 48
     
     return (
-        <div className={cn("inline-flex items-center justify-center rounded-md p-2", 
-            "border border-gray-300 dark:border-gray-600",
-            "bg-white",
-            "shadow-sm",
-            className
-        )}>
-            <Image
-                src="/logo12.png"
-                alt="MyTradeJournal Logo"
-                width={logoWidth}
-                height={logoHeight}
-                className="object-contain"
-                priority
-            />
-        </div>
+        <Image
+            src="/logo12.png"
+            alt="MyTradeJournal Logo"
+            width={logoWidth}
+            height={logoHeight}
+            className={cn("object-contain", className)}
+            priority
+            style={{
+                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.1))',
+            }}
+        />
     )
 }
 

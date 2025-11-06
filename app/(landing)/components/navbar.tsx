@@ -234,7 +234,7 @@ export default function Component() {
             <span className={`h-14 fixed top-0 left-0 right-0 bg-background z-50 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}></span>
             <header className={`max-w-7xl mx-auto fixed top-0 left-0 right-0 px-4 lg:px-6 h-14 flex items-center justify-between z-50  text-foreground transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
                 <Link href="/" className="flex items-center space-x-2">
-                    <Logo className='w-6 h-6 fill-black dark:fill-white' />
+                    <Logo width={64} height={64} />
                     <span className="font-bold text-xl">MyTradeJournal</span>
                 </Link>
                 <div className="hidden lg:block">
@@ -247,7 +247,7 @@ export default function Component() {
                                         <li className="row-span-3">
                                             <NavigationMenuLink asChild>
                                                 <Link className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md" href="/">
-                                                    <Logo className='w-6 h-6' />
+                                                    <Logo width={48} height={48} />
                                                     <div className="mb-2 mt-4 text-lg font-medium">
                                                         MyTradeJournal
                                                     </div>
@@ -440,7 +440,7 @@ export default function Component() {
                             transition={{ duration: 0.1 }}
                         >
                             <span className="sr-only">MyTradeJournal Logo</span>
-                            <Logo className='w-6 h-6 fill-black dark:fill-white' />
+                            <Logo width={64} height={64} />
                         </motion.button>
 
                         <motion.button
