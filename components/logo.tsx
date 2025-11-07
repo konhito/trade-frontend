@@ -12,11 +12,9 @@ export function Logo({ className, width, height }: { className?: string; width?:
             alt="MyTradeJournal Logo"
             width={logoWidth}
             height={logoHeight}
-            className={cn("object-contain", className)}
+            className={cn("object-contain logo-no-invert", className)}
             priority
-            style={{
-                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.1))',
-            }}
+            data-logo="true"
         />
     )
 }

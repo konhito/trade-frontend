@@ -114,8 +114,8 @@ function SignUpContent() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40" />
         
         <div className="relative z-20 flex items-center text-lg font-medium">
-          <Logo width={64} height={64} className="mr-2" />
-          <span className="text-white">MyTradeJournal</span>
+          <Logo width={64} height={64} />
+          <span className="text-white -ml-3">MyTradeJournal</span>
         </div>
         
         {/* Trading Quotes Overlay */}

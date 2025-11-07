@@ -681,6 +681,7 @@ export function StrategyAnalyticsModal({ open, onOpenChange, strategy }: Strateg
                 return {
                   ...item,
                   cumulative,
+                  // Calculate areaPositive and areaNegative for gradient fill only (not shown in tooltip)
                   areaPositive: cumulative > 0 ? cumulative : 0,
                   areaNegative: cumulative < 0 ? cumulative : 0,
                 }
@@ -760,40 +761,50 @@ export function StrategyAnalyticsModal({ open, onOpenChange, strategy }: Strateg
                         />
                         <ReferenceLine y={0} stroke="#f59e0b" strokeWidth={3} label={{ value: '₹0 Baseline', position: 'insideTopRight', fill: '#f59e0b', fontSize: 12, fontWeight: 'bold' }} />
                         <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'rgba(17, 24, 39, 0.98)', 
-                            color: '#fff', 
-                            borderRadius: '8px', 
-                            border: '1px solid #374151',
-                            padding: '12px',
-                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)'
-                          }}
-                          formatter={(value: any, name: string, props: any) => {
-                            const cumulative = props.payload.cumulative
-                            const daily = props.payload.daily
-                            if (name === 'cumulative') {
-                              return [
-                                <div key="tooltip" className="space-y-1">
+                          content={({ active, payload, label }) => {
+                            if (!active || !payload || payload.length === 0) return null
+                            
+                            // Find only the cumulative item, ignore areaPositive and areaNegative
+                            const cumulativeItem = payload.find((item: any) => item.dataKey === 'cumulative')
+                            if (!cumulativeItem || !cumulativeItem.payload) return null
+                            
+                            const payloadData = cumulativeItem.payload
+                            const cumulative = payloadData.cumulative || 0
+                            const daily = payloadData.daily || 0
+                            
+                            let formattedLabel = label
+                            try {
+                              formattedLabel = format(new Date(label), 'EEEE, dd MMM yyyy')
+                            } catch {
+                              // Keep original label if parsing fails
+                            }
+                            
+                            // Return completely custom tooltip - no default Recharts formatting
+                            return (
+                              <div style={{
+                                backgroundColor: 'rgba(17, 24, 39, 0.98)',
+                                color: '#fff',
+                                borderRadius: '8px',
+                                border: '1px solid #374151',
+                                padding: '12px',
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)'
+                              }}>
+                                <div style={{ color: '#e5e7eb', fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>
+                                  {formattedLabel}
+                                </div>
+                                <div className="space-y-1">
                                   <div>Cumulative: <span className={cumulative >= 0 ? 'text-green-400' : 'text-red-400'}>
                                     {cumulative >= 0 ? '+' : ''}₹{Number(cumulative).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </span></div>
                                   <div>Daily P&L: <span className={daily >= 0 ? 'text-green-400' : 'text-red-400'}>
                                     {daily >= 0 ? '+' : ''}₹{Number(daily).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </span></div>
-                                </div>,
-                                ''
-                              ]
-                            }
-                            return null
+                                </div>
+                              </div>
+                            )
                           }}
-                          labelFormatter={(label) => {
-                            try {
-                              return format(new Date(label), 'EEEE, dd MMM yyyy')
-                            } catch {
-                              return label
-                            }
-                          }}
-                          labelStyle={{ color: '#e5e7eb', fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}
+                          formatter={() => null}
+                          labelFormatter={() => null}
                         />
                         
                         {/* Area fill for positive values */}
@@ -804,6 +815,7 @@ export function StrategyAnalyticsModal({ open, onOpenChange, strategy }: Strateg
                           stroke="none"
                           fillOpacity={1}
                           baseValue={0}
+                          isAnimationActive={false}
                         />
                         
                         {/* Area fill for negative values */}
@@ -814,6 +826,7 @@ export function StrategyAnalyticsModal({ open, onOpenChange, strategy }: Strateg
                           stroke="none"
                           fillOpacity={1}
                           baseValue={0}
+                          isAnimationActive={false}
                         />
                         
                         {/* Main cumulative line that changes color based on position */}

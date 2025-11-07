@@ -426,7 +426,7 @@ export default function TradesPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border p-4 sm:p-6 shadow-sm">
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border p-4 sm:p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Trades</h1>

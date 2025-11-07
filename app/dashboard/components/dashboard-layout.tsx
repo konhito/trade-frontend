@@ -209,7 +209,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${
+      <div className={`fixed inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out md:fixed ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       } ${sidebarCollapsed ? 'md:w-16' : 'md:w-64'} w-64 overflow-hidden`}>
         <div 
@@ -223,16 +223,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           }}
         >
           {/* Logo Section */}
-          <div className={`border-b border-sidebar-border ${sidebarCollapsed ? 'md:p-2' : 'p-4 md:p-6'}`}>
+          <div className={`border-b border-sidebar-border ${sidebarCollapsed ? 'md:p-2' : 'p-4 md:p-6'} p-4`}>
             <div 
-              className={`cursor-pointer ${sidebarCollapsed ? 'md:flex md:items-center md:justify-center' : 'flex flex-col items-center'}`}
+              className={`cursor-pointer flex items-center gap-1 md:flex-col md:items-center ${sidebarCollapsed ? '' : 'md:gap-3'}`}
               onClick={() => router.push('/')}
             >
-              <Logo className={`fill-white flex-shrink-0 ${sidebarCollapsed ? 'h-7 w-7 md:h-8 md:w-8' : 'h-16 w-16 md:h-20 md:w-20 mb-3'}`} />
+              <Logo className={`flex-shrink-0 ${sidebarCollapsed ? 'h-10 w-10 md:h-8 md:w-8' : 'h-10 w-10 md:h-20 md:w-20'}`} />
               {/* Mobile: Always show title */}
               <h1 className={`font-bold whitespace-nowrap tracking-tight leading-tight md:hidden ${
                 effectiveTheme === 'light' ? 'text-black' : 'text-white'
-              } ${sidebarCollapsed ? 'text-sm' : 'text-base'}`}>MyTradeJournal</h1>
+              } text-base`}>MyTradeJournal</h1>
               {/* Desktop: Show title only when not collapsed */}
               {!sidebarCollapsed && (
                 <h1 className={`hidden md:block text-base font-bold whitespace-nowrap tracking-tight leading-tight ${
@@ -417,7 +417,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div 
+        className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
+        style={{
+          marginLeft: isMobile ? 0 : (sidebarCollapsed ? '64px' : '256px')
+        }}
+      >
         {/* Mobile Header with Menu Button */}
         <div className="md:hidden bg-card border-b border-border p-4 flex items-center justify-between">
           <Button

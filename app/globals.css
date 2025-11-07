@@ -140,6 +140,13 @@
   }
   img {
     @apply inline-block;
+  }
+  
+  /* Keep logo colors consistent - no filters */
+  img[data-logo="true"],
+  img.logo-no-invert {
+    filter: none !important;
+    -webkit-filter: none !important;
   } 
 }
 

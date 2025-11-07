@@ -41,10 +41,13 @@ export const metadata: Metadata = {
     images: ['/twitter-image.png'],
   },
   icons: {
-    // Default icons
+    // Default icons - using new favicon files with larger sizes for better quality
     icon: [
-      { url: '/logo12.png', sizes: 'any' },
-      { url: '/logo12.png', type: 'image/png', sizes: '32x32' },
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/android-chrome-512x512.png', type: 'image/png', sizes: '512x512' },
+      { url: '/android-chrome-192x192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
     ],
     // Apple-specific icons
     apple: [
@@ -54,18 +57,18 @@ export const metadata: Metadata = {
     other: [
       {
         rel: 'mask-icon',
-        url: '/logo12.png',
+        url: '/safari-pinned-tab.svg',
         color: '#000000'
       },
       {
         rel: 'android-chrome',
         sizes: '192x192',
-        url: '/logo12.png',
+        url: '/android-chrome-192x192.png',
       },
       {
         rel: 'android-chrome',
         sizes: '512x512',
-        url: '/logo12.png',
+        url: '/android-chrome-512x512.png',
       }
     ]
   },

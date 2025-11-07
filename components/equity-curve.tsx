@@ -100,11 +100,10 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
 
       const dataWithSegments = withStart.map((item: any) => {
         const cumulative = Number(item.cumulative) || 0
+        const { areaPositive, areaNegative, ...rest } = item
         return {
-          ...item,
+          ...rest,
           cumulative,
-          areaPositive: Math.max(cumulative, 0),
-          areaNegative: Math.min(cumulative, 0),
         }
       })
 
@@ -205,11 +204,10 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
 
     const dataWithSegments = withStart.map((item) => {
       const cumulative = Number(item.cumulative) || 0
+      const { areaPositive, areaNegative, ...rest } = item
       return {
-        ...item,
+        ...rest,
         cumulative,
-        areaPositive: Math.max(cumulative, 0),
-        areaNegative: Math.min(cumulative, 0),
       }
     })
 
@@ -239,16 +237,6 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
         data={dataWithSegments} 
         margin={isMobile ? { top: 10, right: 10, left: 50, bottom: 50 } : { top: 10, right: 20, left: 60, bottom: 40 }}
       >
-        <defs>
-          <linearGradient id="positiveGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#22c55e" stopOpacity={0.4}/>
-            <stop offset="100%" stopColor="#22c55e" stopOpacity={0.05}/>
-          </linearGradient>
-          <linearGradient id="negativeGradient" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.4}/>
-            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.05}/>
-          </linearGradient>
-        </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
         <XAxis
           dataKey="date"
@@ -262,7 +250,7 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
           interval="preserveStartEnd"
         />
         <YAxis
-          label={isMobile ? undefined : { value: 'Total MTM (₹)', angle: -90, position: 'left', offset: 10, style: { fill: '#9ca3af', fontSize: 11 } }}
+          label={{ value: 'Total MTM (₹)', angle: -90, position: 'left', offset: 10, style: { fill: '#9ca3af', fontSize: isMobile ? 9 : 11 } }}
           domain={[yPadMin, yPadMax]}
           tick={{ fontSize: isMobile ? 8 : 9, fill: '#9ca3af' }}
           width={isMobile ? 50 : 50}
@@ -274,22 +262,22 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
         />
         <ReferenceLine y={0} stroke="#f59e0b" strokeWidth={3} label={{ value: '₹0 Baseline', position: 'insideTopRight', fill: '#f59e0b', fontSize: 12, fontWeight: 'bold' }} />
         <Tooltip
+          cursor={{ stroke: '#3b82f6', strokeWidth: 1 }}
           content={({ active, payload, label }) => {
             if (!active || !payload || payload.length === 0) return null
             
-            // Filter out areaPositive and areaNegative from payload
-            const filteredPayload = payload.filter((item: any) => 
-              item.dataKey !== 'areaPositive' && item.dataKey !== 'areaNegative'
-            )
+            // Find only the cumulative item, ignore everything else
+            const cumulativeItem = payload.find((item: any) => item.dataKey === 'cumulative')
+            if (!cumulativeItem || !cumulativeItem.payload) return null
             
-            if (filteredPayload.length === 0) return null
-            
-            const cumulativeItem = filteredPayload.find((item: any) => item.dataKey === 'cumulative')
-            if (!cumulativeItem) return null
-            
-            const cumulative = cumulativeItem.payload?.cumulative || 0
+            // Get data from payload, explicitly only using cumulative and daily
+            const payloadData = cumulativeItem.payload
+            const cumulative = payloadData.cumulative || 0
+            const daily = payloadData.daily || 0
             const sign = cumulative >= 0 ? '+' : '-'
-            const formattedValue = `${sign}₹${Math.abs(Number(cumulative)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            const formattedCumulative = `${sign}₹${Math.abs(Number(cumulative)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            const dailySign = daily >= 0 ? '+' : '-'
+            const formattedDaily = `${dailySign}₹${Math.abs(Number(daily)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             
             let formattedLabel = label
             try {
@@ -298,6 +286,7 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
               // Keep original label if parsing fails
             }
             
+            // Return completely custom tooltip - no default Recharts formatting
             return (
               <div style={{
                 backgroundColor: 'rgba(17, 24, 39, 0.98)',
@@ -307,18 +296,21 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
                 padding: 12,
                 boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)'
               }}>
-                <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 4 }}>
+                <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 8 }}>
                   {formattedLabel}
                 </div>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>
-                  {formattedValue}
+                <div style={{ fontWeight: 700, fontSize: 14, color: cumulative >= 0 ? '#22c55e' : '#ef4444', marginBottom: 6 }}>
+                  Cumulative: {formattedCumulative}
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: daily >= 0 ? '#22c55e' : '#ef4444' }}>
+                  Daily P&L: {formattedDaily}
                 </div>
               </div>
             )
           }}
+          formatter={() => null}
+          labelFormatter={() => null}
         />
-        <Area type="monotone" dataKey="areaPositive" fill="url(#positiveGradient)" stroke="none" fillOpacity={1} baseValue={0} />
-        <Area type="monotone" dataKey="areaNegative" fill="url(#negativeGradient)" stroke="none" fillOpacity={1} baseValue={0} />
         <Line
           type="monotone"
           dataKey="cumulative"
