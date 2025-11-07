@@ -100,10 +100,12 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
 
       const dataWithSegments = withStart.map((item: any) => {
         const cumulative = Number(item.cumulative) || 0
-        const { areaPositive, areaNegative, ...rest } = item
         return {
-          ...rest,
+          ...item,
           cumulative,
+          // Calculate areaPositive and areaNegative for gradient fill only (not shown in tooltip)
+          areaPositive: cumulative > 0 ? cumulative : 0,
+          areaNegative: cumulative < 0 ? cumulative : 0,
         }
       })
 
@@ -204,10 +206,12 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
 
     const dataWithSegments = withStart.map((item) => {
       const cumulative = Number(item.cumulative) || 0
-      const { areaPositive, areaNegative, ...rest } = item
       return {
-        ...rest,
+        ...item,
         cumulative,
+        // Calculate areaPositive and areaNegative for gradient fill only (not shown in tooltip)
+        areaPositive: cumulative > 0 ? cumulative : 0,
+        areaNegative: cumulative < 0 ? cumulative : 0,
       }
     })
 
@@ -237,6 +241,16 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
         data={dataWithSegments} 
         margin={isMobile ? { top: 10, right: 10, left: 50, bottom: 50 } : { top: 10, right: 20, left: 60, bottom: 40 }}
       >
+        <defs>
+          <linearGradient id="positiveGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#22c55e" stopOpacity={0.4}/>
+            <stop offset="100%" stopColor="#22c55e" stopOpacity={0.05}/>
+          </linearGradient>
+          <linearGradient id="negativeGradient" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.4}/>
+            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.05}/>
+          </linearGradient>
+        </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
         <XAxis
           dataKey="date"
@@ -310,6 +324,26 @@ export function EquityCurve({ trades, strategies, rangeDays, dailyPnLData }: Equ
           }}
           formatter={() => null}
           labelFormatter={() => null}
+        />
+        {/* Area fill for positive values */}
+        <Area 
+          type="monotone" 
+          dataKey="areaPositive" 
+          fill="url(#positiveGradient)"
+          stroke="none"
+          fillOpacity={1}
+          baseValue={0}
+          isAnimationActive={false}
+        />
+        {/* Area fill for negative values */}
+        <Area 
+          type="monotone" 
+          dataKey="areaNegative" 
+          fill="url(#negativeGradient)"
+          stroke="none"
+          fillOpacity={1}
+          baseValue={0}
+          isAnimationActive={false}
         />
         <Line
           type="monotone"
