@@ -234,8 +234,8 @@ export default function Component() {
             <span className={`h-14 fixed top-0 left-0 right-0 bg-background z-50 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}></span>
             <header className={`max-w-7xl mx-auto fixed top-0 left-0 right-0 px-4 lg:px-6 h-14 flex items-center justify-between z-50  text-foreground transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
                 <Link href="/" className="flex items-center">
-                    <Logo width={80} height={80} />
-                    <span className="font-bold text-xl -ml-3">MyTradeJournal</span>
+                    <Logo width={96} height={96} className="h-[96px] w-[96px]" />
+                    <span className="font-bold text-xl -ml-2">MyTradeJournal</span>
                 </Link>
                 <div className="hidden lg:block">
                     <NavigationMenu>
@@ -247,7 +247,7 @@ export default function Component() {
                                         <li className="row-span-3">
                                             <NavigationMenuLink asChild>
                                                 <Link className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md" href="/">
-                                                    <Logo width={48} height={48} />
+                                                    <Logo width={48} height={48} className="h-12 w-12" />
                                                     <div className="mb-2 mt-4 text-lg font-medium">
                                                         MyTradeJournal
                                                     </div>
@@ -440,7 +440,7 @@ export default function Component() {
                             transition={{ duration: 0.1 }}
                         >
                             <span className="sr-only">MyTradeJournal Logo</span>
-                            <Logo width={80} height={80} />
+                            <Logo width={96} height={96} className="h-[96px] w-[96px]" />
                         </motion.button>
 
                         <motion.button

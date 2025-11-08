@@ -1,5 +1,4 @@
 import React from "react";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export function Logo({ className, width, height }: { className?: string; width?: number; height?: number }) {
@@ -7,15 +6,17 @@ export function Logo({ className, width, height }: { className?: string; width?:
     const logoHeight = height || 48
     
     return (
-        <Image
-            src="/logo12.png"
+        <img
+            src="/logo12.svg"
             alt="MyTradeJournal Logo"
             width={logoWidth}
             height={logoHeight}
             className={cn("object-contain logo-no-invert", className)}
-            priority
             style={{
-                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.1))',
+                imageRendering: 'auto',
+                backfaceVisibility: 'hidden',
+                transform: 'translateZ(0)',
+                willChange: 'transform',
             }}
         />
     )
