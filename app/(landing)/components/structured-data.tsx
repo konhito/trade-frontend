@@ -10,7 +10,7 @@ export function StructuredData() {
       "@type": "Organization",
       "name": "MyTradeJournal",
       "url": "https://www.mytradejournal.co.in",
-      "logo": "https://www.mytradejournal.co.in/logo12.png",
+      "logo": "https://www.mytradejournal.co.in/logo2.png",
       "description": "Professional trading journal and analytics platform for traders to track, analyze, and improve their trading performance.",
       "contactPoint": {
         "@type": "ContactPoint",

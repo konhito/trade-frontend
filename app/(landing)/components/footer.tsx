@@ -55,9 +55,9 @@ export default function Footer() {
       <div className="container mx-auto px-4">
         <div className="xl:grid xl:grid-cols-3 xl:gap-8">
           <div className="space-y-8">
-            <div className="flex items-center">
-              <Logo width={64} height={64} />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white -ml-3">MyTradeJournal</h3>
+            <div className="flex items-center gap-2">
+              <Logo width={56} height={56} />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">MyTradeJournal</h3>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               The comprehensive trading journal that helps you analyze performance and improve your trading decisions.

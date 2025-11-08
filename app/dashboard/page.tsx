@@ -557,24 +557,285 @@ export default function Home() {
       }
     }
     
-    // Fallback to empty metrics if no dashboardStats
-    console.log('[Dashboard] No dashboardStats available, returning empty metrics')
+    // Fallback: Calculate metrics from strategies and formattedTrades if no dashboardStats
+    console.log('[Dashboard] No dashboardStats available, calculating from strategies and trades')
+    
+    // Date range for last N days
+    const todayDate = new Date()
+    todayDate.setHours(0, 0, 0, 0)
+    const thirtyDaysAgoDate = new Date(todayDate)
+    thirtyDaysAgoDate.setDate(thirtyDaysAgoDate.getDate() - dateRangeDays)
+    
+    // Helper function to parse date strings (MMM dd format)
+    function parseDateWithMonthName(dateStr: string, year: number): Date {
+      const months: { [key: string]: number } = {
+        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+      }
+      const parts = dateStr.split(' ')
+      const month = months[parts[0]] ?? 0
+      const day = parseInt(parts[1]) || 1
+      return new Date(year, month, day)
+    }
+    
+    // Collect daily P&L from all sources
+    const dailyPnLMap = new Map<string, number>()
+    let dailyPnLData: { name: string; pnl: number; isProfit: boolean }[] = []
+    
+    // Add P&L from formattedTrades
+    if (formattedTrades && formattedTrades.length > 0) {
+      formattedTrades
+        .filter(t => {
+          const tradeDate = t.closeDate ? new Date(t.closeDate) : (t.entryDate ? new Date(t.entryDate) : null)
+          if (!tradeDate || isNaN(tradeDate.getTime())) return false
+          tradeDate.setHours(0, 0, 0, 0)
+          const pnl = typeof t.pnl === 'number' ? t.pnl : (t.pnl !== undefined && t.pnl !== null ? parseFloat(String(t.pnl)) : null)
+          return tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate && pnl !== null && !isNaN(pnl)
+        })
+        .forEach(t => {
+          const tradeDate = t.closeDate ? new Date(t.closeDate) : (t.entryDate ? new Date(t.entryDate) : null)
+          if (!tradeDate) return
+          const dateKey = format(tradeDate, 'MMM dd')
+          const existing = dailyPnLMap.get(dateKey) || 0
+          const pnl = typeof t.pnl === 'number' ? t.pnl : (t.pnl !== undefined && t.pnl !== null ? parseFloat(String(t.pnl)) : 0)
+          const commission = typeof t.commission === 'number' ? t.commission : (t.commission !== undefined && t.commission !== null ? parseFloat(String(t.commission)) : 0)
+          const netPnL = pnl - commission
+          if (!isNaN(netPnL)) {
+            dailyPnLMap.set(dateKey, existing + netPnL)
+          }
+        })
+    }
+    
+    // Add P&L from strategies' historicalData
+    if (strategies && strategies.length > 0) {
+      strategies.forEach((strategy: any) => {
+        if (!strategy.historicalData) return
+        
+        let historicalData = strategy.historicalData
+        if (typeof historicalData === 'string') {
+          try {
+            historicalData = JSON.parse(historicalData)
+          } catch {
+            return
+          }
+        }
+        
+        if (historicalData && historicalData.entries && Array.isArray(historicalData.entries)) {
+          historicalData.entries.forEach((entry: any) => {
+            if (!entry.date) return
+            
+            const tradeDate = new Date(entry.date)
+            if (isNaN(tradeDate.getTime())) return
+            
+            tradeDate.setHours(0, 0, 0, 0)
+            const livePnL = typeof entry.live === 'number' ? entry.live : (entry.live !== undefined && entry.live !== null ? parseFloat(String(entry.live)) : 0)
+            
+            if (!isNaN(livePnL) && tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate) {
+              const dateKey = format(tradeDate, 'MMM dd')
+              const existing = dailyPnLMap.get(dateKey) || 0
+              dailyPnLMap.set(dateKey, existing + livePnL)
+            }
+          })
+        }
+      })
+    }
+    
+    // Convert map to array and sort
+    dailyPnLMap.forEach((pnl, date) => {
+      dailyPnLData.push({
+        name: date,
+        pnl: pnl,
+        isProfit: pnl >= 0
+      })
+    })
+    
+    dailyPnLData.sort((a, b) => {
+      const currentYear = new Date().getFullYear()
+      const dateA = parseDateWithMonthName(a.name, currentYear)
+      const dateB = parseDateWithMonthName(b.name, currentYear)
+      return dateA.getTime() - dateB.getTime()
+    })
+    
+    // Calculate metrics from strategies and trades
+    const cumulativePnL = dailyPnLData.reduce((sum, day) => {
+      const dayPnL = typeof day.pnl === 'number' ? day.pnl : parseFloat(String(day.pnl)) || 0
+      return sum + (isNaN(dayPnL) ? 0 : dayPnL)
+    }, 0)
+    
+    // Calculate win rate from daily P&L data
+    const winningDays = dailyPnLData.filter(day => day.pnl > 0).length
+    const winRate = dailyPnLData.length > 0 ? (winningDays / dailyPnLData.length) * 100 : 0
+    
+    // Count trades from strategies and formattedTrades
+    let tradesThisMonth = 0
+    if (formattedTrades && formattedTrades.length > 0) {
+      tradesThisMonth += formattedTrades.length
+    }
+    if (strategies && strategies.length > 0) {
+      strategies.forEach((strategy: any) => {
+        if (!strategy.historicalData) return
+        let historicalData = strategy.historicalData
+        if (typeof historicalData === 'string') {
+          try {
+            historicalData = JSON.parse(historicalData)
+          } catch {
+            return
+          }
+        }
+        if (historicalData && historicalData.entries && Array.isArray(historicalData.entries)) {
+          tradesThisMonth += historicalData.entries.filter((entry: any) => {
+            if (!entry.date) return false
+            const tradeDate = new Date(entry.date)
+            if (isNaN(tradeDate.getTime())) return false
+            tradeDate.setHours(0, 0, 0, 0)
+            return tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate
+          }).length
+        }
+      })
+    }
+    
+    // Calculate highest P&L
+    const highestPnL = dailyPnLData.length > 0 ? Math.max(...dailyPnLData.map(d => d.pnl)) : 0
+    
+    // Calculate long/short trades
+    let longTrades = 0
+    let shortTrades = 0
+    if (formattedTrades && formattedTrades.length > 0) {
+      formattedTrades.forEach(t => {
+        const side = (t.side || '').toLowerCase()
+        const direction = (t.direction || '').toLowerCase()
+        const isLong = side === 'long' || direction === 'long' || side === 'buy' || direction === 'buy'
+        const isShort = side === 'short' || direction === 'short' || side === 'sell' || direction === 'sell'
+        if (isLong) longTrades++
+        else if (isShort) shortTrades++
+        else longTrades++
+      })
+    }
+    // Count strategy entries as trades
+    if (strategies && strategies.length > 0) {
+      strategies.forEach((strategy: any) => {
+        if (!strategy.historicalData) return
+        let historicalData = strategy.historicalData
+        if (typeof historicalData === 'string') {
+          try {
+            historicalData = JSON.parse(historicalData)
+          } catch {
+            return
+          }
+        }
+        if (historicalData && historicalData.entries && Array.isArray(historicalData.entries)) {
+          historicalData.entries.forEach((entry: any) => {
+            if (entry.date) {
+              const tradeDate = new Date(entry.date)
+              if (!isNaN(tradeDate.getTime())) {
+                tradeDate.setHours(0, 0, 0, 0)
+                if (tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate) {
+                  longTrades++
+                }
+              }
+            }
+          })
+        }
+      })
+    }
+    
+    // Trades by date data
+    const tradesByDateMap = new Map<string, { long: number; short: number }>()
+    if (formattedTrades && formattedTrades.length > 0) {
+      formattedTrades
+        .filter(t => {
+          const tradeDate = t.closeDate ? new Date(t.closeDate) : (t.entryDate ? new Date(t.entryDate) : null)
+          if (!tradeDate || isNaN(tradeDate.getTime())) return false
+          tradeDate.setHours(0, 0, 0, 0)
+          return tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate
+        })
+        .forEach(t => {
+          const tradeDate = t.closeDate ? new Date(t.closeDate) : (t.entryDate ? new Date(t.entryDate) : null)
+          if (!tradeDate) return
+          const dateKey = format(tradeDate, 'MMM dd')
+          const existing = tradesByDateMap.get(dateKey) || { long: 0, short: 0 }
+          const side = (t.side || '').toLowerCase()
+          const direction = (t.direction || '').toLowerCase()
+          const isLong = side === 'long' || direction === 'long' || side === 'buy' || direction === 'buy'
+          const isShort = side === 'short' || direction === 'short' || side === 'sell' || direction === 'sell'
+          if (isLong) existing.long++
+          else if (isShort) existing.short++
+          else existing.long++
+          tradesByDateMap.set(dateKey, existing)
+        })
+    }
+    if (strategies && strategies.length > 0) {
+      strategies.forEach((strategy: any) => {
+        if (!strategy.historicalData) return
+        let historicalData = strategy.historicalData
+        if (typeof historicalData === 'string') {
+          try {
+            historicalData = JSON.parse(historicalData)
+          } catch {
+            return
+          }
+        }
+        if (historicalData && historicalData.entries && Array.isArray(historicalData.entries)) {
+          historicalData.entries.forEach((entry: any) => {
+            if (!entry.date) return
+            const tradeDate = new Date(entry.date)
+            if (isNaN(tradeDate.getTime())) return
+            tradeDate.setHours(0, 0, 0, 0)
+            if (tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate) {
+              const dateKey = format(tradeDate, 'MMM dd')
+              const existing = tradesByDateMap.get(dateKey) || { long: 0, short: 0 }
+              existing.long++
+              tradesByDateMap.set(dateKey, existing)
+            }
+          })
+        }
+      })
+    }
+    
+    const tradesByDateData = Array.from(tradesByDateMap.entries())
+      .map(([date, counts]) => ({
+        name: date,
+        long: counts.long,
+        short: counts.short,
+        total: counts.long + counts.short
+      }))
+      .sort((a, b) => {
+        const currentYear = new Date().getFullYear()
+        const dateA = parseDateWithMonthName(a.name, currentYear)
+        const dateB = parseDateWithMonthName(b.name, currentYear)
+        return dateA.getTime() - dateB.getTime()
+      })
+    
     return {
-      highestPnL: 0,
-      cumulativePnL: 0,
-      winRate: 0,
-      riskReward: '1:0',
-      tradesThisMonth: 0,
-      chartData: [],
-      dailyPnLData: [],
-      longTrades: 0,
-      shortTrades: 0,
-      tradesByDateData: []
+      highestPnL,
+      cumulativePnL,
+      winRate,
+      riskReward: '1:0', // Can't calculate from strategies alone
+      tradesThisMonth,
+      chartData: [], // No monthly data available
+      dailyPnLData,
+      longTrades,
+      shortTrades,
+      tradesByDateData
     }
   }, [formattedTrades, statistics, strategies, dashboardStats, dateRangeDays])
 
   // Check if we have data - prioritize dashboardStats from API
-  const hasNoData = !dashboardStats?.overview || (dashboardStats.overview.totalTrades === 0 && (!formattedTrades || formattedTrades.length === 0))
+  // Also check if there are strategies with historical data
+  const hasStrategiesWithData = strategies && strategies.length > 0 && strategies.some((s: any) => {
+    if (!s.historicalData) return false
+    let historicalData = s.historicalData
+    if (typeof historicalData === 'string') {
+      try {
+        historicalData = JSON.parse(historicalData)
+      } catch {
+        return false
+      }
+    }
+    return historicalData && historicalData.entries && Array.isArray(historicalData.entries) && historicalData.entries.length > 0
+  })
+  
+  const hasNoData = !dashboardStats?.overview || (dashboardStats.overview.totalTrades === 0 && (!formattedTrades || formattedTrades.length === 0) && !hasStrategiesWithData)
 
   console.log('[Dashboard] Metrics calculated:', metrics)
   console.log('[Dashboard] dashboardStats:', dashboardStats)
@@ -789,7 +1050,7 @@ export default function Home() {
           </CardHeader>
           <CardContent className="pt-0 px-3 sm:px-6">
             <div className="h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px]">
-              {(hasNoData && !dashboardStats?.overview && (!strategies || strategies.length === 0 || !strategies.some((s: any) => s.historicalData))) || (metrics.dailyPnLData.length === 0 && (!dashboardStats?.topTrades || dashboardStats.topTrades.length === 0) && (!strategies || strategies.length === 0 || !strategies.some((s: any) => s.historicalData))) ? (
+              {hasNoData && metrics.dailyPnLData.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed border-muted">
                   <div className="text-center">
                     <BarChart3 className="w-12 h-12 mx-auto mb-2 opacity-50" />

@@ -13,7 +13,7 @@ export const contentType = 'image/png'
 export default async function Icon() {
     try {
         // Try to read the logo file from public folder
-        const logoPath = path.join(process.cwd(), 'public', 'logo12.png')
+        const logoPath = path.join(process.cwd(), 'public', 'logo2.png')
         const logoBuffer = fs.readFileSync(logoPath)
         const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`
         
@@ -37,9 +37,9 @@ export default async function Icon() {
                         width={512}
                         height={512}
                         style={{
-                            width: '120%',
-                            height: '120%',
-                            objectFit: 'cover',
+                            width: '150%',
+                            height: '150%',
+                            objectFit: 'contain',
                             padding: '0',
                             margin: '0',
                         }}

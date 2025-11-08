@@ -41,17 +41,17 @@ export const metadata: Metadata = {
     images: ['/twitter-image.png'],
   },
   icons: {
-    // Default icons - using new favicon files with larger sizes for better quality
+    // Default icons - using 512x512 favicon everywhere
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/android-chrome-512x512.png', sizes: 'any' },
       { url: '/android-chrome-512x512.png', type: 'image/png', sizes: '512x512' },
-      { url: '/android-chrome-192x192.png', type: 'image/png', sizes: '192x192' },
-      { url: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
-      { url: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
+      { url: '/android-chrome-512x512.png', type: 'image/png', sizes: '192x192' },
+      { url: '/android-chrome-512x512.png', type: 'image/png', sizes: '32x32' },
+      { url: '/android-chrome-512x512.png', type: 'image/png', sizes: '16x16' },
     ],
     // Apple-specific icons
     apple: [
-      { url: '/logo12.png', sizes: '180x180', type: 'image/png' },
+      { url: '/android-chrome-512x512.png', sizes: '180x180', type: 'image/png' },
     ],
     // Other platform icons
     other: [
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
       {
         rel: 'android-chrome',
         sizes: '192x192',
-        url: '/android-chrome-192x192.png',
+        url: '/android-chrome-512x512.png',
       },
       {
         rel: 'android-chrome',
@@ -163,12 +163,12 @@ export default async function RootLayout({
         <link
           rel="apple-touch-icon"
           sizes="180x180"
-          href="/apple-touch-icon.png"
+          href="/android-chrome-512x512.png"
         />
         <link
           rel="apple-touch-icon-precomposed"
           sizes="180x180"
-          href="/apple-touch-icon-precomposed.png"
+          href="/android-chrome-512x512.png"
         />
         <style>
           {`

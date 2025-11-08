@@ -1,13 +1,18 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/context/theme-provider";
 
 export function Logo({ className, width, height }: { className?: string; width?: number; height?: number }) {
-    const logoWidth = width || 48
-    const logoHeight = height || 48
+    const logoWidth = width || 40
+    const logoHeight = height || 40
+    const { effectiveTheme } = useTheme()
+    
+    // Use logo3.png for light theme, logo2.png for dark theme
+    const logoSource = effectiveTheme === 'light' ? '/logo3.png' : '/logo2.png'
     
     return (
         <img
-            src="/logo12.svg"
+            src={logoSource}
             alt="MyTradeJournal Logo"
             width={logoWidth}
             height={logoHeight}

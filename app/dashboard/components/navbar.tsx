@@ -112,7 +112,7 @@ export default function Navbar() {
                     aria-label="All Trade Diary"
                   >
                     <span className="flex items-center gap-1">
-                      <Logo className='h-6 w-6' />
+                      <Logo className='h-8 w-8' />
                       <ChevronDown 
                         className={`h-4 w-4 transition-transform duration-200 ${isLogoPopoverOpen ? 'rotate-180' : 'rotate-0'}`}
                         aria-hidden="true"
