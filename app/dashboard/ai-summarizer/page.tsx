@@ -42,7 +42,7 @@ export default function AISummarizerPage() {
   })
   const [loadingData, setLoadingData] = useState(true)
 
-  // Load last generated times and summaries from localStorage on mount
+  // Load last generated times from localStorage on mount (but not old summaries)
   useEffect(() => {
     const stored = localStorage.getItem('ai-summarizer-last-generated')
     if (stored) {
@@ -53,14 +53,10 @@ export default function AISummarizerPage() {
       }
     }
     
-    const storedSummaries = localStorage.getItem('ai-summarizer-responses')
-    if (storedSummaries) {
-      try {
-        setGeneratedSummaries(JSON.parse(storedSummaries))
-      } catch (e) {
-        console.error('Error parsing stored summaries:', e)
-      }
-    }
+    // Don't load old summaries - always generate fresh
+    // Clear any existing summaries from localStorage
+    localStorage.removeItem('ai-summarizer-responses')
+    setGeneratedSummaries({})
   }, [])
 
   // Fetch trades data on component mount

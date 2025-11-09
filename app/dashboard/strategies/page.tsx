@@ -52,6 +52,8 @@ export default function StrategiesPage() {
   const [editingStrategy, setEditingStrategy] = useState<any | null>(null)
   const [analyticsStrategy, setAnalyticsStrategy] = useState<any | null>(null)
   const [selectedCategory, setSelectedCategory] = useState('All')
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pause'>('All')
+  const [performanceFilter, setPerformanceFilter] = useState<'All' | 'Profit' | 'Loss'>('All')
   const [loading, setLoading] = useState(true)
   const [strategies, setStrategies] = useState<any[]>([])
   const [refreshing, setRefreshing] = useState(false)
@@ -193,11 +195,38 @@ export default function StrategiesPage() {
     }
   }, [selectedCategory, searchTerm, fetchStrategies, initialLoad, authLoading])
 
+  // Helper function to calculate strategy P&L
+  const calculateStrategyPnL = (strategy: any) => {
+    if (!strategy.historicalData?.entries || strategy.historicalData.entries.length === 0) {
+      return 0
+    }
+    const entries = strategy.historicalData.entries
+    const parseNum = (v: any) => {
+      if (typeof v === 'number' && Number.isFinite(v)) return v
+      const n = Number(String(v).replace(/[^0-9.+-]/g, ''))
+      return Number.isFinite(n) ? n : 0
+    }
+    const liveValues: number[] = entries.map((e: any) => parseNum(e.live))
+    return liveValues.reduce((sum, v) => sum + v, 0)
+  }
+
   const filteredStrategies = strategies.filter(strategy => {
     const matchesSearch = strategy.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (strategy.description && strategy.description.toLowerCase().includes(searchTerm.toLowerCase()))
     const matchesCategory = selectedCategory === 'All' || strategy.category === selectedCategory
-    return matchesSearch && matchesCategory
+    
+    // Status filter (Active/Pause)
+    const matchesStatus = statusFilter === 'All' || 
+      (statusFilter === 'Active' && strategy.isActive) ||
+      (statusFilter === 'Pause' && !strategy.isActive)
+    
+    // Performance filter (Profit/Loss)
+    const strategyPnL = calculateStrategyPnL(strategy)
+    const matchesPerformance = performanceFilter === 'All' ||
+      (performanceFilter === 'Profit' && strategyPnL > 0) ||
+      (performanceFilter === 'Loss' && strategyPnL < 0)
+    
+    return matchesSearch && matchesCategory && matchesStatus && matchesPerformance
   })
 
   const getCategoryColor = (category: string) => {
@@ -233,29 +262,86 @@ export default function StrategiesPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search strategies..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-background border-input text-foreground placeholder-muted-foreground"
-            />
+        <div className="space-y-4 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Search strategies..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-background border-input text-foreground placeholder-muted-foreground"
+              />
+            </div>
+            <select 
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 bg-background border border-input rounded text-foreground text-sm"
+            >
+              {categories.map(category => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
           </div>
-          <select 
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 bg-background border border-input rounded text-foreground text-sm"
-          >
-            {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
-          <Button variant="outline" className="border-input text-muted-foreground hover:bg-accent">
-            <Filter className="w-4 h-4 mr-2" />
-            Filter
-          </Button>
+          
+          {/* Status and Performance Filters */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground font-medium">Status:</span>
+            <Button
+              variant={statusFilter === 'All' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('All')}
+              className={statusFilter === 'All' ? 'bg-primary text-primary-foreground' : ''}
+            >
+              All
+            </Button>
+            <Button
+              variant={statusFilter === 'Active' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('Active')}
+              className={statusFilter === 'Active' ? 'bg-green-600 text-white hover:bg-green-700' : ''}
+            >
+              <Play className="w-3 h-3 mr-1" />
+              Active
+            </Button>
+            <Button
+              variant={statusFilter === 'Pause' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('Pause')}
+              className={statusFilter === 'Pause' ? 'bg-gray-600 text-white hover:bg-gray-700' : ''}
+            >
+              <Pause className="w-3 h-3 mr-1" />
+              Pause
+            </Button>
+            
+            <span className="text-sm text-muted-foreground font-medium ml-2">Performance:</span>
+            <Button
+              variant={performanceFilter === 'All' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setPerformanceFilter('All')}
+              className={performanceFilter === 'All' ? 'bg-primary text-primary-foreground' : ''}
+            >
+              All
+            </Button>
+            <Button
+              variant={performanceFilter === 'Profit' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setPerformanceFilter('Profit')}
+              className={performanceFilter === 'Profit' ? 'bg-green-600 text-white hover:bg-green-700' : ''}
+            >
+              <TrendingUp className="w-3 h-3 mr-1" />
+              Profit
+            </Button>
+            <Button
+              variant={performanceFilter === 'Loss' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setPerformanceFilter('Loss')}
+              className={performanceFilter === 'Loss' ? 'bg-red-600 text-white hover:bg-red-700' : ''}
+            >
+              <TrendingDown className="w-3 h-3 mr-1" />
+              Loss
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}

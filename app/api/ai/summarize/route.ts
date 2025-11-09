@@ -174,13 +174,57 @@ export async function POST(req: Request) {
         throw new Error('Failed to fetch strategies')
       }
       const strategiesResponseData = await strategiesResponse.json()
-      strategies = (strategiesResponseData.strategies || []).slice(0, 10).map((strategy: any) => ({ // Limit to 10 strategies
-        id: strategy.id,
-        n: strategy.name, // Shortened keys
-        d: strategy.description,
-        c: strategy.category,
-        a: strategy.isActive ?? true,
-      }))
+      strategies = (strategiesResponseData.strategies || []).slice(0, 10).map((strategy: any) => {
+        // Calculate strategy performance from historical data
+        let totalPnL = 0
+        let totalTrades = 0
+        let winRate = 0
+        let profitFactor = 0
+        
+        if (strategy.historicalData) {
+          let historicalData = strategy.historicalData
+          if (typeof historicalData === 'string') {
+            try {
+              historicalData = JSON.parse(historicalData)
+            } catch {
+              historicalData = null
+            }
+          }
+          
+          if (historicalData && historicalData.entries && Array.isArray(historicalData.entries)) {
+            const entries = historicalData.entries
+            totalTrades = entries.length
+            
+            const parseNum = (v: any) => {
+              if (typeof v === 'number' && Number.isFinite(v)) return v
+              const n = Number(String(v).replace(/[^0-9.+-]/g, ''))
+              return Number.isFinite(n) ? n : 0
+            }
+            
+            const liveValues: number[] = entries.map((e: any) => parseNum(e.live))
+            totalPnL = liveValues.reduce((sum, v) => sum + v, 0)
+            
+            const winningEntries = liveValues.filter((pnl: number) => pnl > 0).length
+            winRate = totalTrades > 0 ? (winningEntries / totalTrades) * 100 : 0
+            
+            const totalProfit = liveValues.filter((pnl: number) => pnl > 0).reduce((sum: number, pnl: number) => sum + pnl, 0)
+            const totalLoss = Math.abs(liveValues.filter((pnl: number) => pnl < 0).reduce((sum: number, pnl: number) => sum + pnl, 0))
+            profitFactor = totalLoss > 0 ? totalProfit / totalLoss : (totalProfit > 0 ? 999 : 0)
+          }
+        }
+        
+        return {
+          id: strategy.id,
+          n: strategy.name, // Shortened keys
+          d: strategy.description,
+          c: strategy.category,
+          a: strategy.isActive ?? true,
+          pnl: totalPnL, // Total P&L from historical data
+          tr: totalTrades, // Total trades
+          wr: winRate, // Win rate
+          pf: profitFactor, // Profit factor
+        }
+      })
     } catch (error: any) {
       clearTimeout(strategiesTimeout)
       if (error.name === 'AbortError') {
@@ -209,9 +253,20 @@ export async function POST(req: Request) {
 
 Provide: Performance overview (win rate, P&L), key patterns, improvement recommendations, and risk assessment. Use markdown with headings (##), bullets, and bold text. Keep it focused and actionable.`,
 
-        strategy: `Analyze strategies and trades. Strategies: ${strategiesData}. Trades: ${tradesData}
+        strategy: `Analyze and compare trading strategies with their performance data. Focus primarily on STRATEGIES analysis.
 
-Provide: Performance metrics per strategy, comparison, strengths/weaknesses, optimization recommendations, and risk assessment. Use markdown with headings (##), bullets, bold text, and tables. Keep it focused.`,
+Strategies Data (with performance metrics): ${strategiesData}
+Trades Data (for context): ${tradesData}
+
+For EACH strategy, analyze:
+1. Performance metrics (P&L, win rate, profit factor, total trades)
+2. Strategy effectiveness and consistency
+3. Strengths and weaknesses
+4. Comparison between different strategies
+5. Optimization recommendations specific to each strategy
+6. Risk assessment per strategy
+
+Provide: Detailed strategy-by-strategy analysis, performance comparison table, strategy ranking, optimization recommendations, and actionable insights. Use markdown with headings (##), bullets, bold text, and tables. Focus on STRATEGY analysis, not just trades.`,
 
         market: `Analyze market conditions from trading data: ${tradesData}
 

@@ -40,34 +40,6 @@ export default function Home() {
   const [dashboardStats, setDashboardStats] = useState<any>(null)
   const [dashboardStatsLoading, setDashboardStatsLoading] = useState(true)
 
-  // Fetch dashboard stats from backend
-  useEffect(() => {
-    const fetchDashboardStats = async () => {
-      if (!user?.id) {
-        console.log('[Dashboard] Stats: Waiting for user')
-        return
-      }
-      
-      console.log('[Dashboard] Stats: Fetching dashboard stats for userId:', user.id)
-      setDashboardStatsLoading(true)
-      
-      try {
-        // Always force refresh to get latest data
-        const data = await getDashboardStats(String(user.id), 30, true)
-        console.log('[Dashboard] Stats: Received dashboard stats:', data)
-        console.log('[Dashboard] Stats: overview:', data?.stats?.overview)
-        console.log('[Dashboard] Stats: totalTrades:', data?.stats?.overview?.totalTrades)
-        setDashboardStats(data.stats)
-      } catch (error) {
-        console.error('[Dashboard] Error fetching dashboard stats:', error)
-      } finally {
-        setDashboardStatsLoading(false)
-      }
-    }
-    
-    fetchDashboardStats()
-  }, [user?.id])
-
   // Load/persist date range preference
   useEffect(() => {
     try {
@@ -79,29 +51,44 @@ export default function Home() {
     try { localStorage.setItem('dashboard_date_range_days', String(dateRangeDays)) } catch {}
   }, [dateRangeDays])
 
-  // Fetch strategies from backend
+  // Fetch dashboard stats and strategies in parallel for better performance
   useEffect(() => {
-    const fetchStrategies = async () => {
-      if (!user?.id) {
-        console.log('[Dashboard] Strategies: Waiting for user')
-        return
-      }
-      
-      console.log('[Dashboard] Strategies: Fetching for userId:', user.id)
+    if (!user?.id) return
+    
+    const fetchData = async () => {
+      setDashboardStatsLoading(true)
       setStrategiesLoading(true)
       
       try {
-        const data = await listStrategies({ userId: String(user.id) })
-        console.log('[Dashboard] Strategies: Received', data.strategies?.length || 0, 'strategies')
-        setStrategies(data.strategies || [])
+        // Fetch both in parallel to reduce total load time
+        const [dashboardData, strategiesData] = await Promise.all([
+          getDashboardStats(String(user.id), 30, true),
+          listStrategies({ userId: String(user.id) })
+        ])
+        
+        setDashboardStats(dashboardData.stats)
+        setStrategies(strategiesData.strategies || [])
       } catch (error) {
-        console.error('[Dashboard] Error fetching strategies:', error)
+        // Try to fetch individually if parallel fails
+        try {
+          const dashboardData = await getDashboardStats(String(user.id), 30, true)
+          setDashboardStats(dashboardData.stats)
+        } catch (e) {
+          // Silently fail - will retry on next mount
+        }
+        try {
+          const strategiesData = await listStrategies({ userId: String(user.id) })
+          setStrategies(strategiesData.strategies || [])
+        } catch (e) {
+          // Silently fail - will retry on next mount
+        }
       } finally {
+        setDashboardStatsLoading(false)
         setStrategiesLoading(false)
       }
     }
     
-    fetchStrategies()
+    fetchData()
   }, [user?.id])
 
   
@@ -111,18 +98,11 @@ export default function Home() {
   
   // Auto-refresh trades when user is available (only once on mount)
   useEffect(() => {
-    if (!user?.id) {
-      console.log('[Dashboard] Waiting for user, user:', user)
-      return
-    }
+    if (!user?.id) return
     
     // Only fetch once when user becomes available
-    if (initialLoadRef.current) {
-      console.log('[Dashboard] Already loaded, skipping duplicate call')
-      return
-    }
+    if (initialLoadRef.current) return
     
-    console.log('[Dashboard] User available, calling refreshTrades (without forceRefresh to avoid timestamp spam)')
     let mounted = true
     initialLoadRef.current = true
     
@@ -131,12 +111,9 @@ export default function Home() {
         if (mounted) {
           // Don't use forceRefresh for automatic loads - only use it for manual refresh actions
           // This prevents the _t= timestamp parameter from being added unnecessarily
-          console.log('[Dashboard] About to call refreshTrades for userId:', user.id)
           await refreshTrades(false, String(user.id))
-          console.log('[Dashboard] Initial data fetch completed')
         }
       } catch (error) {
-        console.error('[Dashboard] Error refreshing trades:', error)
         initialLoadRef.current = false // Reset on error so we can retry
       }
     }
@@ -154,42 +131,32 @@ export default function Home() {
   
   // Refresh dashboard stats when trades change (debounced to prevent excessive calls)
   useEffect(() => {
-    if (!user?.id) return
+    if (!user?.id || !formattedTrades || formattedTrades.length === 0) return
     
     // Only refresh stats if we have trades or if stats are not loaded yet
     // Don't refresh on every length change to avoid loops
     const refreshStats = async () => {
       try {
-        console.log('[Dashboard] Refreshing stats, trades count:', formattedTrades?.length || 0)
         setDashboardStatsLoading(true)
         // Don't force refresh stats - use cache if available
         const data = await getDashboardStats(String(user.id), 30, false)
         setDashboardStats(data.stats)
-        setDashboardStatsLoading(false)
       } catch (error) {
-        console.error('[Dashboard] Error refreshing stats:', error)
+        // Silently fail - stats will update on next page load
+      } finally {
         setDashboardStatsLoading(false)
       }
     }
     
-    // Debounce: Only refresh after trades have stabilized (1 second delay)
+    // Debounce: Only refresh after trades have stabilized (2 second delay to reduce calls)
     const timeoutId = setTimeout(() => {
       refreshStats()
-    }, 1000)
+    }, 2000)
     
     return () => clearTimeout(timeoutId)
-  }, [user?.id]) // Only depend on user.id - stats will update when trades change via useMemo
+  }, [user?.id, formattedTrades?.length]) // Only refresh when trade count changes
 
   // This effect is now merged with the one above
-
-  // Debug logging
-  console.log('[Dashboard] === DASHBOARD STATE ===')
-  console.log('[Dashboard] isLoading:', isLoading)
-  console.log('[Dashboard] formattedTrades count:', formattedTrades?.length || 0)
-  console.log('[Dashboard] formattedTrades sample:', formattedTrades?.[0])
-  console.log('[Dashboard] statistics:', statistics)
-  console.log('[Dashboard] user:', user ? { id: user.id, email: user.email } : 'null')
-  console.log('[Dashboard] === END DASHBOARD STATE ===')
 
   // Use API data directly - no calculation needed
   const metrics = useMemo(() => {
@@ -290,8 +257,6 @@ export default function Home() {
                 const dateKey = format(tradeDate, 'MMM dd')
                 const existing = dailyPnLMap.get(dateKey) || 0
                 dailyPnLMap.set(dateKey, existing + tradePnLValue)
-              } else {
-                console.log(`[Dashboard] Filtered outlier trade from daily P&L: PnL=${trade.pnl}, date=${trade.entryDate}`)
               }
             }
           }
@@ -316,44 +281,28 @@ export default function Home() {
           
           // Check if historicalData has entries array
           if (historicalData && historicalData.entries && Array.isArray(historicalData.entries)) {
-            console.log(`[Dashboard] Processing strategy "${strategy.name}" with ${historicalData.entries.length} entries`)
-            historicalData.entries.forEach((entry: any, index: number) => {
-              if (!entry.date) {
-                console.log(`[Dashboard] Entry ${index} has no date, skipping`)
-                return
-              }
+            historicalData.entries.forEach((entry: any) => {
+              if (!entry.date) return
               
               const tradeDate = new Date(entry.date)
-              if (isNaN(tradeDate.getTime())) {
-                console.log(`[Dashboard] Entry ${index} has invalid date: ${entry.date}`)
-                return
-              }
+              if (isNaN(tradeDate.getTime())) return
               
               tradeDate.setHours(0, 0, 0, 0)
               // Ensure P&L is properly parsed as a number (handles negative values correctly)
               const livePnL = typeof entry.live === 'number' ? entry.live : (entry.live !== undefined && entry.live !== null ? parseFloat(String(entry.live)) : 0)
               
               // Skip if P&L is invalid (NaN), but allow negative and zero values
-              if (isNaN(livePnL)) {
-                console.log(`[Dashboard] Entry ${index} has invalid P&L value: ${entry.live}`)
-                return
-              }
-              
-              console.log(`[Dashboard] Entry ${index}: date=${entry.date}, live=${entry.live}, parsedDate=${tradeDate.toISOString()}, pnl=${livePnL}, inRange=${tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate}`)
+              if (isNaN(livePnL)) return
               
               if (tradeDate >= thirtyDaysAgoDate && tradeDate <= todayDate) {
                 const dateKey = format(tradeDate, 'MMM dd')
                 const existing = dailyPnLMap.get(dateKey) || 0
                 dailyPnLMap.set(dateKey, existing + livePnL)
                 strategyTradesCount++
-                console.log(`[Dashboard] Added to daily P&L: ${dateKey} = ${existing + livePnL} (added ${livePnL})`)
-              } else {
-                console.log(`[Dashboard] Entry ${index} date ${entry.date} is outside 30-day range (${thirtyDaysAgoDate.toISOString()} to ${todayDate.toISOString()})`)
               }
             })
           }
         })
-        console.log('[Dashboard] Strategy historical data: Added', strategyTradesCount, 'trades to daily P&L')
       }
       
       // Convert map to array and sort
@@ -365,22 +314,6 @@ export default function Home() {
         })
       })
       
-      // Log the actual data structure
-      console.log('[Dashboard] Daily P&L data after aggregation:', {
-        totalEntries: dailyPnLData.length,
-        sampleEntries: dailyPnLData.slice(0, 10),
-        allEntries: dailyPnLData,
-        allEntriesDetailed: dailyPnLData.map(e => ({ name: e.name, pnl: e.pnl, isProfit: e.isProfit })),
-        strategiesCount: strategies?.length || 0,
-        hasFormattedTrades: !!(formattedTrades && formattedTrades.length > 0),
-        hasTopTrades: !!(dashboardStats.topTrades && dashboardStats.topTrades.length > 0),
-        dailyPnLMapSize: dailyPnLMap.size,
-        dailyPnLMapEntries: Array.from(dailyPnLMap.entries()),
-        dateRange: {
-          thirtyDaysAgo: thirtyDaysAgoDate.toISOString(),
-          today: todayDate.toISOString()
-        }
-      })
       
       // Sort daily P&L data by date
       dailyPnLData.sort((a, b) => {
@@ -558,7 +491,6 @@ export default function Home() {
     }
     
     // Fallback: Calculate metrics from strategies and formattedTrades if no dashboardStats
-    console.log('[Dashboard] No dashboardStats available, calculating from strategies and trades')
     
     // Date range for last N days
     const todayDate = new Date()
@@ -835,22 +767,10 @@ export default function Home() {
     return historicalData && historicalData.entries && Array.isArray(historicalData.entries) && historicalData.entries.length > 0
   })
   
-  const hasNoData = !dashboardStats?.overview || (dashboardStats.overview.totalTrades === 0 && (!formattedTrades || formattedTrades.length === 0) && !hasStrategiesWithData)
+  const hasNoData = useMemo(() => {
+    return !dashboardStats?.overview || (dashboardStats.overview.totalTrades === 0 && (!formattedTrades || formattedTrades.length === 0) && !hasStrategiesWithData)
+  }, [dashboardStats?.overview, formattedTrades?.length, hasStrategiesWithData])
 
-  console.log('[Dashboard] Metrics calculated:', metrics)
-  console.log('[Dashboard] dashboardStats:', dashboardStats)
-  console.log('[Dashboard] hasNoData:', hasNoData)
-  console.log('[Dashboard] dashboardStats.overview:', dashboardStats?.overview)
-  
-  // Debug: Log what's happening with trades
-  useEffect(() => {
-    console.log('[Dashboard Effect] formattedTrades changed:', {
-      length: formattedTrades?.length || 0,
-      sample: formattedTrades?.[0],
-      isLoading,
-      hasNoData
-    })
-  }, [formattedTrades, isLoading, hasNoData])
 
   if (isLoading) {
     return (
@@ -1059,20 +979,6 @@ export default function Home() {
                 </div>
               ) : (
                 <>
-                  {(() => {
-                    console.log('[Dashboard] Rendering Daily P&L Chart')
-                    console.log('[Dashboard] Chart data:', metrics.dailyPnLData)
-                    console.log('[Dashboard] Chart data length:', metrics.dailyPnLData.length)
-                    if (metrics.dailyPnLData.length > 0) {
-                      console.log('[Dashboard] First entry:', JSON.stringify(metrics.dailyPnLData[0], null, 2))
-                      console.log('[Dashboard] All entries:', metrics.dailyPnLData.map(e => ({ name: e.name, pnl: e.pnl, isProfit: e.isProfit })))
-                      const pnlValues = metrics.dailyPnLData.map(e => e.pnl)
-                      console.log('[Dashboard] PnL values:', pnlValues)
-                      console.log('[Dashboard] Min PnL:', Math.min(...pnlValues))
-                      console.log('[Dashboard] Max PnL:', Math.max(...pnlValues))
-                    }
-                    return null
-                  })()}
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart 
                       data={metrics.dailyPnLData || []} 
@@ -1234,7 +1140,9 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {strategies.filter(s => s.isActive).slice(0, 6).map((strategy) => {
+                  {useMemo(() => {
+                    return strategies.filter(s => s.isActive).slice(0, 6)
+                  }, [strategies]).map((strategy) => {
                     // Calculate metrics from historical data
                     let tradesFromHistorical = 0
                     let winRateFromHistorical = 0
@@ -1246,18 +1154,13 @@ export default function Home() {
                       try {
                         parsedHistoricalData = JSON.parse(parsedHistoricalData)
                       } catch (e) {
-                        console.warn('[Dashboard] Failed to parse historicalData as JSON:', e)
                         parsedHistoricalData = null
                       }
                     }
                     
-                    console.log('[Dashboard] Strategy:', strategy.name, 'historicalData:', parsedHistoricalData)
-                    
                     if (parsedHistoricalData && parsedHistoricalData.entries && Array.isArray(parsedHistoricalData.entries)) {
                       const entries = parsedHistoricalData.entries
                       tradesFromHistorical = entries.length
-                      
-                      console.log('[Dashboard] Found', tradesFromHistorical, 'entries in historical data')
                       
                       if (tradesFromHistorical > 0) {
                         // Calculate win rate from live P&L entries (count positive entries)
@@ -1266,8 +1169,6 @@ export default function Home() {
                           return liveValue
                         })
                         
-                        console.log('[Dashboard] Live entries P&L values:', liveEntries.slice(0, 5))
-                        
                         const winningEntries = liveEntries.filter((pnl: number) => pnl > 0).length
                         winRateFromHistorical = (winningEntries / tradesFromHistorical) * 100
                         
@@ -1275,31 +1176,13 @@ export default function Home() {
                         const totalProfit = liveEntries.filter((pnl: number) => pnl > 0).reduce((sum: number, pnl: number) => sum + pnl, 0)
                         const totalLoss = Math.abs(liveEntries.filter((pnl: number) => pnl < 0).reduce((sum: number, pnl: number) => sum + pnl, 0))
                         profitFactorFromHistorical = totalLoss > 0 ? totalProfit / totalLoss : (totalProfit > 0 ? 999 : 0)
-                        
-                        console.log('[Dashboard] Calculated metrics:', {
-                          tradesFromHistorical,
-                          winningEntries,
-                          winRateFromHistorical,
-                          totalProfit,
-                          totalLoss,
-                          profitFactorFromHistorical
-                        })
                       }
-                    } else {
-                      console.log('[Dashboard] No historical data entries found for strategy:', strategy.name)
                     }
                     
                     // Use historical data if available, otherwise fall back to strategy stats from trades
                     const displayTrades = tradesFromHistorical > 0 ? tradesFromHistorical : (strategy.totalTrades || 0)
                     const displayWinRate = tradesFromHistorical > 0 ? winRateFromHistorical : (strategy.winRate || 0)
                     const displayProfitFactor = tradesFromHistorical > 0 ? profitFactorFromHistorical : (strategy.profitFactor || 0)
-                    
-                    console.log('[Dashboard] Final display values:', {
-                      strategyName: strategy.name,
-                      displayTrades,
-                      displayWinRate,
-                      displayProfitFactor
-                    })
                     
                     return (
                       <Card key={strategy.id} className="bg-muted/30 border-border hover:shadow-md transition-shadow">
