@@ -515,12 +515,22 @@ export default function StrategiesPage() {
                         <div className="mt-2 flex items-center gap-2">
                           <Badge className={
                             isLoss ? 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/50' :
+                            isProfitable ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/50' :
                             'bg-gray-500/20 text-gray-700 dark:text-gray-400 border-gray-500/50'
                           }>
                             {isLoss ? (
-                              <TrendingDown className="w-3 h-3 mr-1" />
-                            ) : null}
-                            {isLoss ? 'Loss' : 'Active'}
+                              <>
+                                <TrendingDown className="w-3 h-3 mr-1" />
+                                Loss
+                              </>
+                            ) : isProfitable ? (
+                              <>
+                                <TrendingUp className="w-3 h-3 mr-1" />
+                                Profit
+                              </>
+                            ) : (
+                              'Active'
+                            )}
                           </Badge>
                         </div>
                       )}
