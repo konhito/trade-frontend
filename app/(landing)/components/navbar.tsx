@@ -232,10 +232,10 @@ export default function Component() {
             <div className={`fixed inset-0 bg-background/80  backdrop-blur-sm z-40 transition-opacity duration-300 ${hoveredItem ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} />
             
             <span className={`h-14 fixed top-0 left-0 right-0 bg-background z-50 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}></span>
-            <header className={`max-w-7xl mx-auto fixed top-0 left-0 right-0 px-4 lg:px-6 h-14 flex items-center justify-between z-50  text-foreground transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-                <Link href="/" className="flex items-center gap-2">
-                    <Logo width={56} height={56} className="h-14 w-14" />
-                    <span className="font-bold text-xl">MyTradeJournal</span>
+            <header className={`max-w-7xl mx-auto fixed top-0 left-0 right-0 px-4 lg:px-6 h-14 flex items-center justify-between z-50 text-foreground transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+                <Link href="/" className="flex items-center gap-0.5">
+                    <Logo width={100} height={100} />
+                    <span className="font-bold text-2xl pt-4">MyTradeJournal</span>
                 </Link>
                 <div className="hidden lg:block">
                     <NavigationMenu>
@@ -247,7 +247,7 @@ export default function Component() {
                                         <li className="row-span-3">
                                             <NavigationMenuLink asChild>
                                                 <Link className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md" href="/">
-                                                    <Logo width={40} height={40} className="h-10 w-10" />
+                                                    <Logo width={80} height={80} className="h-20 w-20" />
                                                     <div className="mb-2 mt-4 text-lg font-medium">
                                                         MyTradeJournal
                                                     </div>
@@ -440,7 +440,7 @@ export default function Component() {
                             transition={{ duration: 0.1 }}
                         >
                             <span className="sr-only">MyTradeJournal Logo</span>
-                            <Logo width={56} height={56} className="h-14 w-14" />
+                            <Logo width={100} height={100} className="h-24 w-24" />
                         </motion.button>
 
                         <motion.button

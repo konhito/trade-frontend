@@ -228,7 +228,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               className={`cursor-pointer flex items-center gap-1 md:flex-col md:items-center ${sidebarCollapsed ? '' : 'md:gap-3'}`}
               onClick={() => router.push('/')}
             >
-              <Logo className={`flex-shrink-0 ${sidebarCollapsed ? 'h-10 w-10 md:h-8 md:w-8' : 'h-10 w-10 md:h-14 md:w-14'}`} />
+              <Logo className={`flex-shrink-0 ${sidebarCollapsed ? 'h-14 w-14 md:h-12 md:w-12' : 'h-14 w-14 md:h-24 md:w-24'}`} />
               {/* Mobile: Always show title */}
               <h1 className={`font-bold whitespace-nowrap tracking-tight leading-tight md:hidden ${
                 effectiveTheme === 'light' ? 'text-black' : 'text-white'

@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/context/theme-provider";
 
 export function Logo({ className, width, height }: { className?: string; width?: number; height?: number }) {
-    const logoWidth = width || 40
-    const logoHeight = height || 40
+    const logoWidth = width || 80
+    const logoHeight = height || 80
     const { effectiveTheme } = useTheme()
     
     // Use logo3.png for light theme, logo2.png for dark theme

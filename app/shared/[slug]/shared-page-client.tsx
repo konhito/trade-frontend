@@ -121,7 +121,7 @@ function TopBanner({ t }: { t: any }) {
       <div className="w-full mx-auto py-3 px-4 md:px-10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-x-4">
-            <Logo className="h-8 w-8" />
+            <Logo className="h-14 w-14" />
             <div className="flex flex-col">
               <h1 className="font-semibold">Deltalytix</h1>
               <p className="text-sm text-muted-foreground">{t('shared.tagline')}</p>

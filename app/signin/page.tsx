@@ -166,9 +166,9 @@ function SignInContent() {
         {/* Additional overlay for better text readability */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40" />
         
-        <div className="relative z-20 flex items-center gap-2 text-lg font-medium">
-          <Logo width={56} height={56} />
-          <span className="text-white">MyTradeJournal</span>
+        <div className="relative z-20 flex items-center gap-0.5 font-medium">
+          <Logo width={100} height={100} />
+          <span className="text-white text-2xl font-bold pt-4">MyTradeJournal</span>
         </div>
         
         {/* Trading Quotes Overlay */}

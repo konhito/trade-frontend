@@ -97,7 +97,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="fixed py-2 top-0 left-0 right-0 z-50 flex flex-col text-primary bg-background/80 backdrop-blur-md border-b shadow-sm w-screen">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex flex-col text-primary bg-background/80 backdrop-blur-md w-screen">
         <div className="flex items-center justify-between px-10 h-16">
           <div className="flex items-center gap-x-2">
             <div className="flex flex-col items-center">
@@ -112,9 +112,9 @@ export default function Navbar() {
                     aria-label="All Trade Diary"
                   >
                     <span className="flex items-center gap-1">
-                      <Logo className='h-8 w-8' />
+                      <Logo className='h-14 w-14 pt-4' />
                       <ChevronDown 
-                        className={`h-4 w-4 transition-transform duration-200 ${isLogoPopoverOpen ? 'rotate-180' : 'rotate-0'}`}
+                        className={`h-4 w-4 transition-transform duration-200 pt-4 ${isLogoPopoverOpen ? 'rotate-180' : 'rotate-0'}`}
                         aria-hidden="true"
                       />
                     </span>

@@ -56,7 +56,7 @@ export default function Footer() {
         <div className="xl:grid xl:grid-cols-3 xl:gap-8">
           <div className="space-y-8">
             <div className="flex items-center gap-2">
-              <Logo width={56} height={56} />
+              <Logo width={100} height={100} />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">MyTradeJournal</h3>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">

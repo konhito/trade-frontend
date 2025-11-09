@@ -771,6 +771,11 @@ export default function Home() {
     return !dashboardStats?.overview || (dashboardStats.overview.totalTrades === 0 && (!formattedTrades || formattedTrades.length === 0) && !hasStrategiesWithData)
   }, [dashboardStats?.overview, formattedTrades?.length, hasStrategiesWithData])
 
+  // Memoize active strategies for rendering
+  const activeStrategies = useMemo(() => {
+    return strategies.filter(s => s.isActive).slice(0, 6)
+  }, [strategies])
+
 
   if (isLoading) {
     return (
@@ -1140,13 +1145,12 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {useMemo(() => {
-                    return strategies.filter(s => s.isActive).slice(0, 6)
-                  }, [strategies]).map((strategy) => {
+                  {activeStrategies.map((strategy) => {
                     // Calculate metrics from historical data
                     let tradesFromHistorical = 0
                     let winRateFromHistorical = 0
                     let profitFactorFromHistorical = 0
+                    let totalProfit = 0
                     
                     // Parse historicalData - it might be a JSON string
                     let parsedHistoricalData = strategy.historicalData
@@ -1169,13 +1173,16 @@ export default function Home() {
                           return liveValue
                         })
                         
+                        // Calculate total profit (sum of all P&L entries)
+                        totalProfit = liveEntries.reduce((sum: number, pnl: number) => sum + pnl, 0)
+                        
                         const winningEntries = liveEntries.filter((pnl: number) => pnl > 0).length
                         winRateFromHistorical = (winningEntries / tradesFromHistorical) * 100
                         
                         // Calculate profit factor from live data
-                        const totalProfit = liveEntries.filter((pnl: number) => pnl > 0).reduce((sum: number, pnl: number) => sum + pnl, 0)
+                        const totalProfitOnly = liveEntries.filter((pnl: number) => pnl > 0).reduce((sum: number, pnl: number) => sum + pnl, 0)
                         const totalLoss = Math.abs(liveEntries.filter((pnl: number) => pnl < 0).reduce((sum: number, pnl: number) => sum + pnl, 0))
-                        profitFactorFromHistorical = totalLoss > 0 ? totalProfit / totalLoss : (totalProfit > 0 ? 999 : 0)
+                        profitFactorFromHistorical = totalLoss > 0 ? totalProfitOnly / totalLoss : (totalProfitOnly > 0 ? 999 : 0)
                       }
                     }
                     
@@ -1183,6 +1190,16 @@ export default function Home() {
                     const displayTrades = tradesFromHistorical > 0 ? tradesFromHistorical : (strategy.totalTrades || 0)
                     const displayWinRate = tradesFromHistorical > 0 ? winRateFromHistorical : (strategy.winRate || 0)
                     const displayProfitFactor = tradesFromHistorical > 0 ? profitFactorFromHistorical : (strategy.profitFactor || 0)
+                    const displayProfit = totalProfit !== 0 ? totalProfit : (strategy.totalPnl || strategy.totalProfit || 0)
+                    
+                    // Format profit for display
+                    const formatProfit = (profit: number) => {
+                      if (profit >= 0) {
+                        return `+$${Math.abs(profit).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                      } else {
+                        return `-$${Math.abs(profit).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                      }
+                    }
                     
                     return (
                       <Card key={strategy.id} className="bg-muted/30 border-border hover:shadow-md transition-shadow">
@@ -1193,10 +1210,14 @@ export default function Home() {
                               <p className="text-xs text-muted-foreground mb-2">{strategy.category}</p>
                             </div>
                             <Badge 
-                              variant={strategy.isActive ? "default" : "secondary"}
-                              className={`text-xs ${strategy.isActive ? "bg-green-500 text-white" : ""}`}
+                              variant={displayProfit >= 0 ? "default" : "destructive"}
+                              className={`text-xs font-semibold ${
+                                displayProfit >= 0 
+                                  ? "bg-green-500 text-white hover:bg-green-600" 
+                                  : "bg-red-500 text-white hover:bg-red-600"
+                              }`}
                             >
-                              {strategy.isActive ? "Active" : "Inactive"}
+                              {formatProfit(displayProfit)}
                             </Badge>
                           </div>
                           <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3 sm:mt-4">

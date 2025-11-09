@@ -164,7 +164,7 @@ function NotFoundContent() {
         {/* Placeholder for theme toggle */}
         <div className="absolute top-4 right-4 w-10 h-8" />
 
-        <Logo className="w-14 h-14 mb-8 fill-primary" />
+        <Logo className="w-24 h-24 mb-8 fill-primary" />
         <h1 className="text-6xl font-bold mb-4 text-foreground">404</h1>
         <h2 className="text-2xl font-semibold text-muted-foreground mb-6 text-center">
           Page introuvable
