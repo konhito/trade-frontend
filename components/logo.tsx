@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/context/theme-provider";
 
@@ -6,24 +6,58 @@ export function Logo({ className, width, height }: { className?: string; width?:
     const logoWidth = width || 80
     const logoHeight = height || 80
     const { effectiveTheme } = useTheme()
+    const lightLogo = '/logo3.png'
+    const darkLogo = '/logo2.png'
     
-    // Use logo3.png for light theme, logo2.png for dark theme
-    const logoSource = effectiveTheme === 'light' ? '/logo3.png' : '/logo2.png'
+    // Preload both images for smooth transitions
+    useEffect(() => {
+        const lightImg = new Image()
+        const darkImg = new Image()
+        lightImg.src = lightLogo
+        darkImg.src = darkLogo
+    }, [lightLogo, darkLogo])
     
     return (
-        <img
-            src={logoSource}
-            alt="MyTradeJournal Logo"
-            width={logoWidth}
-            height={logoHeight}
-            className={cn("object-contain logo-no-invert", className)}
+        <div 
+            className={cn("relative inline-block", className)}
             style={{
-                imageRendering: 'auto',
-                backfaceVisibility: 'hidden',
-                transform: 'translateZ(0)',
-                willChange: 'transform',
+                width: logoWidth,
+                height: logoHeight,
             }}
-        />
+        >
+            {/* Light theme logo */}
+            <img
+                src={lightLogo}
+                alt="MyTradeJournal Logo"
+                width={logoWidth}
+                height={logoHeight}
+                className={cn(
+                    "object-contain logo-no-invert absolute inset-0 transition-opacity duration-300 ease-in-out",
+                    effectiveTheme === 'light' ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                )}
+                style={{
+                    imageRendering: 'auto',
+                    backfaceVisibility: 'hidden',
+                    transform: 'translateZ(0)',
+                }}
+            />
+            {/* Dark theme logo */}
+            <img
+                src={darkLogo}
+                alt="MyTradeJournal Logo"
+                width={logoWidth}
+                height={logoHeight}
+                className={cn(
+                    "object-contain logo-no-invert absolute inset-0 transition-opacity duration-300 ease-in-out",
+                    effectiveTheme === 'dark' ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                )}
+                style={{
+                    imageRendering: 'auto',
+                    backfaceVisibility: 'hidden',
+                    transform: 'translateZ(0)',
+                }}
+            />
+        </div>
     )
 }
 
