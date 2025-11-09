@@ -1,13 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { BookOpen, Code, LineChart, GraduationCap } from "lucide-react"
+import { BookOpen, Code, LineChart, GraduationCap, TrendingUp, Shield, BarChart3, Brain, FileText } from "lucide-react"
 
 export default function AboutPage() {
   const founderSkills = [
-    { name: "Order Book Trading", icon: <BookOpen className="w-4 h-4" /> },
-    { name: "Volume Profile", icon: <LineChart className="w-4 h-4" /> },
-    { name: "Computer Science", icon: <Code className="w-4 h-4" /> },
-    { name: "Quantitative Finance", icon: <GraduationCap className="w-4 h-4" /> },
+    { name: "Capital & Financial Markets", icon: <BarChart3 className="w-4 h-4" /> },
+    { name: "Retail Banking Operations", icon: <BookOpen className="w-4 h-4" /> },
+    { name: "Derivatives & Risk Management", icon: <Shield className="w-4 h-4" /> },
+    { name: "Options Strategies (Straddle, Strangle, Hedging)", icon: <TrendingUp className="w-4 h-4" /> },
+    { name: "Price Action & Volatility Analysis", icon: <LineChart className="w-4 h-4" /> },
+    { name: "Trading Psychology & Behavioral Finance", icon: <Brain className="w-4 h-4" /> },
+    { name: "Strategy Backtesting & Trade Journaling", icon: <FileText className="w-4 h-4" /> },
   ]
 
   return (
@@ -28,21 +31,30 @@ export default function AboutPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card">
+        <Card className="bg-card md:col-span-2">
           <CardHeader>
             <CardTitle className="text-2xl">The Founder&apos;s Story</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">
-              With over 5 years of trading experience, our founder has mastered order book trading with a specific 
-              focus on volume profile. Combining a strong background in engineering, computer science, and financial 
-              markets, along with a master&apos;s degree in quantitative finance, he identified a gap in the market for 
-              a tool that could truly help traders understand and improve their performance.
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Anubhav Singh, the founder of MyTradeJournal, is a finance professional and passionate trader with over 3–5 years of real market experience. He has completed his MBA in Finance and holds multiple NISM certifications in Equity, Derivatives, and Risk Management, as well as a certification from the NSE Academy in capital markets.
             </p>
             <p className="text-muted-foreground">
-              This unique blend of skills and experience led to the creation of MyTradeJournal - a platform that 
-              reflects the needs of serious traders looking to gain deeper insights into their trading patterns 
-              and performance.
+              He began his career with HDFC Bank in the Retail Branch Banking division, where he gained hands-on knowledge of financial products, client management, and investment advisory. Later, he worked with Kedia Capital, a leading stock broking firm, where he deepened his understanding of the capital market structure, derivatives trading, and client portfolio management.
+            </p>
+            <p className="text-muted-foreground">
+              Alongside his professional journey, Anubhav has been a dedicated market participant and strategy-based trader. Over the years, he has tested, refined, and mastered multiple strategies including:
+            </p>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+              <li><strong>Straddle Strategy</strong> – Managing at-the-money (ATM) straddles with dynamic hedging and controlled risk.</li>
+              <li><strong>Strangle Strategy</strong> – Positioning trades based on volatility and option premium behavior.</li>
+              <li><strong>Price Action Analysis</strong> – Identifying intraday trends, key breakout levels, and volume zones to enhance accuracy.</li>
+            </ul>
+            <p className="text-muted-foreground">
+              His unique combination of banking experience, technical trading skills, and risk management expertise led him to create MyTradeJournal.co.in — a platform designed to help traders track, analyze, and improve their trading performance using data-driven insights and structured journaling.
+            </p>
+            <p className="text-muted-foreground">
+              Anubhav believes that consistent profitability comes not just from good entries but from disciplined journaling, emotional control, and continuous analysis — values that form the foundation of MyTradeJournal.
             </p>
           </CardContent>
         </Card>

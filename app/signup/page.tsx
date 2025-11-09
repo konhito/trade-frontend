@@ -114,7 +114,7 @@ function SignUpContent() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40" />
         
         <div className="relative z-20 flex items-center gap-0.5 font-medium">
-          <Logo width={100} height={100} />
+          <Logo width={100} height={100} className="pt-2" />
           <span className="text-white text-2xl font-bold pt-4">MyTradeJournal</span>
         </div>
         

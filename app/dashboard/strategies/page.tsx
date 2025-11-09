@@ -33,7 +33,7 @@ import {
   X,
   Download
 } from "lucide-react"
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTheme } from '@/context/theme-provider'
 import { useAuth } from '@/context/auth-provider'
 import { toast } from 'sonner'
@@ -196,7 +196,7 @@ export default function StrategiesPage() {
   }, [selectedCategory, searchTerm, fetchStrategies, initialLoad, authLoading])
 
   // Helper function to calculate strategy P&L
-  const calculateStrategyPnL = (strategy: any) => {
+  const calculateStrategyPnL = useCallback((strategy: any) => {
     if (!strategy.historicalData?.entries || strategy.historicalData.entries.length === 0) {
       return 0
     }
@@ -208,7 +208,7 @@ export default function StrategiesPage() {
     }
     const liveValues: number[] = entries.map((e: any) => parseNum(e.live))
     return liveValues.reduce((sum, v) => sum + v, 0)
-  }
+  }, [])
 
   const filteredStrategies = strategies.filter(strategy => {
     const matchesSearch = strategy.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -228,6 +228,19 @@ export default function StrategiesPage() {
     
     return matchesSearch && matchesCategory && matchesStatus && matchesPerformance
   })
+
+  // Calculate total PnL for all strategies
+  const totalStrategiesPnL = useMemo(() => {
+    return strategies.reduce((sum, s) => {
+      const pnl = calculateStrategyPnL(s)
+      return sum + pnl
+    }, 0)
+  }, [strategies, calculateStrategyPnL])
+
+  // Calculate active strategies count
+  const activeStrategiesCount = useMemo(() => {
+    return strategies.filter(s => s.isActive).length
+  }, [strategies])
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -348,6 +361,23 @@ export default function StrategiesPage() {
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <Card className="bg-card border-border">
             <CardContent className="p-4">
+              <div className="text-sm text-muted-foreground">Total Strategies PnL</div>
+              {loading ? (
+                <Skeleton className="h-8 w-16 mt-2" />
+              ) : (
+                <div className={`text-2xl font-bold ${totalStrategiesPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {totalStrategiesPnL >= 0 
+                    ? `+₹${Math.abs(totalStrategiesPnL).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                    : `-₹${Math.abs(totalStrategiesPnL).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+                </div>
+              )}
+              <div className="text-xs text-muted-foreground mt-1">
+                {activeStrategiesCount} active
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card border-border">
+            <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Total Strategies</div>
               {loading ? (
                 <Skeleton className="h-8 w-16 mt-2" />
@@ -364,7 +394,7 @@ export default function StrategiesPage() {
               {loading ? (
                 <Skeleton className="h-8 w-16 mt-2" />
               ) : (
-                <div className="text-2xl font-bold text-green-500">{strategies.filter(s => s.isActive).length}</div>
+                <div className="text-2xl font-bold text-green-500">{activeStrategiesCount}</div>
               )}
             </CardContent>
           </Card>
