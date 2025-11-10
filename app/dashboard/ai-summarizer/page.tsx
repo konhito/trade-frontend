@@ -187,11 +187,24 @@ export default function AISummarizerPage() {
         })
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to generate summary')
-      }
-
       const data = await response.json()
+      
+      if (!response.ok) {
+        // Get error message from response
+        const errorMessage = data.error || 'Failed to generate summary'
+        
+        // Show specific error messages
+        if (response.status === 413) {
+          toast.error('Too much data to process. The daily summary will only include today\'s trades.')
+        } else if (response.status === 408) {
+          toast.error('Generation took too long. Please try again.')
+        } else if (response.status === 401) {
+          toast.error('Please sign in to generate summaries')
+        } else {
+          toast.error(errorMessage)
+        }
+        throw new Error(errorMessage)
+      }
       const summary = data.summary
       
       // Save generated summary
@@ -211,9 +224,12 @@ export default function AISummarizerPage() {
       localStorage.setItem('ai-summarizer-last-generated', JSON.stringify(newLastGenerated))
       
       toast.success(`${summaryTypes.find(t => t.id === type)?.title || 'Summary'} generated successfully!`)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating summary:', error)
-      toast.error('Failed to generate summary. Please try again later.')
+      // Only show generic error if we haven't already shown a specific one
+      if (!error.message || !error.message.includes('Failed to generate')) {
+        toast.error(error.message || 'Failed to generate summary. Please try again later.')
+      }
     } finally {
       setLoading(false)
       setSelectedType(null)

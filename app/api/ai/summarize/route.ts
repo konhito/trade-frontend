@@ -111,13 +111,31 @@ export async function POST(req: Request) {
     
     console.log('[AI Summarize] Using token for API calls:', token ? 'token exists' : 'no token')
 
-    // Fetch recent trades for analysis from backend API with timeout
+    // For daily summary, only get today's trades
+    const isDailySummary = type === 'daily'
+    let dateFilter: string | undefined = undefined
+    
+    if (isDailySummary) {
+      // Get today's date at midnight (start of day) in ISO format
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      dateFilter = today.toISOString()
+      console.log('[AI Summarize] Daily summary - filtering trades from:', dateFilter)
+    }
+
+    // Fetch trades for analysis from backend API with timeout
     const tradesController = new AbortController()
     const tradesTimeout = setTimeout(() => tradesController.abort(), 10000) // 10 second timeout
     
     let allTrades: any[] = []
     try {
-      const tradesResponse = await fetch(`${backendBaseUrl}/trades?userId=${String(user.id)}&limit=50`, {
+      // Build query URL with date filter for daily summaries
+      let tradesUrl = `${backendBaseUrl}/trades?userId=${String(user.id)}`
+      if (dateFilter) {
+        tradesUrl += `&from=${encodeURIComponent(dateFilter)}`
+      }
+      
+      const tradesResponse = await fetch(tradesUrl, {
         headers: { Authorization: `Bearer ${token}` },
         signal: tradesController.signal
       })
@@ -128,6 +146,7 @@ export async function POST(req: Request) {
       }
       const tradesResponseData = await tradesResponse.json()
       allTrades = tradesResponseData.trades || []
+      console.log(`[AI Summarize] Fetched ${allTrades.length} trades${isDailySummary ? ' (today only)' : ''}`)
     } catch (error: any) {
       clearTimeout(tradesTimeout)
       if (error.name === 'AbortError') {
@@ -138,14 +157,37 @@ export async function POST(req: Request) {
       // Continue with empty trades array rather than failing completely
     }
     
-    // Get recent 30 trades (reduced from 50 for faster processing), sorted by entryDate
-    const recentTrades = allTrades
+    // Filter and process trades
+    // For daily summary, filter by entryDate to ensure only today's trades
+    // For other types, get recent trades
+    let filteredTrades = allTrades
+    
+    if (isDailySummary) {
+      // Filter to only today's trades based on entryDate
+      const todayStr = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
+      filteredTrades = allTrades.filter((trade: any) => {
+        const tradeDate = trade.entryDate || trade.createdAt
+        if (!tradeDate) return false
+        // Handle both ISO string and date object
+        const tradeDateStr = typeof tradeDate === 'string' 
+          ? tradeDate.split('T')[0] 
+          : new Date(tradeDate).toISOString().split('T')[0]
+        return tradeDateStr === todayStr
+      })
+      console.log(`[AI Summarize] Filtered to ${filteredTrades.length} trades from today`)
+    }
+    
+    // Sort by entryDate (most recent first) and limit to prevent token overflow
+    // For daily: use all today's trades (but cap at 50 to avoid token limits)
+    // For others: use recent 30 trades
+    const maxTrades = isDailySummary ? 50 : 30
+    const recentTrades = filteredTrades
       .sort((a: any, b: any) => {
         const dateA = new Date(a.entryDate || a.createdAt || 0).getTime()
         const dateB = new Date(b.entryDate || b.createdAt || 0).getTime()
         return dateB - dateA
       })
-      .slice(0, 30) // Reduced from 50 to 30 for faster processing
+      .slice(0, maxTrades)
       .map((trade: any) => ({
         s: trade.symbol || trade.instrument, // Shortened keys
         d: trade.direction || trade.side,
@@ -157,6 +199,8 @@ export async function POST(req: Request) {
         q: trade.quantity || 0,
         st: trade.strategy || null,
       }))
+    
+    console.log(`[AI Summarize] Processing ${recentTrades.length} trades for ${type} summary`)
 
     // Fetch strategies for strategy analysis from backend API with timeout
     const strategiesController = new AbortController()
@@ -244,12 +288,28 @@ export async function POST(req: Request) {
       }
     })
 
+    // Check if we have too many trades that might exceed token limits
+    // Estimate: each trade ~100-150 tokens, prompt base ~200 tokens, max input ~8000 tokens
+    // So we should limit to ~50 trades max
+    if (recentTrades.length > 50) {
+      console.warn(`[AI Summarize] Too many trades (${recentTrades.length}), limiting to 50 to avoid token limits`)
+      recentTrades.splice(50)
+    }
+
     // Create prompts based on summary type - use compact JSON
     const tradesData = JSON.stringify(recentTrades) // Compact format (no pretty print)
     const strategiesData = JSON.stringify(strategies) // Compact format
 
+    // Check data size to prevent token limit issues
+    const estimatedTokens = Math.ceil((tradesData.length + strategiesData.length) / 4) // Rough estimate: ~4 chars per token
+    console.log(`[AI Summarize] Estimated input tokens: ${estimatedTokens}`)
+    
+    if (estimatedTokens > 6000) {
+      console.warn(`[AI Summarize] Large input detected (${estimatedTokens} tokens), may hit token limits`)
+    }
+
       const prompts: Record<string, string> = {
-        daily: `Analyze these trades and provide a concise daily summary. Data: ${tradesData}
+        daily: `Analyze these trades from today and provide a concise daily summary. Data: ${tradesData}
 
 Provide: Performance overview (win rate, P&L), key patterns, improvement recommendations, and risk assessment. Use markdown with headings (##), bullets, and bold text. Keep it focused and actionable.`,
 
@@ -292,12 +352,24 @@ Provide: Risk metrics (drawdown, Sharpe, volatility), risk factors, position siz
     } catch (error: any) {
       const elapsed = Date.now() - startTime
       console.error(`[AI Summarize] Generation error after ${elapsed}ms:`, error)
+      
+      // Handle token limit errors
+      if (error.message?.includes('token') || error.message?.includes('Token') || 
+          error.message?.includes('input') || error.message?.includes('limit')) {
+        return NextResponse.json(
+          { error: 'Too much data to process. Please try again with fewer trades or contact support.' },
+          { status: 413 }
+        )
+      }
+      
+      // Handle timeout errors
       if (error.message?.includes('timeout') || elapsed > 50000) {
         return NextResponse.json(
           { error: 'Generation took too long. Please try again with fewer trades.' },
           { status: 408 }
         )
       }
+      
       throw error
     }
   } catch (error) {
