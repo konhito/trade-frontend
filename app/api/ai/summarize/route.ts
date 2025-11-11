@@ -201,9 +201,9 @@ export async function POST(req: Request) {
     }
     
     // Sort by entryDate (most recent first) and limit to prevent token overflow
-    // For daily: use all today's trades (but cap at 50 to avoid token limits)
-    // For others: use recent 30 trades
-    const maxTrades = isDailySummary ? 50 : 30
+    // For daily: use all today's trades (but cap at 100 to avoid token limits)
+    // For others: use recent 50 trades (increased for better analysis)
+    const maxTrades = isDailySummary ? 100 : 50
     const recentTrades = filteredTrades
       .sort((a: any, b: any) => {
         const dateA = new Date(a.entryDate || a.createdAt || 0).getTime()
@@ -370,7 +370,7 @@ export async function POST(req: Request) {
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-2.5-flash',
       generationConfig: {
-        maxOutputTokens: 2048, // Limit response length for faster generation
+        maxOutputTokens: 8192, // Increased for comprehensive full responses
         temperature: 0.7,
       }
     })
@@ -421,7 +421,7 @@ export async function POST(req: Request) {
     const estimatedTokens = Math.ceil((tradesData.length + strategiesData.length) / 4) // Rough estimate: ~4 chars per token
     console.log(`[AI Summarize] Estimated input tokens: ${estimatedTokens}`)
     
-    if (estimatedTokens > 6000) {
+    if (estimatedTokens > 25000) {
       console.warn(`[AI Summarize] Large input detected (${estimatedTokens} tokens), may hit token limits`)
     }
 
