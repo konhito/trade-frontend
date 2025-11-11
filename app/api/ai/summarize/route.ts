@@ -142,9 +142,23 @@ export async function POST(req: Request) {
       clearTimeout(tradesTimeout)
       
       if (!tradesResponse.ok) {
-        throw new Error('Failed to fetch trades')
+        let errorText = 'Unknown error'
+        try {
+          errorText = await tradesResponse.text()
+        } catch {
+          // Response body already consumed or not available
+        }
+        console.error(`[AI Summarize] Trades fetch failed: ${tradesResponse.status} ${tradesResponse.statusText}`, errorText)
+        throw new Error(`Failed to fetch trades: ${tradesResponse.status} ${tradesResponse.statusText}`)
       }
-      const tradesResponseData = await tradesResponse.json()
+      
+      let tradesResponseData: any
+      try {
+        tradesResponseData = await tradesResponse.json()
+      } catch (error: any) {
+        console.error('[AI Summarize] Error parsing trades response:', error)
+        throw new Error('Invalid response from trades API')
+      }
       allTrades = tradesResponseData.trades || []
       console.log(`[AI Summarize] Fetched ${allTrades.length} trades${isDailySummary ? ' (today only)' : ''}`)
     } catch (error: any) {
@@ -154,7 +168,16 @@ export async function POST(req: Request) {
       } else {
         console.error('[AI Summarize] Error fetching trades:', error)
       }
-      // Continue with empty trades array rather than failing completely
+      // For non-daily summaries, we can continue with empty trades (they might have strategies)
+      // For daily summaries, we need trades, so return error
+      if (isDailySummary) {
+        return NextResponse.json(
+          { error: 'Failed to fetch today\'s trades. Please try again later.' },
+          { status: 500 }
+        )
+      }
+      // Continue with empty trades array for other types
+      allTrades = []
     }
     
     // Filter and process trades
@@ -206,7 +229,7 @@ export async function POST(req: Request) {
     const strategiesController = new AbortController()
     const strategiesTimeout = setTimeout(() => strategiesController.abort(), 10000) // 10 second timeout
     
-    let strategies: any[] = []
+    let allStrategies: any[] = []
     try {
       const strategiesResponse = await fetch(`${backendBaseUrl}/strategies?userId=${String(user.id)}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -218,7 +241,79 @@ export async function POST(req: Request) {
         throw new Error('Failed to fetch strategies')
       }
       const strategiesResponseData = await strategiesResponse.json()
-      strategies = (strategiesResponseData.strategies || []).slice(0, 10).map((strategy: any) => {
+      allStrategies = strategiesResponseData.strategies || []
+    } catch (error: any) {
+      clearTimeout(strategiesTimeout)
+      if (error.name === 'AbortError') {
+        console.error('[AI Summarize] Strategies fetch timeout')
+      } else {
+        console.error('[AI Summarize] Error fetching strategies:', error)
+      }
+      // Continue with empty strategies array
+    }
+
+    // For daily summary, filter strategies to only those used in today's trades
+    // and calculate performance metrics from today's trades only
+    let strategies: any[] = []
+    
+    if (isDailySummary) {
+      // Get unique strategy names/IDs from today's trades
+      const todayStrategyNames = new Set<string>()
+      recentTrades.forEach((trade: any) => {
+        if (trade.st && trade.st.trim()) {
+          todayStrategyNames.add(trade.st.trim())
+        }
+      })
+      
+      console.log(`[AI Summarize] Found ${todayStrategyNames.size} unique strategies used today:`, Array.from(todayStrategyNames))
+      
+      // Filter strategies to only those used today
+      const todayStrategies = allStrategies.filter((strategy: any) => {
+        // Match by strategy name or ID
+        return todayStrategyNames.has(strategy.name?.trim()) || 
+               todayStrategyNames.has(strategy.id?.trim()) ||
+               (strategy.name && todayStrategyNames.has(String(strategy.name).trim()))
+      })
+      
+      // Calculate performance metrics from today's trades only
+      strategies = todayStrategies.map((strategy: any) => {
+        // Get trades for this strategy from today
+        const strategyTrades = recentTrades.filter((trade: any) => {
+          const tradeStrategy = trade.st?.trim()
+          return tradeStrategy === strategy.name?.trim() || 
+                 tradeStrategy === strategy.id?.trim() ||
+                 (strategy.name && tradeStrategy === String(strategy.name).trim())
+        })
+        
+        // Calculate metrics from today's trades only
+        const totalTrades = strategyTrades.length
+        const totalPnL = strategyTrades.reduce((sum: number, trade: any) => sum + (trade.p || 0), 0)
+        const winningTrades = strategyTrades.filter((trade: any) => (trade.p || 0) > 0).length
+        const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0
+        
+        const profits = strategyTrades.filter((trade: any) => (trade.p || 0) > 0).map((trade: any) => trade.p || 0)
+        const losses = strategyTrades.filter((trade: any) => (trade.p || 0) < 0).map((trade: any) => Math.abs(trade.p || 0))
+        const totalProfit = profits.reduce((sum: number, p: number) => sum + p, 0)
+        const totalLoss = losses.reduce((sum: number, l: number) => sum + l, 0)
+        const profitFactor = totalLoss > 0 ? totalProfit / totalLoss : (totalProfit > 0 ? 999 : 0)
+        
+        return {
+          id: strategy.id,
+          n: strategy.name, // Shortened keys
+          d: strategy.description,
+          c: strategy.category,
+          a: strategy.isActive ?? true,
+          pnl: totalPnL, // P&L from today's trades only
+          tr: totalTrades, // Trades from today only
+          wr: winRate, // Win rate from today's trades
+          pf: profitFactor, // Profit factor from today's trades
+        }
+      })
+      
+      console.log(`[AI Summarize] Filtered to ${strategies.length} strategies used today with today's performance metrics`)
+    } else {
+      // For non-daily summaries, use all strategies with historical data
+      strategies = allStrategies.slice(0, 10).map((strategy: any) => {
         // Calculate strategy performance from historical data
         let totalPnL = 0
         let totalTrades = 0
@@ -269,14 +364,6 @@ export async function POST(req: Request) {
           pf: profitFactor, // Profit factor
         }
       })
-    } catch (error: any) {
-      clearTimeout(strategiesTimeout)
-      if (error.name === 'AbortError') {
-        console.error('[AI Summarize] Strategies fetch timeout')
-      } else {
-        console.error('[AI Summarize] Error fetching strategies:', error)
-      }
-      // Continue with empty strategies array
     }
 
     // Get the model with optimized settings
@@ -288,6 +375,25 @@ export async function POST(req: Request) {
       }
     })
 
+    // Check if we have trades to analyze
+    // Strategy analysis can work with just strategies, but others need trades
+    if (recentTrades.length === 0 && type !== 'strategy') {
+      console.warn(`[AI Summarize] No trades found for ${type} summary`)
+      return NextResponse.json(
+        { error: `No trades found${isDailySummary ? ' for today' : ''}. Please add some trades first.` },
+        { status: 400 }
+      )
+    }
+    
+    // Strategy analysis needs at least strategies
+    if (type === 'strategy' && strategies.length === 0 && recentTrades.length === 0) {
+      console.warn('[AI Summarize] No strategies or trades found for strategy analysis')
+      return NextResponse.json(
+        { error: 'No strategies or trades found. Please add some strategies or trades first.' },
+        { status: 400 }
+      )
+    }
+
     // Check if we have too many trades that might exceed token limits
     // Estimate: each trade ~100-150 tokens, prompt base ~200 tokens, max input ~8000 tokens
     // So we should limit to ~50 trades max
@@ -297,8 +403,19 @@ export async function POST(req: Request) {
     }
 
     // Create prompts based on summary type - use compact JSON
-    const tradesData = JSON.stringify(recentTrades) // Compact format (no pretty print)
-    const strategiesData = JSON.stringify(strategies) // Compact format
+    let tradesData: string
+    let strategiesData: string
+    
+    try {
+      tradesData = JSON.stringify(recentTrades) // Compact format (no pretty print)
+      strategiesData = JSON.stringify(strategies) // Compact format
+    } catch (error: any) {
+      console.error('[AI Summarize] Error stringifying data:', error)
+      return NextResponse.json(
+        { error: 'Failed to process trade data. Please try again.' },
+        { status: 500 }
+      )
+    }
 
     // Check data size to prevent token limit issues
     const estimatedTokens = Math.ceil((tradesData.length + strategiesData.length) / 4) // Rough estimate: ~4 chars per token
@@ -308,10 +425,13 @@ export async function POST(req: Request) {
       console.warn(`[AI Summarize] Large input detected (${estimatedTokens} tokens), may hit token limits`)
     }
 
-      const prompts: Record<string, string> = {
-        daily: `Analyze these trades from today and provide a concise daily summary. Data: ${tradesData}
+    const prompts: Record<string, string> = {
+        daily: `Analyze these trades from today and provide a concise daily summary. 
 
-Provide: Performance overview (win rate, P&L), key patterns, improvement recommendations, and risk assessment. Use markdown with headings (##), bullets, and bold text. Keep it focused and actionable.`,
+Trades Data (from today only): ${tradesData}
+${strategies.length > 0 ? `Strategies Data (used today only, with today's performance metrics): ${strategiesData}` : ''}
+
+Provide: Performance overview (win rate, P&L), key patterns${strategies.length > 0 ? ', strategy performance analysis for strategies used today' : ''}, improvement recommendations, and risk assessment. Use markdown with headings (##), bullets, and bold text. Keep it focused and actionable.`,
 
         strategy: `Analyze and compare trading strategies with their performance data. Focus primarily on STRATEGIES analysis.
 
@@ -339,14 +459,32 @@ Provide: Risk metrics (drawdown, Sharpe, volatility), risk factors, position siz
 
     const prompt = prompts[type] || prompts.daily
 
+    // Validate prompt exists and is not empty
+    if (!prompt || prompt.trim().length === 0) {
+      console.error(`[AI Summarize] Invalid prompt for type: ${type}`)
+      return NextResponse.json(
+        { error: `Invalid summary type: ${type}` },
+        { status: 400 }
+      )
+    }
+
     // Generate content - timeout is handled by maxDuration
     const startTime = Date.now()
     try {
+      console.log(`[AI Summarize] Generating ${type} summary with ${recentTrades.length} trades`)
       const result = await model.generateContent(prompt)
       const response = await result.response
       const text = response.text()
       const elapsed = Date.now() - startTime
       console.log(`[AI Summarize] Generation completed in ${elapsed}ms`)
+
+      if (!text || text.trim().length === 0) {
+        console.error('[AI Summarize] Empty response from AI')
+        return NextResponse.json(
+          { error: 'AI returned an empty response. Please try again.' },
+          { status: 500 }
+        )
+      }
 
       return NextResponse.json({ summary: text })
     } catch (error: any) {
@@ -372,10 +510,25 @@ Provide: Risk metrics (drawdown, Sharpe, volatility), risk factors, position siz
       
       throw error
     }
-  } catch (error) {
-    console.error('Gemini API error:', error)
+  } catch (error: any) {
+    console.error('[AI Summarize] Top-level error:', error)
+    console.error('[AI Summarize] Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      type: typeof error
+    })
+    
+    // Return more specific error messages
+    if (error?.message) {
+      return NextResponse.json(
+        { error: `Failed to generate summary: ${error.message}` },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to generate summary' },
+      { error: 'Failed to generate summary. Please try again later.' },
       { status: 500 }
     )
   }
