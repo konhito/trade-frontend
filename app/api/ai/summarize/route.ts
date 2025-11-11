@@ -395,11 +395,11 @@ export async function POST(req: Request) {
     }
 
     // Check if we have too many trades that might exceed token limits
-    // Estimate: each trade ~100-150 tokens, prompt base ~200 tokens, max input ~8000 tokens
-    // So we should limit to ~50 trades max
-    if (recentTrades.length > 50) {
-      console.warn(`[AI Summarize] Too many trades (${recentTrades.length}), limiting to 50 to avoid token limits`)
-      recentTrades.splice(50)
+    // Estimate: each trade ~100-150 tokens, prompt base ~200 tokens, max input ~32000 tokens for Gemini 2.5 Flash
+    // So we can handle more trades, but keep reasonable limits
+    if (recentTrades.length > 100) {
+      console.warn(`[AI Summarize] Too many trades (${recentTrades.length}), limiting to 100 to avoid token limits`)
+      recentTrades.splice(100)
     }
 
     // Create prompts based on summary type - use compact JSON
