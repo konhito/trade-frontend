@@ -327,3 +327,5 @@ Provide: Risk metrics (drawdown, Sharpe, volatility), risk factors, position siz
 5. All data uses compact JSON format to minimize token usage
 6. Token limits have been increased to support comprehensive full responses
 
+
+

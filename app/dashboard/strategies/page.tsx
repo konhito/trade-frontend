@@ -38,7 +38,7 @@ import { useTheme } from '@/context/theme-provider'
 import { useAuth } from '@/context/auth-provider'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
-import { listStrategies, createStrategy as createStrategyApi, updateStrategy as updateStrategyApi, deleteStrategy as deleteStrategyApi } from '@/lib/services/strategies'
+import { listStrategies, getStrategy, createStrategy as createStrategyApi, updateStrategy as updateStrategyApi, deleteStrategy as deleteStrategyApi } from '@/lib/services/strategies'
 
 export default function StrategiesPage() {
   const { effectiveTheme } = useTheme()
@@ -62,7 +62,7 @@ export default function StrategiesPage() {
   const categories = ['All', 'Breakout', 'Trend', 'Mean Reversion', 'Scalping', 'Swing', 'Directional Strategy', 'Non-Directional Strategy', 'Reversal']
 
   // API functions with silent loading for subsequent calls
-  const fetchStrategies = useCallback(async (silent = false) => {
+  const fetchStrategies = useCallback(async (silent = false, forceRefresh = false) => {
     // Get userId from auth context - use 'default-user' fallback like trades page does
     // This ensures we always make the API call, and the backend will validate via token
     let userId = user?.id || 'default-user'
@@ -70,18 +70,21 @@ export default function StrategiesPage() {
     console.log('[Strategies] fetchStrategies called', { 
       userId, 
       userFromContext: user?.id || 'none',
-      authLoading 
+      authLoading,
+      forceRefresh
     })
     
     try {
       if (!silent) setLoading(true)
       
-      console.log('[Strategies] About to call listStrategies API with userId:', userId)
-      console.log('[Strategies] Fetching strategies for userId:', userId)
+      // listStrategies now checks cache first and returns immediately if cached
+      // This means if data was loaded on dashboard, it will be instant here!
+      console.log('[Strategies] Calling listStrategies (will use cache if available)')
       const data = await listStrategies({
         userId: String(userId),
         ...(selectedCategory !== 'All' && { category: selectedCategory }),
-        ...(searchTerm && { search: searchTerm })
+        ...(searchTerm && { search: searchTerm }),
+        forceRefresh
       })
       
       let filteredStrategies = data.strategies || []
@@ -731,15 +734,32 @@ export default function StrategiesPage() {
                       <Upload className="w-4 h-4 mr-2" />
                       Add Data
                     </Button>
-                    {strategy.image && (
+                    {(strategy.image || strategy.hasImage) && (
                       <Button 
                         size="sm" 
                         variant="outline" 
                         className="w-full border-input text-muted-foreground hover:bg-accent hover:text-foreground"
-                        onClick={() => {
+                        onClick={async () => {
                           try {
-                            // Handle base64 data URL
-                            const base64Data = strategy.image
+                            // Fetch image on demand if not available (optimization: images excluded from list)
+                            let base64Data = strategy.image
+                            
+                            // If image not available, fetch the full strategy
+                            if (!base64Data && strategy.hasImage) {
+                              toast.info('Loading PDF...')
+                              const fullStrategy = await getStrategy(strategy.id)
+                              base64Data = fullStrategy.strategy?.image
+                              
+                              if (!base64Data) {
+                                toast.error('PDF not found')
+                                return
+                              }
+                            }
+                            
+                            if (!base64Data) {
+                              toast.error('No PDF available for this strategy')
+                              return
+                            }
                             
                             // Determine file type from data URL or default to pdf
                             let extension = 'pdf'
