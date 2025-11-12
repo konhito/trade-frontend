@@ -1194,12 +1194,12 @@ export default function Home() {
                     
                     // Format profit for display
                     const formatProfit = (profit: number) => {
-                      if (profit >= 0) {
-                        return `+$${Math.abs(profit).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-                      } else {
-                        return `-$${Math.abs(profit).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-                      }
-                    }
+                          const sign = profit >= 0 ? '+' : '-';
+                          return `${sign}₹${Math.abs(profit).toLocaleString('en-IN', {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0
+                        })}`;
+                      };
                     
                     return (
                       <Card key={strategy.id} className="bg-muted/30 border-border hover:shadow-md transition-shadow">
