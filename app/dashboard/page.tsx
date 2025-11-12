@@ -1195,7 +1195,7 @@ export default function Home() {
                     // Format profit for display
                     const formatProfit = (profit: number) => {
                           const sign = profit >= 0 ? '+' : '-';
-                          return `${sign}Rs${Math.abs(profit).toLocaleString('en-IN', {
+                          return `${sign}₹${Math.abs(profit).toLocaleString('en-IN', {
                           minimumFractionDigits: 0,
                           maximumFractionDigits: 0
                         })}`;
