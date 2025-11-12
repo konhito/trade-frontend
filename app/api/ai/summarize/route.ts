@@ -268,9 +268,9 @@ For EACH strategy, analyze:
 
 Provide: Detailed strategy-by-strategy analysis, performance comparison table, strategy ranking, optimization recommendations, and actionable insights. Use markdown with headings (##), bullets, bold text, and tables. Focus on STRATEGY analysis, not just trades.`,
 
-        market: `Analyze market conditions from trading data: ${tradesData}
+        market: `Analyze trading performance and patterns from trade data: ${tradesData}
 
-Provide: Market conditions inference, asset performance trends, technical insights, market sentiment, trading opportunities, and outlook. Use markdown with headings (##), bullets, bold text, and tables. Keep it concise.`,
+Provide: Trade performance analysis, asset performance trends, technical insights, trading patterns, opportunities, and recommendations. Use markdown with headings (##), bullets, bold text, and tables. Keep it concise.`,
 
         risk: `Analyze risk from trading data. Trades: ${tradesData}. Strategies: ${strategiesData}
 

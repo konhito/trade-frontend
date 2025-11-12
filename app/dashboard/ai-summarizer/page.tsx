@@ -135,8 +135,8 @@ export default function AISummarizerPage() {
     },
     {
       id: 'market',
-      title: 'Market Analysis',
-      description: 'AI-generated market insights and outlook',
+      title: 'Trade Analysis',
+      description: 'AI-generated trade insights and analysis',
       icon: FileText,
       color: 'bg-purple-500'
     },
@@ -682,7 +682,7 @@ export default function AISummarizerPage() {
               <li>Real-time AI-powered summary generation</li>
               <li>Pattern recognition and performance analysis</li>
               <li>Personalized trading recommendations</li>
-              <li>Market sentiment analysis</li>
+              <li>Trade pattern analysis</li>
               <li>Risk assessment and suggestions</li>
             </ul>
           </CardContent>
