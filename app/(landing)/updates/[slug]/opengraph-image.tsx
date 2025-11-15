@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og"
 import { getPost } from "@/lib/mdx"
 import type { ReactElement } from "react"
 
-export const alt = "Deltalytix Blog Post"
+export const alt = "MyTradeJournal Blog Post"
 export const size = {
     width: 1200,
     height: 630,
@@ -54,7 +54,7 @@ export default async function Image({
                         letterSpacing: "-0.02em",
                     }}
                 >
-                    Deltalytix
+                    MyTradeJournal
                 </h1>
 
                 {/* Post Title Subtitle */}

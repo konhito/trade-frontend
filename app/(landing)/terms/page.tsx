@@ -2,8 +2,20 @@ import React from 'react';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | MyTradeJournal',
-  description: 'Terms of Service for MyTradeJournal - Read our terms and conditions for using our trading journal platform.',
+  title: 'Terms of Service',
+  description: 'Terms of Service for MyTradeJournal - Read our terms and conditions for using our trading journal platform. Understand your rights and responsibilities.',
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    title: 'Terms of Service | MyTradeJournal',
+    description: 'Terms of Service for MyTradeJournal - Read our terms and conditions for using our trading journal platform.',
+    url: 'https://www.mytradejournal.co.in/terms',
+  },
+  alternates: {
+    canonical: 'https://www.mytradejournal.co.in/terms',
+  },
 };
 
 export default function TermsOfService() {

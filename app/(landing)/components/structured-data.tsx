@@ -21,7 +21,8 @@ export function StructuredData() {
       "sameAs": [
         "https://youtube.com/@decayhunters",
         "https://t.me/DECAYHUNTERS"
-      ]
+      ],
+      "foundingDate": "2024"
     }
 
     // SoftwareApplication Schema

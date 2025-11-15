@@ -1,6 +1,28 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { BookOpen, Code, LineChart, GraduationCap, TrendingUp, Shield, BarChart3, Brain, FileText } from "lucide-react"
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'About Us',
+  description: 'Learn about MyTradeJournal - built by traders, for traders. Founded by Anubhav Singh, a finance professional with extensive trading experience and NISM certifications.',
+  keywords: [
+    'about MyTradeJournal',
+    'trading journal founder',
+    'trading software company',
+    'finance professional',
+    'trading analytics platform',
+    'trade journal creator'
+  ],
+  openGraph: {
+    title: 'About Us | MyTradeJournal',
+    description: 'Learn about MyTradeJournal - built by traders, for traders. Founded by Anubhav Singh, a finance professional with extensive trading experience.',
+    url: 'https://www.mytradejournal.co.in/about',
+  },
+  alternates: {
+    canonical: 'https://www.mytradejournal.co.in/about',
+  },
+}
 
 export default function AboutPage() {
   const founderSkills = [

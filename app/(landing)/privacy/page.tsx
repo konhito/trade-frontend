@@ -2,8 +2,20 @@ import React from 'react';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | MyTradeJournal',
-  description: 'Privacy Policy for MyTradeJournal - Learn how we collect, use, and protect your personal information.',
+  title: 'Privacy Policy',
+  description: 'Privacy Policy for MyTradeJournal - Learn how we collect, use, and protect your personal information. Your data security and privacy are our top priorities.',
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    title: 'Privacy Policy | MyTradeJournal',
+    description: 'Privacy Policy for MyTradeJournal - Learn how we collect, use, and protect your personal information.',
+    url: 'https://www.mytradejournal.co.in/privacy',
+  },
+  alternates: {
+    canonical: 'https://www.mytradejournal.co.in/privacy',
+  },
 };
 
 export default function PrivacyPolicy() {

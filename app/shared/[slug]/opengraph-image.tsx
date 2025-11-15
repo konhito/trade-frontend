@@ -214,7 +214,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
                                         marginRight: "16px",
                                     }}
                                 >
-                                    Deltalytix
+                                    MyTradeJournal
                                 </span>
                             </div>
 

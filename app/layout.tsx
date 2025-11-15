@@ -15,9 +15,34 @@ export const metadata: Metadata = {
     template: "%s | MyTradeJournal"
   },
   description: "Record, Review and Refine your trading journey. Track, analyze, and improve your trading performance with powerful AI-powered analytics across multiple brokers.",
+  keywords: [
+    'trading journal',
+    'trade journal',
+    'trading analytics',
+    'trading performance',
+    'trade analysis',
+    'trading software',
+    'trading platform',
+    'stock trading journal',
+    'forex trading journal',
+    'crypto trading journal',
+    'trade management',
+    'trading insights',
+    'trading statistics',
+    'portfolio analysis',
+    'trading diary',
+    'AI trading analytics',
+    'multi-broker trading',
+    'trading strategy analysis',
+    'trade performance tracking'
+  ],
   metadataBase: new URL('https://www.mytradejournal.co.in'),
   openGraph: {
-    title: "MyTradeJournal",
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://www.mytradejournal.co.in',
+    siteName: 'MyTradeJournal',
+    title: "MyTradeJournal - Professional Trading Journal & Analytics Platform",
     description: "Record, Review and Refine your trading journey. Advanced analytics platform for modern traders.",
     images: [
       {
@@ -36,8 +61,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: "MyTradeJournal",
-    description: "Record, Review and Refine your trading journey",
+    title: "MyTradeJournal - Professional Trading Journal & Analytics Platform",
+    description: "Record, Review and Refine your trading journey. Advanced analytics platform for modern traders.",
     images: ['/twitter-image.png'],
   },
   icons: {
@@ -85,12 +110,17 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
+  alternates: {
+    canonical: 'https://www.mytradejournal.co.in',
+  },
+  category: 'Finance',
+  classification: 'Trading Software',
   other: {
     'google': 'notranslate',
   },
-  authors: [{ name: 'Hugo DEMENEZ' }],
-  creator: 'Hugo DEMENEZ',
-  publisher: 'Hugo DEMENEZ',
+  authors: [{ name: 'MyTradeJournal Team' }],
+  creator: 'MyTradeJournal',
+  publisher: 'MyTradeJournal',
   formatDetection: {
     email: false,
     address: false,
