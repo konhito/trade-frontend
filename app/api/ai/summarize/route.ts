@@ -253,15 +253,19 @@ export async function POST(req: Request) {
       const prompts: Record<string, string> = {
         daily: `Analyze these trades and provide a concise daily summary. Data: ${tradesData}
 
-Provide: Performance overview (win rate, P&L), key patterns, improvement recommendations, and risk assessment. Use markdown with headings (##), bullets, and bold text. Keep it focused and actionable.`,
+IMPORTANT: Always use Indian Rupees (₹) for all currency amounts. Never use dollars ($) or USD. Format amounts as ₹1,234.56 or ₹1,234.
+
+Provide: Performance overview (win rate, P&L in ₹), key patterns, improvement recommendations, and risk assessment. Use markdown with headings (##), bullets, and bold text. Keep it focused and actionable.`,
 
         strategy: `Analyze and compare trading strategies with their performance data. Focus primarily on STRATEGIES analysis.
+
+IMPORTANT: Always use Indian Rupees (₹) for all currency amounts. Never use dollars ($) or USD. Format amounts as ₹1,234.56 or ₹1,234.
 
 Strategies Data (with performance metrics): ${strategiesData}
 Trades Data (for context): ${tradesData}
 
 For EACH strategy, analyze:
-1. Performance metrics (P&L, win rate, profit factor, total trades)
+1. Performance metrics (P&L in ₹, win rate, profit factor, total trades)
 2. Strategy effectiveness and consistency
 3. Strengths and weaknesses
 4. Comparison between different strategies
@@ -272,11 +276,15 @@ Provide: Detailed strategy-by-strategy analysis, performance comparison table, s
 
         market: `Analyze trading performance and patterns from trade data: ${tradesData}
 
+IMPORTANT: Always use Indian Rupees (₹) for all currency amounts. Never use dollars ($) or USD. Format amounts as ₹1,234.56 or ₹1,234.
+
 Provide: Trade performance analysis, asset performance trends, technical insights, trading patterns, opportunities, and recommendations. Use markdown with headings (##), bullets, bold text, and tables. Keep it concise.`,
 
         risk: `Analyze risk from trading data. Trades: ${tradesData}. Strategies: ${strategiesData}
 
-Provide: Risk metrics (drawdown, Sharpe, volatility), risk factors, position sizing recommendations, diversification assessment, risk mitigation actions, and stop-loss/take-profit advice. Use markdown with headings (##), bullets, bold text, and tables. Keep it focused.`
+IMPORTANT: Always use Indian Rupees (₹) for all currency amounts. Never use dollars ($) or USD. Format amounts as ₹1,234.56 or ₹1,234.
+
+Provide: Risk metrics (drawdown, Sharpe, volatility), risk factors, position sizing recommendations in ₹, diversification assessment, risk mitigation actions, and stop-loss/take-profit advice. Use markdown with headings (##), bullets, bold text, and tables. Keep it focused.`
     }
 
     const prompt = prompts[type] || prompts.daily
@@ -319,7 +327,6 @@ Provide: Risk metrics (drawdown, Sharpe, volatility), risk factors, position siz
         const { text } = await generateText({
           model: openai('gpt-4o-mini'),
           prompt: prompt,
-          maxTokens: 4096,
           temperature: 0.7,
         })
         const openaiElapsed = Date.now() - openaiStartTime

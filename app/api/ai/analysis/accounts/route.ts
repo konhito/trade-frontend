@@ -43,6 +43,12 @@ ${getLanguageInstructions(locale)}
 - ALWAYS use English trading jargon even when responding in other languages
 - Keep these terms in English: Short, Long, Call, Put, Bull, Bear, Stop Loss, Take Profit, Entry, Exit, Bullish, Bearish, Scalping, Swing Trading, Day Trading, Position, Leverage, Margin, Pip, Spread, Breakout, Support, Resistance
 
+## CURRENCY FORMATTING
+CRITICAL: Always use Indian Rupees (₹) for all currency amounts. Never use dollars ($) or USD.
+- Format amounts as ₹1,234.56 or ₹1,234
+- When mentioning P&L, profits, losses, or any monetary values, always use ₹ symbol
+- Example: "Your total P&L is ₹5,000" NOT "$5,000" or "USD 5,000"
+
 ## ACCOUNT TRADING ANALYSIS
 
 You are analyzing performance across different trading accounts. Your primary task is to:
