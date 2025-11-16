@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { openai } from '@ai-sdk/openai'
+import { generateText } from 'ai'
 import { cookies } from 'next/headers'
 
 // Initialize the Gemini API
@@ -281,29 +283,62 @@ Provide: Risk metrics (drawdown, Sharpe, volatility), risk factors, position siz
 
     // Generate content - timeout is handled by maxDuration
     const startTime = Date.now()
+    
+    // Try Gemini first
     try {
       const result = await model.generateContent(prompt)
       const response = await result.response
       const text = response.text()
       const elapsed = Date.now() - startTime
-      console.log(`[AI Summarize] Generation completed in ${elapsed}ms`)
+      console.log(`[AI Summarize] Gemini generation completed in ${elapsed}ms`)
 
       return NextResponse.json({ summary: text })
-    } catch (error: any) {
+    } catch (geminiError: any) {
       const elapsed = Date.now() - startTime
-      console.error(`[AI Summarize] Generation error after ${elapsed}ms:`, error)
-      if (error.message?.includes('timeout') || elapsed > 50000) {
+      console.error(`[AI Summarize] Gemini generation error after ${elapsed}ms:`, geminiError)
+      
+      // Check if it's a timeout error
+      if (geminiError.message?.includes('timeout') || elapsed > 50000) {
         return NextResponse.json(
           { error: 'Generation took too long. Please try again with fewer trades.' },
           { status: 408 }
         )
       }
-      throw error
+
+      // Fallback to OpenAI if Gemini fails
+      console.log('[AI Summarize] Falling back to OpenAI...')
+      
+      // Check if OpenAI API key is configured
+      if (!process.env.OPENAI_API_KEY) {
+        console.error('[AI Summarize] OpenAI API key not configured for fallback')
+        throw geminiError // Re-throw original error if no OpenAI fallback available
+      }
+
+      try {
+        const openaiStartTime = Date.now()
+        const { text } = await generateText({
+          model: openai('gpt-4o-mini'),
+          prompt: prompt,
+          maxTokens: 4096,
+          temperature: 0.7,
+        })
+        const openaiElapsed = Date.now() - openaiStartTime
+        console.log(`[AI Summarize] OpenAI fallback generation completed in ${openaiElapsed}ms`)
+
+        return NextResponse.json({ 
+          summary: text,
+          provider: 'openai-fallback' // Indicate that OpenAI was used as fallback
+        })
+      } catch (openaiError: any) {
+        console.error('[AI Summarize] OpenAI fallback also failed:', openaiError)
+        // If both fail, throw the original Gemini error
+        throw geminiError
+      }
     }
   } catch (error) {
-    console.error('Gemini API error:', error)
+    console.error('[AI Summarize] Final error after all attempts:', error)
     return NextResponse.json(
-      { error: 'Failed to generate summary' },
+      { error: 'Failed to generate summary. Please try again later.' },
       { status: 500 }
     )
   }
