@@ -11,8 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { BookOpen, ArrowRight, CheckCircle2, X } from "lucide-react"
+import { BookOpen, ArrowRight } from "lucide-react"
 
 interface TourStep {
   title: string
@@ -26,45 +25,16 @@ interface TourStep {
 const tourSteps: TourStep[] = [
   {
     title: "Welcome to MyTradeJournal! 🎉",
-    description: "Let's take a quick tour to help you get started. First, let's check out our How to Use guide with video tutorials.",
+    description: "Let's get you started! Check out our How to Use guide with video tutorials to learn how to use the platform.",
     action: {
       label: "View How to Use Guide",
       path: "/dashboard/how-to-use"
     }
-  },
-  {
-    title: "Add Your First Trade",
-    description: "Start by adding your trades. Go to the Trades page to manually enter trades or import them from your broker.",
-    action: {
-      label: "Go to Trades",
-      path: "/dashboard/trades"
-    }
-  },
-  {
-    title: "Explore Your Dashboard",
-    description: "Your dashboard shows key metrics, charts, and statistics about your trading performance. Check it out!",
-    action: {
-      label: "View Dashboard",
-      path: "/dashboard"
-    }
-  },
-  {
-    title: "Try AI Summarizer",
-    description: "Get AI-powered insights about your trading. The AI Summarizer analyzes your trades and provides recommendations.",
-    action: {
-      label: "Try AI Summarizer",
-      path: "/dashboard/ai-summarizer"
-    }
-  },
-  {
-    title: "You're All Set! 🚀",
-    description: "You've completed the tour! Start tracking your trades and improving your performance. You can always access the How to Use guide from the sidebar.",
   }
 ]
 
 export function OnboardingTour() {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
   const [hasCompletedTour, setHasCompletedTour] = useState(false)
 
@@ -88,20 +58,11 @@ export function OnboardingTour() {
   }, [])
 
   const handleNext = () => {
-    const step = tourSteps[currentStep]
+    // Navigate to How to Use page
+    router.push("/dashboard/how-to-use")
     
-    // If step has an action, navigate to that path
-    if (step.action) {
-      router.push(step.action.path)
-    }
-
-    // Move to next step
-    if (currentStep < tourSteps.length - 1) {
-      setCurrentStep(currentStep + 1)
-    } else {
-      // Tour completed
-      handleComplete()
-    }
+    // Tour completed
+    handleComplete()
   }
 
   const handleSkip = () => {
@@ -118,8 +79,7 @@ export function OnboardingTour() {
     return null
   }
 
-  const currentStepData = tourSteps[currentStep]
-  const progress = ((currentStep + 1) / tourSteps.length) * 100
+  const currentStepData = tourSteps[0]
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -140,32 +100,6 @@ export function OnboardingTour() {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Progress indicator */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Step {currentStep + 1} of {tourSteps.length}</span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-            <Progress value={progress} className="h-2" />
-          </div>
-
-          {/* Step indicators */}
-          <div className="flex justify-center gap-2">
-            {tourSteps.map((_, index) => (
-              <div
-                key={index}
-                className={`h-2 w-2 rounded-full transition-colors ${
-                  index === currentStep
-                    ? 'bg-primary'
-                    : index < currentStep
-                    ? 'bg-primary/50'
-                    : 'bg-muted'
-                }`}
-              />
-            ))}
-          </div>
-        </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button
@@ -179,17 +113,8 @@ export function OnboardingTour() {
             onClick={handleNext}
             className="w-full sm:w-auto"
           >
-            {currentStep === tourSteps.length - 1 ? (
-              <>
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Get Started
-              </>
-            ) : (
-              <>
-                {currentStepData.action?.label || 'Next'}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
+            {currentStepData.action?.label || 'Get Started'}
+            <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </DialogFooter>
       </DialogContent>

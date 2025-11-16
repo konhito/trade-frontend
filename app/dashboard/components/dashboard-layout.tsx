@@ -98,13 +98,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navigationItems = [
     { name: 'Dashboard', icon: Clock, id: 'dashboard', path: '/dashboard' },
-    { name: 'How to Use', icon: BookOpen, id: 'how-to-use', path: '/dashboard/how-to-use' },
     { name: 'Trades', icon: ArrowLeftRight, id: 'trades', path: '/dashboard/trades' },
     { name: 'Strategies', icon: Lightbulb, id: 'strategies', path: '/dashboard/strategies' },
     { name: 'Calendar', icon: Calendar, id: 'calendar', path: '/dashboard/calendar' },
     { name: 'AI Summarizer', icon: Bot, id: 'ai', path: '/dashboard/ai-summarizer' },
     { name: 'Tools', icon: Hammer, id: 'tools', path: '/dashboard/tools' },
     { name: 'Profile', icon: User, id: 'profile', path: '/dashboard/profile' },
+    { name: 'How to Use', icon: BookOpen, id: 'how-to-use', path: '/dashboard/how-to-use' },
     { name: 'Contact Us', icon: Handshake, id: 'contact', path: '/contact' },
   ]
 
