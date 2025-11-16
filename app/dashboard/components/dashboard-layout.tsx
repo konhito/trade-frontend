@@ -17,7 +17,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  Settings
+  Settings,
+  BookOpen
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
@@ -97,6 +98,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navigationItems = [
     { name: 'Dashboard', icon: Clock, id: 'dashboard', path: '/dashboard' },
+    { name: 'How to Use', icon: BookOpen, id: 'how-to-use', path: '/dashboard/how-to-use' },
     { name: 'Trades', icon: ArrowLeftRight, id: 'trades', path: '/dashboard/trades' },
     { name: 'Strategies', icon: Lightbulb, id: 'strategies', path: '/dashboard/strategies' },
     { name: 'Calendar', icon: Calendar, id: 'calendar', path: '/dashboard/calendar' },
@@ -112,7 +114,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       if (item.path === '/dashboard') {
         return pathname === '/dashboard'
       }
-        return pathname === item.path
+      return pathname === item.path || pathname?.startsWith(item.path + '/')
     })
     
     if (currentItem) {
