@@ -328,9 +328,12 @@ export default function CalendarPage() {
     bestDay: Object.entries(calendarData || {}).reduce((best, [date, day]) => 
       day.pnl > best.pnl ? { date, ...day } : best, { date: '', pnl: -Infinity }
     ),
-    worstDay: Object.entries(calendarData || {}).reduce((worst, [date, day]) => 
-      day.pnl < worst.pnl ? { date, ...day } : worst, { date: '', pnl: Infinity }
-    )
+    worstDay: Object.entries(calendarData || {})
+      .filter(([_, day]) => day.pnl < 0) // Only consider losing days
+      .reduce((worst, [date, day]) => 
+        day.pnl < worst.pnl ? { date, ...day } : worst, 
+        { date: '', pnl: Infinity }
+      )
   }
 
   const winRate = calendarStats.totalDays > 0 ? (calendarStats.profitableDays / calendarStats.totalDays) * 100 : 0
@@ -497,7 +500,9 @@ export default function CalendarPage() {
               {isCalendarLoading ? (
                 <Skeleton className="h-8 w-24 mt-2" />
               ) : (
-                <div className="text-2xl font-bold text-red-500">{formatCurrency(calendarStats.worstDay.pnl)}</div>
+                <div className="text-2xl font-bold text-red-500">
+                  {calendarStats.worstDay.pnl === Infinity ? formatCurrency(0) : formatCurrency(calendarStats.worstDay.pnl)}
+                </div>
               )}
             </CardContent>
           </Card>
