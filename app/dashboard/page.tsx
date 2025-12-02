@@ -113,7 +113,8 @@ export default function Home() {
         if (mounted) {
           // Don't use forceRefresh for automatic loads - only use it for manual refresh actions
           // This prevents the _t= timestamp parameter from being added unnecessarily
-          await refreshTrades(false, String(user.id))
+          const refreshFn = refreshTrades as any
+          await refreshFn(false, String(user.id))
         }
       } catch (error) {
         initialLoadRef.current = false // Reset on error so we can retry
@@ -166,15 +167,27 @@ export default function Home() {
     if (dashboardStats && dashboardStats.overview) {
       const overview = dashboardStats.overview
       
-      // Get main metrics directly from API
+      // Get main metrics - prioritize statistics from useData() which includes trades + strategies
       const highestPnL = overview.highestPnL || 0
-      const winRate = overview.winRate || 0
+      
+      // Use statistics from useData() for winRate (includes trades + strategies)
+      const winRate = statistics?.winRate ?? overview.winRate ?? 0
       const tradesThisMonth = overview.totalTrades || 0
       
-      // Format risk/reward from API
-      const riskReward = overview.avgRiskReward 
-        ? `1:${overview.avgRiskReward.toFixed(1)}` 
-        : '1:0'
+      // Calculate risk/reward from statistics (includes trades + strategies)
+      // Risk/Reward = Avg Win / Avg Loss
+      let riskReward = '1:0'
+      if (statistics && statistics.nbWin > 0 && statistics.nbLoss > 0) {
+        const avgWin = statistics.grossWin / statistics.nbWin
+        const avgLoss = statistics.grossLosses / statistics.nbLoss
+        if (avgLoss > 0) {
+          const ratio = avgWin / avgLoss
+          riskReward = `1:${ratio.toFixed(1)}`
+        }
+      } else if (overview.avgRiskReward) {
+        // Fallback to API if statistics not available
+        riskReward = `1:${overview.avgRiskReward.toFixed(1)}`
+      }
       
       // For charts, use monthlyData from API or calculate from formattedTrades if available
       let chartData: { name: string; value: number }[] = []
@@ -596,9 +609,20 @@ export default function Home() {
       return sum + (isNaN(dayPnL) ? 0 : dayPnL)
     }, 0)
     
-    // Calculate win rate from daily P&L data
-    const winningDays = dailyPnLData.filter(day => day.pnl > 0).length
-    const winRate = dailyPnLData.length > 0 ? (winningDays / dailyPnLData.length) * 100 : 0
+    // Use statistics from useData() for winRate (includes trades + strategies)
+    // Fallback to calculating from daily P&L data if statistics not available
+    const winRate = statistics?.winRate ?? (dailyPnLData.length > 0 ? (dailyPnLData.filter(day => day.pnl > 0).length / dailyPnLData.length) * 100 : 0)
+    
+    // Calculate risk/reward from statistics (includes trades + strategies)
+    let riskReward = '1:0'
+    if (statistics && statistics.nbWin > 0 && statistics.nbLoss > 0) {
+      const avgWin = statistics.grossWin / statistics.nbWin
+      const avgLoss = statistics.grossLosses / statistics.nbLoss
+      if (avgLoss > 0) {
+        const ratio = avgWin / avgLoss
+        riskReward = `1:${ratio.toFixed(1)}`
+      }
+    }
     
     // Count trades from strategies and formattedTrades
     let tradesThisMonth = 0
@@ -744,7 +768,7 @@ export default function Home() {
       highestPnL,
       cumulativePnL,
       winRate,
-      riskReward: '1:0', // Can't calculate from strategies alone
+      riskReward,
       tradesThisMonth,
       chartData: [], // No monthly data available
       dailyPnLData,
@@ -752,7 +776,7 @@ export default function Home() {
       shortTrades,
       tradesByDateData
     }
-  }, [formattedTrades, statistics, strategies, dashboardStats, dateRangeDays])
+  }, [formattedTrades, statistics, strategies, dashboardStats, dateRangeDays, statistics?.winRate, statistics?.profitFactor, statistics?.grossWin, statistics?.grossLosses, statistics?.nbWin, statistics?.nbLoss, statistics?.nbTrades])
 
   // Check if we have data - prioritize dashboardStats from API
   // Also check if there are strategies with historical data
@@ -925,7 +949,7 @@ export default function Home() {
               {dashboardStatsLoading ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : hasNoData ? '1:0' : metrics.riskReward}
             </div>
             <div className="text-xs sm:text-sm text-purple-500/90 mb-2 sm:mb-3">
-              {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : `Profit Factor: ${dashboardStats?.overview?.profitFactor?.toFixed(2) || '0.00'}`}
+              {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : `Profit Factor: ${statistics?.profitFactor ? (statistics.profitFactor === Number.POSITIVE_INFINITY ? '∞' : statistics.profitFactor.toFixed(2)) : (dashboardStats?.overview?.profitFactor?.toFixed(2) || '0.00')}`}
             </div>
             <Progress value={dashboardStatsLoading ? 0 : hasNoData ? 0 : Math.min((dashboardStats?.overview?.profitFactor || 0) * 10, 100)} className="h-2 bg-muted">
               <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${dashboardStatsLoading ? 0 : hasNoData ? 0 : Math.min((dashboardStats?.overview?.profitFactor || 0) * 10, 100)}%` }}></div>

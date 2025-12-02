@@ -237,8 +237,11 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                           <div className="text-sm text-muted-foreground mb-1">Avg Win Rate</div>
                           <div className="text-2xl font-bold text-blue-500">
                             {periodStats.length > 0
-                              ? (periodStats.reduce((sum, s) => sum + (s as any).winRate, 0) / periodStats.length).toFixed(1)
-                              : '0'}%
+                              ? (() => {
+                                  const avg = periodStats.reduce((sum, s) => sum + ((s as any).winRate || 0), 0) / periodStats.length
+                                  return isNaN(avg) ? '0.0' : avg.toFixed(1)
+                                })()
+                              : '0.0'}%
                           </div>
                         </CardContent>
                       </Card>
@@ -285,17 +288,17 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                                       </TableCell>
                                       <TableCell className="text-right">{s.nbTrades}</TableCell>
                                       <TableCell className="text-right">
-                                        <Badge variant={s.winRate >= 50 ? 'default' : 'secondary'}>
-                                          {s.winRate.toFixed(1)}%
+                                        <Badge variant={(s.winRate || 0) >= 50 ? 'default' : 'secondary'}>
+                                          {isNaN(s.winRate) ? '0.0' : s.winRate.toFixed(1)}%
                                         </Badge>
                                       </TableCell>
-                                      <TableCell className="text-right text-green-500">{s.nbWin}</TableCell>
-                                      <TableCell className="text-right text-red-500">{s.nbLoss}</TableCell>
+                                      <TableCell className="text-right text-green-500">{s.nbWin || 0}</TableCell>
+                                      <TableCell className="text-right text-red-500">{s.nbLoss || 0}</TableCell>
                                       <TableCell className="text-right">
                                         {s.profitFactor === Number.POSITIVE_INFINITY ? (
                                           <span className="text-green-500">∞</span>
                                         ) : (
-                                          s.profitFactor.toFixed(2)
+                                          isNaN(s.profitFactor) ? '0.00' : s.profitFactor.toFixed(2)
                                         )}
                                       </TableCell>
                                       <TableCell className="text-right text-muted-foreground">
