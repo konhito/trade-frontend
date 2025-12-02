@@ -10,12 +10,16 @@ import { Button } from "@/components/ui/button"
 import { useData } from "@/context/data-provider"
 import { calculatePeriodStatistics, PeriodType, PeriodStatistics } from "@/lib/utils"
 import { formatCurrency } from "@/lib/currency"
-import { TrendingUp, TrendingDown, BarChart3, X, Info } from "lucide-react"
+import { TrendingUp, TrendingDown, BarChart3, X, Info, CalendarIcon } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import StatisticsWidget from "./statistics-widget"
 import { useAuth } from "@/context/auth-provider"
 import { listStrategies } from "@/lib/services/strategies"
 import { useUserStore } from "@/store/user-store"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 
 interface FullStatisticsDialogProps {
   trigger?: React.ReactNode
@@ -28,6 +32,7 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
   const [open, setOpen] = React.useState(false)
   const [selectedPeriod, setSelectedPeriod] = React.useState<PeriodType>('monthly')
   const [strategies, setStrategies] = React.useState<any[]>([])
+  const [dateRange, setDateRange] = React.useState<{ from: Date; to?: Date } | undefined>(undefined)
   
   // Fetch strategies when dialog opens
   React.useEffect(() => {
@@ -375,10 +380,84 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
               <TabsContent value="bydate" className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Statistics by Date</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      View daily performance breakdown for all trades and strategies
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Statistics by Date</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          View daily performance breakdown for all trades and strategies
+                        </p>
+                      </div>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-[280px] justify-start text-left font-normal",
+                              !dateRange && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from ? (
+                              dateRange.to ? (
+                                <>
+                                  {format(dateRange.from, "LLL dd, y")} -{" "}
+                                  {format(dateRange.to, "LLL dd, y")}
+                                </>
+                              ) : (
+                                format(dateRange.from, "LLL dd, y")
+                              )
+                            ) : (
+                              <span>Pick a date range</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                          <div className="p-4 space-y-4">
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const today = new Date()
+                                  const lastWeek = new Date()
+                                  lastWeek.setDate(today.getDate() - 7)
+                                  setDateRange({ from: lastWeek, to: today })
+                                }}
+                              >
+                                Last 7 days
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const today = new Date()
+                                  const lastMonth = new Date()
+                                  lastMonth.setMonth(today.getMonth() - 1)
+                                  setDateRange({ from: lastMonth, to: today })
+                                }}
+                              >
+                                Last 30 days
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setDateRange(undefined)}
+                              >
+                                Clear
+                              </Button>
+                            </div>
+                            <Calendar
+                              initialFocus
+                              mode="range"
+                              defaultMonth={dateRange?.from}
+                              selected={dateRange as { from: Date; to?: Date } | undefined}
+                              onSelect={(range) => setDateRange(range as { from: Date; to?: Date } | undefined)}
+                              numberOfMonths={2}
+                            />
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -386,12 +465,34 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {(() => {
                           try {
-                            const dailyStats = calculatePeriodStatistics(
+                            let dailyStats = calculatePeriodStatistics(
                               formattedTrades || [],
                               strategies || [],
                               accounts || [],
                               'daily'
                             )
+                            
+                            // Filter by date range if selected
+                            if (dateRange?.from || dateRange?.to) {
+                              dailyStats = dailyStats.filter((stat: any) => {
+                                try {
+                                  const statDate = new Date(stat.period)
+                                  if (isNaN(statDate.getTime())) return false
+                                  
+                                  // Set time to start of day for comparison
+                                  const statDateOnly = new Date(statDate.getFullYear(), statDate.getMonth(), statDate.getDate())
+                                  const fromDate = dateRange.from ? new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), dateRange.from.getDate()) : null
+                                  const toDate = dateRange.to ? new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate()) : null
+                                  
+                                  if (fromDate && statDateOnly < fromDate) return false
+                                  if (toDate && statDateOnly > toDate) return false
+                                  return true
+                                } catch {
+                                  return false
+                                }
+                              })
+                            }
+                            
                             const totalPnl = dailyStats.reduce((sum, s) => {
                               const pnl = (s as any).cumulativePnl || 0
                               return sum + (isNaN(pnl) ? 0 : pnl)
@@ -490,12 +591,47 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                             <TableBody>
                               {(() => {
                                 try {
-                                  const dailyStats = calculatePeriodStatistics(
+                                  let dailyStats = calculatePeriodStatistics(
                                     formattedTrades || [],
                                     strategies || [],
                                     accounts || [],
                                     'daily'
                                   )
+                                  
+                                  // Filter by date range if selected
+                                  if (dateRange?.from || dateRange?.to) {
+                                    dailyStats = dailyStats.filter((stat: any) => {
+                                      try {
+                                        const statDate = new Date(stat.period)
+                                        if (isNaN(statDate.getTime())) return false
+                                        
+                                        // Set time to start of day for comparison
+                                        const statDateOnly = new Date(statDate.getFullYear(), statDate.getMonth(), statDate.getDate())
+                                        const fromDate = dateRange.from ? new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), dateRange.from.getDate()) : null
+                                        const toDate = dateRange.to ? new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate()) : null
+                                        
+                                        if (fromDate && statDateOnly < fromDate) return false
+                                        if (toDate && statDateOnly > toDate) return false
+                                        return true
+                                      } catch {
+                                        return false
+                                      }
+                                    })
+                                  }
+                                  
+                                  // Show message if no data for selected date range
+                                  if (dailyStats.length === 0) {
+                                    return (
+                                      <TableRow>
+                                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                                          {dateRange?.from || dateRange?.to
+                                            ? 'No trading data found for the selected date range'
+                                            : 'No trading data available'}
+                                        </TableCell>
+                                      </TableRow>
+                                    )
+                                  }
+                                  
                                   // Sort by date descending (most recent first)
                                   return dailyStats
                                     .sort((a, b) => {

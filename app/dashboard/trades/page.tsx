@@ -136,6 +136,7 @@ export default function TradesPage() {
     duration: 'Intraday',
     stopLoss: '',
     targetProfit: '',
+    convenienceFee: '',
     notes: '',
     psychology: {
       emotion: 'Confident',
@@ -212,6 +213,7 @@ export default function TradesPage() {
         duration: formData.duration,
         stopLoss: formData.stopLoss || null,
         targetProfit: formData.targetProfit || null,
+        convenienceFee: formData.convenienceFee || null,
         notes: formData.notes,
         psychology: formData.psychology,
         status: formData.exitDate ? 'Closed' : 'Open'
@@ -249,6 +251,7 @@ export default function TradesPage() {
       duration: 'Intraday',
       stopLoss: '',
       targetProfit: '',
+      convenienceFee: '',
       notes: '',
       psychology: {
         emotion: 'Confident',
@@ -277,8 +280,8 @@ export default function TradesPage() {
     setFormData({
       symbol: trade.symbol || '',
       direction: trade.direction || 'Long',
-      entryPrice: trade.entryPrice || '',
-      exitPrice: trade.exitPrice || '',
+      entryPrice: typeof trade.entryPrice === 'string' ? trade.entryPrice : (trade.entryPrice?.toString() || ''),
+      exitPrice: typeof trade.exitPrice === 'string' ? trade.exitPrice : (trade.exitPrice?.toString() || ''),
       quantity: trade.quantity?.toString() || '',
       entryDate: trade.entryDate || '',
       exitDate: trade.exitDate || '',
@@ -286,9 +289,16 @@ export default function TradesPage() {
       duration: trade.duration || 'Intraday',
       stopLoss: (trade as any).stopLoss?.toString() || '',
       targetProfit: (trade as any).targetProfit?.toString() || '',
+      convenienceFee: (trade as any).convenienceFee?.toString() || '',
       notes: trade.notes || '',
-      psychology: '',
-      commission: trade.commission?.toString() || ''
+      psychology: (typeof trade.psychology === 'object' && trade.psychology !== null) 
+        ? trade.psychology 
+        : {
+            emotion: 'Confident',
+            confidence: 8,
+            stress: 3,
+            notes: ''
+          }
     })
     setShowEditModal(true)
   }
@@ -850,6 +860,18 @@ export default function TradesPage() {
                   </div>
 
                   <div>
+                    <Label htmlFor="convenienceFee">Convenience Fee</Label>
+                    <Input
+                      id="convenienceFee"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.convenienceFee}
+                      onChange={(e) => handleInputChange('convenienceFee', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
                     <Label htmlFor="quantity">Quantity *</Label>
                     <Input
                       id="quantity"
@@ -1222,8 +1244,20 @@ export default function TradesPage() {
                       type="number"
                       step="0.01"
                       placeholder="5.00"
-                      value={formData.commission}
+                      value={(formData as any).commission || ''}
                       onChange={(e) => handleInputChange('commission', e.target.value)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="edit-convenienceFee">Convenience Fee</Label>
+                    <Input
+                      id="edit-convenienceFee"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.convenienceFee}
+                      onChange={(e) => handleInputChange('convenienceFee', e.target.value)}
                     />
                   </div>
                   
