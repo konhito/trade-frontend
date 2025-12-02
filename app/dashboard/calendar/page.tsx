@@ -167,8 +167,10 @@ export default function CalendarPage() {
             }
             
             // Calculate trade P&L (net of commission) - same as dashboard
+            // Note: P&L stored in database already has convenience fee subtracted (from backend calculation)
             const tradePnLValue = typeof trade.pnl === 'number' ? trade.pnl : (trade.pnl !== undefined && trade.pnl !== null ? parseFloat(String(trade.pnl)) : 0)
             const commission = typeof trade.commission === 'number' ? trade.commission : (trade.commission !== undefined && trade.commission !== null ? parseFloat(String(trade.commission)) : 0)
+            // P&L already has convenience fee subtracted, so only subtract commission
             const netPnL = tradePnLValue - commission
             
             // Check if the value is valid (not NaN) - same as dashboard

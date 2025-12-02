@@ -74,9 +74,12 @@ export function calculateStatistics(trades: Trade[], accounts: Account[] = [], s
     // Process trades
     filteredTrades.forEach((trade: Trade) => {
       // Ensure P&L is properly parsed as a number (handles negative values correctly)
+      // Note: P&L stored in database already has convenience fee subtracted (from backend calculation)
       const pnl = typeof trade.pnl === 'number' ? trade.pnl : (trade.pnl !== undefined && trade.pnl !== null ? parseFloat(String(trade.pnl)) : 0)
       // Ensure commission is properly parsed as a number
       const commission = typeof trade.commission === 'number' ? trade.commission : (trade.commission !== undefined && trade.commission !== null ? parseFloat(String(trade.commission)) : 0)
+      // Ensure convenience fee is properly parsed as a number
+      const convenienceFee = typeof (trade as any).convenienceFee === 'number' ? (trade as any).convenienceFee : ((trade as any).convenienceFee !== undefined && (trade as any).convenienceFee !== null ? parseFloat(String((trade as any).convenienceFee)) : 0)
       
       // Skip if P&L is invalid (NaN)
       if (isNaN(pnl)) {
@@ -85,8 +88,9 @@ export function calculateStatistics(trades: Trade[], accounts: Account[] = [], s
       }
       
       initialStatistics.nbTrades++;
+      // P&L already has convenience fee subtracted, so use it directly
       initialStatistics.cumulativePnl += pnl;
-      initialStatistics.cumulativeFees += commission;
+      initialStatistics.cumulativeFees += commission + convenienceFee; // Add both commission and convenience fee to total fees
       initialStatistics.totalPositionTime += trade.timeInPosition || 0;
 
       if (pnl === 0) {
@@ -490,15 +494,18 @@ export function calculatePeriodStatistics(
 
     // Process trades for this period
     data.trades.forEach((trade: Trade) => {
+      // Note: P&L stored in database already has convenience fee subtracted (from backend calculation)
       const pnl = typeof trade.pnl === 'number' ? trade.pnl : parseFloat(String(trade.pnl)) || 0;
       const commission = typeof trade.commission === 'number' ? trade.commission : parseFloat(String(trade.commission)) || 0;
+      const convenienceFee = typeof (trade as any).convenienceFee === 'number' ? (trade as any).convenienceFee : parseFloat(String((trade as any).convenienceFee)) || 0;
       const timeInPosition = typeof trade.timeInPosition === 'number' ? trade.timeInPosition : parseFloat(String(trade.timeInPosition)) || 0;
 
       if (isNaN(pnl)) return;
 
       stats.nbTrades++;
+      // P&L already has convenience fee subtracted, so use it directly
       stats.cumulativePnl += pnl;
-      stats.cumulativeFees += isNaN(commission) ? 0 : commission;
+      stats.cumulativeFees += (isNaN(commission) ? 0 : commission) + (isNaN(convenienceFee) ? 0 : convenienceFee); // Add both commission and convenience fee
       stats.totalPositionTime += isNaN(timeInPosition) ? 0 : timeInPosition;
 
       if (pnl === 0) {

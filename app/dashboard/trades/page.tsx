@@ -168,12 +168,14 @@ export default function TradesPage() {
     const entry = parseFloat(formData.entryPrice) || 0
     const exit = parseFloat(formData.exitPrice) || 0
     const qty = parseInt(formData.quantity) || 0
+    const convenienceFee = parseFloat(formData.convenienceFee) || 0
     const multiplier = formData.direction === 'Long' ? 1 : -1
     
     if (entry > 0 && exit > 0 && qty > 0) {
-      const pnl = (exit - entry) * qty * multiplier
+      const grossPnl = (exit - entry) * qty * multiplier
+      const netPnl = grossPnl - convenienceFee // Subtract convenience fee from profit
       const pnlPercent = ((exit - entry) / entry) * 100 * multiplier
-      return { pnl: pnl.toFixed(2), pnlPercent: pnlPercent.toFixed(2) }
+      return { pnl: netPnl.toFixed(2), pnlPercent: pnlPercent.toFixed(2) }
     }
     return { pnl: '0.00', pnlPercent: '0.00' }
   }

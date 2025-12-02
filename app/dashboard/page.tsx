@@ -243,8 +243,10 @@ export default function Home() {
             const dateKey = format(tradeDate, 'MMM dd')
             const existing = dailyPnLMap.get(dateKey) || 0
             // Ensure P&L is properly parsed as a number (handles negative values correctly)
+            // Note: P&L stored in database already has convenience fee subtracted (from backend calculation)
             const pnl = typeof t.pnl === 'number' ? t.pnl : (t.pnl !== undefined && t.pnl !== null ? parseFloat(String(t.pnl)) : 0)
             const commission = typeof t.commission === 'number' ? t.commission : (t.commission !== undefined && t.commission !== null ? parseFloat(String(t.commission)) : 0)
+            // P&L already has convenience fee subtracted, so only subtract commission
             const netPnL = pnl - commission
             // Check if the value is valid (not NaN)
             if (!isNaN(netPnL)) {
@@ -543,8 +545,10 @@ export default function Home() {
           if (!tradeDate) return
           const dateKey = format(tradeDate, 'MMM dd')
           const existing = dailyPnLMap.get(dateKey) || 0
+          // Note: P&L stored in database already has convenience fee subtracted (from backend calculation)
           const pnl = typeof t.pnl === 'number' ? t.pnl : (t.pnl !== undefined && t.pnl !== null ? parseFloat(String(t.pnl)) : 0)
           const commission = typeof t.commission === 'number' ? t.commission : (t.commission !== undefined && t.commission !== null ? parseFloat(String(t.commission)) : 0)
+          // P&L already has convenience fee subtracted, so only subtract commission
           const netPnL = pnl - commission
           if (!isNaN(netPnL)) {
             dailyPnLMap.set(dateKey, existing + netPnL)
