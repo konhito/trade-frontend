@@ -308,3 +308,286 @@ export function generateTradeHash(trade: Partial<Trade>): string {
   const hashString = `${trade.userId || ''}-${trade.accountNumber || ''}-${trade.instrument || ''}-${trade.entryDate || ''}-${trade.closeDate || ''}-${trade.quantity || 0}-${trade.entryId || ''}-${trade.closeId || ''}-${trade.timeInPosition || 0}`
   return hashString
 }
+
+// Period-based statistics types
+export interface PeriodStatistics extends StatisticsProps {
+  period: string; // Date, week key, or month key
+  periodLabel: string; // Formatted label for display
+}
+
+export type PeriodType = 'daily' | 'weekly' | 'monthly';
+
+// Helper to get week key (YYYY-WW format)
+function getWeekKey(date: Date): string {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7)); // Get Thursday (week starts on Monday)
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${d.getFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
+
+// Helper to get month key (YYYY-MM format)
+function getMonthKey(date: Date): string {
+  return format(date, 'yyyy-MM');
+}
+
+// Helper to format period label
+function formatPeriodLabel(period: string, periodType: PeriodType): string {
+  if (periodType === 'daily') {
+    try {
+      return format(new Date(period), 'MMM dd, yyyy');
+    } catch {
+      return period;
+    }
+  } else if (periodType === 'weekly') {
+    // Format: "Week 01, 2024" or "Jan 01 - Jan 07, 2024"
+    const [year, week] = period.split('-W');
+    if (!year || !week) return period;
+    // Calculate start of week
+    const yearNum = parseInt(year);
+    const weekNum = parseInt(week);
+    const simple = new Date(yearNum, 0, 1 + (weekNum - 1) * 7);
+    const dow = simple.getDay();
+    const ISOweekStart = simple;
+    if (dow <= 4) ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+    else ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+    const weekEnd = new Date(ISOweekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    return `${format(ISOweekStart, 'MMM dd')} - ${format(weekEnd, 'MMM dd, yyyy')}`;
+  } else {
+    // Monthly: "January 2024"
+    try {
+      const [year, month] = period.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+      return format(date, 'MMMM yyyy');
+    } catch {
+      return period;
+    }
+  }
+}
+
+// Calculate period-based statistics
+export function calculatePeriodStatistics(
+  trades: Trade[],
+  strategies: any[],
+  accounts: Account[] = [],
+  periodType: PeriodType = 'daily'
+): PeriodStatistics[] {
+  const parseNumeric = (value: any): number => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (!value) return 0;
+    const str = String(value).replace(/[^0-9.+-]/g, '');
+    const num = Number(str);
+    return Number.isFinite(num) ? num : 0;
+  };
+
+  // Create account map for filtering
+  const accountMap = new Map(accounts.map(account => [account.number, account]));
+
+  // Group trades and strategies by period
+  const periodMap = new Map<string, {
+    trades: Trade[];
+    strategyEntries: Array<{ date: Date; pnl: number }>;
+  }>();
+
+  // Process trades
+  trades.forEach((trade: Trade) => {
+    const account = accountMap.get(trade.accountNumber);
+    if (account?.resetDate && new Date(trade.entryDate) < new Date(account.resetDate)) {
+      return; // Skip trades before reset date
+    }
+
+    // Use exitDate/closeDate first (same as dashboard), then fallback to entryDate
+    const tradeDate = (trade as any).closeDate 
+      ? new Date((trade as any).closeDate) 
+      : (trade.exitDate 
+        ? new Date(trade.exitDate) 
+        : (trade.entryDate ? new Date(trade.entryDate) : null));
+    
+    if (!tradeDate || isNaN(tradeDate.getTime())) return;
+
+    let periodKey: string;
+    if (periodType === 'daily') {
+      periodKey = format(tradeDate, 'yyyy-MM-dd');
+    } else if (periodType === 'weekly') {
+      periodKey = getWeekKey(tradeDate);
+    } else {
+      periodKey = getMonthKey(tradeDate);
+    }
+
+    if (!periodMap.has(periodKey)) {
+      periodMap.set(periodKey, { trades: [], strategyEntries: [] });
+    }
+
+    periodMap.get(periodKey)!.trades.push(trade);
+  });
+
+  // Process strategies
+  if (strategies && strategies.length > 0) {
+    strategies.forEach((strategy: any) => {
+      if (!strategy.historicalData) return;
+
+      let historicalData = strategy.historicalData;
+      if (typeof historicalData === 'string') {
+        try {
+          historicalData = JSON.parse(historicalData);
+        } catch {
+          return;
+        }
+      }
+
+      if (historicalData?.entries && Array.isArray(historicalData.entries)) {
+        historicalData.entries.forEach((entry: any) => {
+          if (!entry.date || entry.live === undefined || entry.live === null) return;
+
+          const entryDate = new Date(entry.date);
+          if (isNaN(entryDate.getTime())) return;
+
+          const livePnL = parseNumeric(entry.live);
+          if (isNaN(livePnL)) return;
+
+          let periodKey: string;
+          if (periodType === 'daily') {
+            periodKey = format(entryDate, 'yyyy-MM-dd');
+          } else if (periodType === 'weekly') {
+            periodKey = getWeekKey(entryDate);
+          } else {
+            periodKey = getMonthKey(entryDate);
+          }
+
+          if (!periodMap.has(periodKey)) {
+            periodMap.set(periodKey, { trades: [], strategyEntries: [] });
+          }
+
+          periodMap.get(periodKey)!.strategyEntries.push({ date: entryDate, pnl: livePnL });
+        });
+      }
+    });
+  }
+
+  // Calculate statistics for each period
+  const periodStats: PeriodStatistics[] = [];
+
+  periodMap.forEach((data, periodKey) => {
+    const stats: StatisticsProps = {
+      cumulativeFees: 0,
+      cumulativePnl: 0,
+      winningStreak: 0,
+      winRate: 0,
+      nbTrades: 0,
+      nbBe: 0,
+      nbWin: 0,
+      nbLoss: 0,
+      totalPositionTime: 0,
+      averagePositionTime: '0s',
+      profitFactor: 1,
+      grossLosses: 0,
+      grossWin: 0,
+      totalPayouts: 0,
+      nbPayouts: 0,
+    };
+
+    // Process trades for this period
+    data.trades.forEach((trade: Trade) => {
+      const pnl = typeof trade.pnl === 'number' ? trade.pnl : parseFloat(String(trade.pnl)) || 0;
+      const commission = typeof trade.commission === 'number' ? trade.commission : parseFloat(String(trade.commission)) || 0;
+
+      if (isNaN(pnl)) return;
+
+      stats.nbTrades++;
+      stats.cumulativePnl += pnl;
+      stats.cumulativeFees += commission;
+      stats.totalPositionTime += trade.timeInPosition || 0;
+
+      if (pnl === 0) {
+        stats.nbBe++;
+      } else if (pnl > 0) {
+        stats.nbWin++;
+        stats.winningStreak++;
+        stats.grossWin += pnl;
+      } else {
+        stats.nbLoss++;
+        stats.winningStreak = 0;
+        stats.grossLosses += Math.abs(pnl);
+      }
+    });
+
+    // Process strategy entries for this period
+    data.strategyEntries.forEach((entry) => {
+      const pnl = entry.pnl;
+      if (isNaN(pnl)) return;
+
+      stats.nbTrades++;
+      stats.cumulativePnl += pnl;
+
+      if (pnl === 0) {
+        stats.nbBe++;
+      } else if (pnl > 0) {
+        stats.nbWin++;
+        stats.winningStreak++;
+        stats.grossWin += pnl;
+      } else {
+        stats.nbLoss++;
+        stats.winningStreak = 0;
+        stats.grossLosses += Math.abs(pnl);
+      }
+    });
+
+    // Calculate derived metrics
+    const totalTrades = stats.nbWin + stats.nbLoss;
+    stats.winRate = totalTrades > 0 ? (stats.nbWin / totalTrades) * 100 : 0;
+
+    if (stats.grossLosses > 0) {
+      stats.profitFactor = stats.grossWin / stats.grossLosses;
+    } else if (stats.grossWin > 0) {
+      stats.profitFactor = Number.POSITIVE_INFINITY;
+    }
+
+    // Calculate average position time (only for trades)
+    const tradesOnly = data.trades.length;
+    if (tradesOnly > 0 && stats.totalPositionTime > 0) {
+      const averageTimeInSeconds = Math.round(stats.totalPositionTime / tradesOnly);
+      stats.averagePositionTime = parsePositionTime(averageTimeInSeconds);
+    }
+
+    // Calculate payouts for this period (if accounts have reset dates, filter accordingly)
+    accounts.forEach(account => {
+      if (account.payouts) {
+        account.payouts.forEach(payout => {
+          const payoutDate = new Date(payout.date);
+          let payoutPeriodKey: string;
+          if (periodType === 'daily') {
+            payoutPeriodKey = format(payoutDate, 'yyyy-MM-dd');
+          } else if (periodType === 'weekly') {
+            payoutPeriodKey = getWeekKey(payoutDate);
+          } else {
+            payoutPeriodKey = getMonthKey(payoutDate);
+          }
+
+          if (payoutPeriodKey === periodKey) {
+            if (!account.resetDate || new Date(payout.date) >= new Date(account.resetDate)) {
+              stats.totalPayouts += payout.amount;
+              stats.nbPayouts++;
+            }
+          }
+        });
+      }
+    });
+
+    periodStats.push({
+      ...stats,
+      period: periodKey,
+      periodLabel: formatPeriodLabel(periodKey, periodType),
+    });
+  });
+
+  // Sort by period (most recent first for daily, oldest first for weekly/monthly)
+  return periodStats.sort((a, b) => {
+    if (periodType === 'daily') {
+      return b.period.localeCompare(a.period);
+    } else {
+      return a.period.localeCompare(b.period);
+    }
+  });
+}

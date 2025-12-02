@@ -39,6 +39,7 @@ import { useAuth } from '@/context/auth-provider'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { listStrategies, getStrategy, createStrategy as createStrategyApi, updateStrategy as updateStrategyApi, deleteStrategy as deleteStrategyApi } from '@/lib/services/strategies'
+import PeriodStatisticsComponent from '../components/statistics/period-statistics'
 
 export default function StrategiesPage() {
   const { effectiveTheme } = useTheme()
@@ -846,6 +847,9 @@ export default function StrategiesPage() {
             })}
           </motion.div>
         )}
+
+        {/* Period Statistics Section */}
+        <PeriodStatisticsComponent />
 
         {/* Add Strategy Modal */}
         <AddStrategyModal 

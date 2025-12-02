@@ -35,6 +35,8 @@ import { useAuth } from '@/context/auth-provider'
 import { useData } from '@/context/data-provider'
 import { useEffect } from 'react'
 import { listTrades, createTrade, updateTrade, deleteTrade } from '@/lib/services/trades'
+import PeriodStatisticsComponent from '../components/statistics/period-statistics'
+import FullStatisticsDialog from '../components/statistics/full-statistics-dialog'
 
 export default function TradesPage() {
   const { effectiveTheme } = useTheme()
@@ -433,6 +435,7 @@ export default function TradesPage() {
             <p className="text-sm sm:text-base text-muted-foreground">Manage and track your trading performance</p>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
+              <FullStatisticsDialog />
               <Button 
                 variant="outline" 
                 onClick={handleRefresh}
@@ -717,6 +720,9 @@ export default function TradesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Period Statistics Section */}
+      <PeriodStatisticsComponent />
 
       {/* Add Trade Modal */}
       <Dialog open={showAddModal} onOpenChange={handleCloseModal}>
