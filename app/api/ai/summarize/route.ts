@@ -7,7 +7,7 @@ import { cookies } from 'next/headers'
 // Initialize the Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
-const backendBaseUrl = 'https://trade-backend-production-b0a3.up.railway.app'
+const backendBaseUrl = 'https://www.backend.mytradejournal.co.in'
 
 // Allow up to 60 seconds for AI generation
 export const maxDuration = 60

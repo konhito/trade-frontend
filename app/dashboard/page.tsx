@@ -29,7 +29,6 @@ import { format } from 'date-fns'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import PeriodStatisticsComponent from './components/statistics/period-statistics'
-import FullStatisticsDialog from './components/statistics/full-statistics-dialog'
 
 export default function Home() {
   const [selectedTimeframe, setSelectedTimeframe] = useState('W')
@@ -862,10 +861,6 @@ export default function Home() {
 
   return (
     <div className="p-2 sm:p-4 md:p-5 lg:p-6 space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6 bg-background text-foreground min-h-screen">
-      {/* Header with Full Statistics Button */}
-      <div className="flex justify-end mb-2">
-        <FullStatisticsDialog />
-      </div>
       
       {/* KPI Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 lg:gap-6">

@@ -492,13 +492,14 @@ export function calculatePeriodStatistics(
     data.trades.forEach((trade: Trade) => {
       const pnl = typeof trade.pnl === 'number' ? trade.pnl : parseFloat(String(trade.pnl)) || 0;
       const commission = typeof trade.commission === 'number' ? trade.commission : parseFloat(String(trade.commission)) || 0;
+      const timeInPosition = typeof trade.timeInPosition === 'number' ? trade.timeInPosition : parseFloat(String(trade.timeInPosition)) || 0;
 
       if (isNaN(pnl)) return;
 
       stats.nbTrades++;
       stats.cumulativePnl += pnl;
-      stats.cumulativeFees += commission;
-      stats.totalPositionTime += trade.timeInPosition || 0;
+      stats.cumulativeFees += isNaN(commission) ? 0 : commission;
+      stats.totalPositionTime += isNaN(timeInPosition) ? 0 : timeInPosition;
 
       if (pnl === 0) {
         stats.nbBe++;
@@ -553,23 +554,35 @@ export function calculatePeriodStatistics(
 
     // Calculate payouts for this period (if accounts have reset dates, filter accordingly)
     accounts.forEach(account => {
-      if (account.payouts) {
+      if (account.payouts && Array.isArray(account.payouts)) {
         account.payouts.forEach(payout => {
-          const payoutDate = new Date(payout.date);
-          let payoutPeriodKey: string;
-          if (periodType === 'daily') {
-            payoutPeriodKey = format(payoutDate, 'yyyy-MM-dd');
-          } else if (periodType === 'weekly') {
-            payoutPeriodKey = getWeekKey(payoutDate);
-          } else {
-            payoutPeriodKey = getMonthKey(payoutDate);
-          }
-
-          if (payoutPeriodKey === periodKey) {
-            if (!account.resetDate || new Date(payout.date) >= new Date(account.resetDate)) {
-              stats.totalPayouts += payout.amount;
-              stats.nbPayouts++;
+          if (!payout.date || !payout.amount) return;
+          
+          try {
+            const payoutDate = new Date(payout.date);
+            if (isNaN(payoutDate.getTime())) return;
+            
+            let payoutPeriodKey: string;
+            if (periodType === 'daily') {
+              payoutPeriodKey = format(payoutDate, 'yyyy-MM-dd');
+            } else if (periodType === 'weekly') {
+              payoutPeriodKey = getWeekKey(payoutDate);
+            } else {
+              payoutPeriodKey = getMonthKey(payoutDate);
             }
+
+            if (payoutPeriodKey === periodKey) {
+              const payoutAmount = typeof payout.amount === 'number' ? payout.amount : parseFloat(String(payout.amount)) || 0;
+              if (!isNaN(payoutAmount) && payoutAmount > 0) {
+                if (!account.resetDate || new Date(payout.date) >= new Date(account.resetDate)) {
+                  stats.totalPayouts += payoutAmount;
+                  stats.nbPayouts++;
+                }
+              }
+            }
+          } catch (error) {
+            // Skip invalid payout dates
+            console.warn('[calculatePeriodStatistics] Invalid payout date:', payout.date, error);
           }
         });
       }

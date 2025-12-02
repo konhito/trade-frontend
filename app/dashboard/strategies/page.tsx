@@ -40,6 +40,7 @@ import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { listStrategies, getStrategy, createStrategy as createStrategyApi, updateStrategy as updateStrategyApi, deleteStrategy as deleteStrategyApi } from '@/lib/services/strategies'
 import PeriodStatisticsComponent from '../components/statistics/period-statistics'
+import FullStatisticsDialog from '../components/statistics/full-statistics-dialog'
 
 export default function StrategiesPage() {
   const { effectiveTheme } = useTheme()
@@ -269,13 +270,16 @@ export default function StrategiesPage() {
             <h1 className="text-2xl font-bold text-foreground">Trading Strategies</h1>
             <p className="text-muted-foreground">Manage and track your trading strategies</p>
           </div>
-          <Button 
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            onClick={() => setShowAddModal(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Strategy
-          </Button>
+          <div className="flex gap-2">
+            <FullStatisticsDialog />
+            <Button 
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              onClick={() => setShowAddModal(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Strategy
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}

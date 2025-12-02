@@ -10,23 +10,67 @@ import { calculatePeriodStatistics, PeriodType, PeriodStatistics } from "@/lib/u
 import { formatCurrency } from "@/lib/currency"
 import { TrendingUp, TrendingDown, Calendar, BarChart3, Clock } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useAuth } from "@/context/auth-provider"
+import { listStrategies } from "@/lib/services/strategies"
+import { useUserStore } from "@/store/user-store"
 
 export default function PeriodStatisticsComponent() {
-  const { formattedTrades, strategies, accounts, isLoading } = useData()
+  const { formattedTrades, isLoading } = useData()
+  const { user } = useAuth()
+  const accounts = useUserStore(state => state.accounts || [])
   const [selectedPeriod, setSelectedPeriod] = React.useState<PeriodType>('monthly')
+  const [strategies, setStrategies] = React.useState<any[]>([])
+  const [strategiesLoading, setStrategiesLoading] = React.useState(false)
+
+  // Fetch strategies
+  React.useEffect(() => {
+    const fetchStrategies = async () => {
+      if (!user?.id) return
+      setStrategiesLoading(true)
+      try {
+        const strategiesData = await listStrategies({ userId: String(user.id) })
+        setStrategies(strategiesData.strategies || [])
+      } catch (error) {
+        console.error('Error fetching strategies:', error)
+      } finally {
+        setStrategiesLoading(false)
+      }
+    }
+    fetchStrategies()
+  }, [user?.id])
 
   // Calculate period-based statistics
   const periodStats = React.useMemo(() => {
-    if (!formattedTrades || formattedTrades.length === 0) return []
-    return calculatePeriodStatistics(
-      formattedTrades,
-      strategies || [],
-      accounts || [],
-      selectedPeriod
-    )
+    // Include strategies even if no trades - calculate from both sources
+    const hasTrades = formattedTrades && formattedTrades.length > 0
+    const hasStrategies = strategies && strategies.length > 0
+    
+    if (!hasTrades && !hasStrategies) return []
+    
+    try {
+      const stats = calculatePeriodStatistics(
+        formattedTrades || [],
+        strategies || [],
+        accounts || [],
+        selectedPeriod
+      )
+      console.log('[Period Statistics] Calculated stats:', {
+        periodType: selectedPeriod,
+        statsCount: stats.length,
+        hasTrades,
+        hasStrategies,
+        tradesCount: formattedTrades?.length || 0,
+        strategiesCount: strategies?.length || 0,
+        sampleStat: stats[0]
+      })
+      return stats
+    } catch (error) {
+      console.error('[Period Statistics] Error calculating stats:', error)
+      return []
+    }
   }, [formattedTrades, strategies, accounts, selectedPeriod])
 
-  if (isLoading) {
+  if (isLoading || strategiesLoading) {
     return (
       <Card>
         <CardHeader>
@@ -91,11 +135,20 @@ export default function PeriodStatisticsComponent() {
               <CardContent className="p-4">
                 <div className="text-sm text-muted-foreground mb-1">Total P&L</div>
                 <div className={`text-2xl font-bold ${
-                  periodStats.reduce((sum, s) => sum + s.cumulativePnl, 0) >= 0 
-                    ? 'text-green-500' 
-                    : 'text-red-500'
+                  (() => {
+                    const total = periodStats.reduce((sum, s) => {
+                      const pnl = (s as any).cumulativePnl || 0
+                      return sum + (isNaN(pnl) ? 0 : pnl)
+                    }, 0)
+                    return total >= 0 ? 'text-green-500' : 'text-red-500'
+                  })()
                 }`}>
-                  {formatCurrency(periodStats.reduce((sum, s) => sum + s.cumulativePnl, 0))}
+                  {formatCurrency(
+                    periodStats.reduce((sum, s) => {
+                      const pnl = (s as any).cumulativePnl || 0
+                      return sum + (isNaN(pnl) ? 0 : pnl)
+                    }, 0)
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -103,7 +156,10 @@ export default function PeriodStatisticsComponent() {
               <CardContent className="p-4">
                 <div className="text-sm text-muted-foreground mb-1">Total Trades</div>
                 <div className="text-2xl font-bold">
-                  {periodStats.reduce((sum, s) => sum + s.nbTrades, 0)}
+                  {periodStats.reduce((sum, s) => {
+                    const trades = (s as any).nbTrades || 0
+                    return sum + (isNaN(trades) ? 0 : trades)
+                  }, 0)}
                 </div>
               </CardContent>
             </Card>
@@ -112,8 +168,14 @@ export default function PeriodStatisticsComponent() {
                 <div className="text-sm text-muted-foreground mb-1">Avg Win Rate</div>
                 <div className="text-2xl font-bold text-blue-500">
                   {periodStats.length > 0
-                    ? (periodStats.reduce((sum, s) => sum + s.winRate, 0) / periodStats.length).toFixed(1)
-                    : '0'}%
+                    ? (() => {
+                        const avg = periodStats.reduce((sum, s) => {
+                          const winRate = (s as any).winRate || 0
+                          return sum + (isNaN(winRate) ? 0 : winRate)
+                        }, 0) / periodStats.length
+                        return isNaN(avg) ? '0.0' : avg.toFixed(1)
+                      })()
+                    : '0.0'}%
                 </div>
               </CardContent>
             </Card>
@@ -136,41 +198,52 @@ export default function PeriodStatisticsComponent() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {periodStats.map((stat, index) => (
-                    <TableRow key={`${stat.period}-${index}`}>
-                      <TableCell className="font-medium">{stat.periodLabel}</TableCell>
-                      <TableCell className={`text-right font-medium ${
-                        stat.cumulativePnl >= 0 ? 'text-green-500' : 'text-red-500'
-                      }`}>
-                        <div className="flex items-center justify-end gap-1">
-                          {stat.cumulativePnl >= 0 ? (
-                            <TrendingUp className="w-4 h-4" />
+                  {periodStats.map((stat, index) => {
+                    const s = stat as any
+                    const safePnl = (s.cumulativePnl || 0)
+                    const safeWinRate = isNaN(s.winRate) ? 0 : (s.winRate || 0)
+                    const safeProfitFactor = isNaN(s.profitFactor) ? 0 : (s.profitFactor || 0)
+                    const safeNbTrades = s.nbTrades || 0
+                    const safeNbWin = s.nbWin || 0
+                    const safeNbLoss = s.nbLoss || 0
+                    const safeFees = s.cumulativeFees || 0
+                    
+                    return (
+                      <TableRow key={`${s.period || index}-${index}`}>
+                        <TableCell className="font-medium">{s.periodLabel || s.period || 'N/A'}</TableCell>
+                        <TableCell className={`text-right font-medium ${
+                          safePnl >= 0 ? 'text-green-500' : 'text-red-500'
+                        }`}>
+                          <div className="flex items-center justify-end gap-1">
+                            {safePnl >= 0 ? (
+                              <TrendingUp className="w-4 h-4" />
+                            ) : (
+                              <TrendingDown className="w-4 h-4" />
+                            )}
+                            {formatCurrency(safePnl)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">{safeNbTrades}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={safeWinRate >= 50 ? 'default' : 'secondary'}>
+                            {safeWinRate.toFixed(1)}%
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right text-green-500">{safeNbWin}</TableCell>
+                        <TableCell className="text-right text-red-500">{safeNbLoss}</TableCell>
+                        <TableCell className="text-right">
+                          {safeProfitFactor === Number.POSITIVE_INFINITY ? (
+                            <span className="text-green-500">∞</span>
                           ) : (
-                            <TrendingDown className="w-4 h-4" />
+                            safeProfitFactor.toFixed(2)
                           )}
-                          {formatCurrency(stat.cumulativePnl)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">{stat.nbTrades}</TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant={stat.winRate >= 50 ? 'default' : 'secondary'}>
-                          {stat.winRate.toFixed(1)}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-green-500">{stat.nbWin}</TableCell>
-                      <TableCell className="text-right text-red-500">{stat.nbLoss}</TableCell>
-                      <TableCell className="text-right">
-                        {stat.profitFactor === Number.POSITIVE_INFINITY ? (
-                          <span className="text-green-500">∞</span>
-                        ) : (
-                          stat.profitFactor.toFixed(2)
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {formatCurrency(stat.cumulativeFees)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {formatCurrency(safeFees)}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>

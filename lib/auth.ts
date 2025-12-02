@@ -47,7 +47,7 @@ export function createClient() {
 }
 
 // Backend auth functions - hardcoded for closed repo
-const BACKEND_URL = 'https://trade-backend-production-b0a3.up.railway.app'
+const BACKEND_URL = 'https://www.backend.mytradejournal.co.in'
 
 // Sign out - clear localStorage and redirect
 export function signOut() {
@@ -203,7 +203,7 @@ export function signInWithDiscord(next?: string | null) {
 export function signInWithGoogle(next?: string | null) {
   if (typeof window === 'undefined') return
   
-  const apiUrl = 'https://trade-backend-production-b0a3.up.railway.app'
+  const apiUrl = 'https://www.backend.mytradejournal.co.in'
   const nextUrl = next || '/dashboard'
   const redirectUrl = `${apiUrl}/api/auth/google?next=${encodeURIComponent(nextUrl)}`
   

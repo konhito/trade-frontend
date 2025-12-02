@@ -15,7 +15,7 @@
 
 ## Test Details
 
-**Backend URL**: `https://trade-backend-production-b0a3.up.railway.app`
+**Backend URL**: `https://www.backend.mytradejournal.co.in`
 
 **Test Results**:
 - Registration endpoint working correctly
@@ -74,7 +74,7 @@
 ## Configuration
 
 The frontend is configured to use the production backend by default:
-- `NEXT_PUBLIC_BACKEND_URL`: `https://trade-backend-production-b0a3.up.railway.app`
+- `NEXT_PUBLIC_BACKEND_URL`: `https://www.backend.mytradejournal.co.in`
 
 You can override this by setting the environment variable in your `.env.local` file.
 

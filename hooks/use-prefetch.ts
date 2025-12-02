@@ -21,7 +21,7 @@ export function useDashboardPrefetch() {
     const checkAndPrefetch = async () => {
       try {
         // Check auth status without blocking
-        const authResponse = await fetch('https://trade-backend-production-b0a3.up.railway.app/api/auth/me', {
+        const authResponse = await fetch('https://www.backend.mytradejournal.co.in/api/auth/me', {
           method: 'GET',
           // @ts-ignore - priority may not be in all browsers
           priority: 'low',

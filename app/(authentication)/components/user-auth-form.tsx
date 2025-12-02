@@ -6,7 +6,16 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Icons } from "@/components/icons"
-import { signInWithEmail, verifyOtp, signInWithGoogle } from "@/server/auth"
+import { signInWithGoogle } from "@/lib/auth"
+
+// Stub functions for email OTP (not currently implemented)
+const signInWithEmail = async (email: string, next?: string) => {
+  throw new Error('Email OTP authentication is not currently implemented. Please use Google sign-in.')
+}
+
+const verifyOtp = async (email: string, otp: string) => {
+  throw new Error('Email OTP verification is not currently implemented. Please use Google sign-in.')
+}
 import { z } from 'zod';
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"

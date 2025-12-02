@@ -3,7 +3,7 @@
 
 $envContent = @"
 # Frontend Environment Variables - Production
-NEXT_PUBLIC_BACKEND_URL=https://trade-backend-production-b0a3.up.railway.app
+NEXT_PUBLIC_BACKEND_URL=https://www.backend.mytradejournal.co.in
 
 # Optional Services (if using)
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key_here

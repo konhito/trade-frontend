@@ -45,13 +45,23 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
 
   // Calculate period-based statistics
   const periodStats = React.useMemo(() => {
-    if (!formattedTrades || formattedTrades.length === 0) return []
-    return calculatePeriodStatistics(
-      formattedTrades,
-      strategies || [],
-      accounts || [],
-      selectedPeriod
-    )
+    // Include strategies even if no trades - calculate from both sources
+    const hasTrades = formattedTrades && formattedTrades.length > 0
+    const hasStrategies = strategies && strategies.length > 0
+    
+    if (!hasTrades && !hasStrategies) return []
+    
+    try {
+      return calculatePeriodStatistics(
+        formattedTrades || [],
+        strategies || [],
+        accounts || [],
+        selectedPeriod
+      )
+    } catch (error) {
+      console.error('[Full Statistics] Error calculating period stats:', error)
+      return []
+    }
   }, [formattedTrades, strategies, accounts, selectedPeriod])
 
   const {
@@ -71,10 +81,25 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
     winningStreak
   } = statistics
 
-  const netPnl = cumulativePnl - cumulativeFees - totalPayouts
-  const avgWin = nbWin > 0 ? grossWin / nbWin : 0
-  const avgLoss = nbLoss > 0 ? grossLosses / nbLoss : 0
-  const riskRewardRatio = avgLoss > 0 ? avgWin / avgLoss : 0
+  const netPnl = (cumulativePnl || 0) - (cumulativeFees || 0) - (totalPayouts || 0)
+  const avgWin = (nbWin || 0) > 0 && (grossWin || 0) > 0 ? (grossWin || 0) / (nbWin || 1) : 0
+  const avgLoss = (nbLoss || 0) > 0 && (grossLosses || 0) > 0 ? (grossLosses || 0) / (nbLoss || 1) : 0
+  const riskRewardRatio = avgLoss > 0 && avgWin > 0 ? Math.abs(avgWin / avgLoss) : 0
+  
+  // Ensure all values are valid numbers
+  const safeWinRate = isNaN(winRate) ? 0 : (winRate || 0)
+  const safeProfitFactor = isNaN(profitFactor) ? 0 : (profitFactor || 0)
+  const safeNbTrades = nbTrades || 0
+  const safeNbWin = nbWin || 0
+  const safeNbLoss = nbLoss || 0
+  const safeNbBe = nbBe || 0
+  const safeGrossWin = grossWin || 0
+  const safeGrossLosses = grossLosses || 0
+  const safeCumulativePnl = cumulativePnl || 0
+  const safeCumulativeFees = cumulativeFees || 0
+  const safeTotalPayouts = totalPayouts || 0
+  const safeWinningStreak = winningStreak || 0
+  const safeAveragePositionTime = averagePositionTime || '0s'
 
   const defaultTrigger = (
     <Button variant="outline" className="gap-2">
@@ -104,9 +129,10 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
         ) : (
           <div className="space-y-6">
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="period">Period Analysis</TabsTrigger>
+                <TabsTrigger value="bydate">By Date</TabsTrigger>
                 <TabsTrigger value="performance">Performance</TabsTrigger>
                 <TabsTrigger value="detailed">Detailed Stats</TabsTrigger>
               </TabsList>
@@ -137,11 +163,11 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                     </CardHeader>
                     <CardContent>
                       <div className={`text-2xl font-bold ${
-                        profitFactor > 1 ? 'text-green-500' : 
-                        profitFactor > 0 ? 'text-yellow-500' : 
+                        safeProfitFactor > 1 ? 'text-green-500' : 
+                        safeProfitFactor > 0 ? 'text-yellow-500' : 
                         'text-red-500'
                       }`}>
-                        {profitFactor === Number.POSITIVE_INFINITY ? '∞' : profitFactor.toFixed(2)}
+                        {safeProfitFactor === Number.POSITIVE_INFINITY ? '∞' : safeProfitFactor.toFixed(2)}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         Gross Win / Gross Loss
@@ -199,7 +225,12 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                   <Card>
                     <CardContent className="py-12 text-center">
                       <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">No trading data available</p>
+                      <h3 className="text-lg font-semibold text-foreground mb-2">No Trading Data</h3>
+                      <p className="text-muted-foreground">
+                        {(!formattedTrades || formattedTrades.length === 0) && (!strategies || strategies.length === 0)
+                          ? 'Start trading or add strategies to see period-based statistics'
+                          : 'No data available for the selected period'}
+                      </p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -216,11 +247,20 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                         <CardContent className="p-4">
                           <div className="text-sm text-muted-foreground mb-1">Total P&L</div>
                           <div className={`text-2xl font-bold ${
-                            periodStats.reduce((sum, s) => sum + (s as any).cumulativePnl, 0) >= 0 
-                              ? 'text-green-500' 
-                              : 'text-red-500'
+                            (() => {
+                              const total = periodStats.reduce((sum, s) => {
+                                const pnl = (s as any).cumulativePnl || 0
+                                return sum + (isNaN(pnl) ? 0 : pnl)
+                              }, 0)
+                              return total >= 0 ? 'text-green-500' : 'text-red-500'
+                            })()
                           }`}>
-                            {formatCurrency(periodStats.reduce((sum, s) => sum + (s as any).cumulativePnl, 0))}
+                            {formatCurrency(
+                              periodStats.reduce((sum, s) => {
+                                const pnl = (s as any).cumulativePnl || 0
+                                return sum + (isNaN(pnl) ? 0 : pnl)
+                              }, 0)
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -228,7 +268,10 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                         <CardContent className="p-4">
                           <div className="text-sm text-muted-foreground mb-1">Total Trades</div>
                           <div className="text-2xl font-bold">
-                            {periodStats.reduce((sum, s) => sum + ((s as any).nbTrades || 0), 0)}
+                            {periodStats.reduce((sum, s) => {
+                              const trades = (s as any).nbTrades || 0
+                              return sum + (isNaN(trades) ? 0 : trades)
+                            }, 0)}
                           </div>
                         </CardContent>
                       </Card>
@@ -238,7 +281,10 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                           <div className="text-2xl font-bold text-blue-500">
                             {periodStats.length > 0
                               ? (() => {
-                                  const avg = periodStats.reduce((sum, s) => sum + ((s as any).winRate || 0), 0) / periodStats.length
+                                  const avg = periodStats.reduce((sum, s) => {
+                                    const winRate = (s as any).winRate || 0
+                                    return sum + (isNaN(winRate) ? 0 : winRate)
+                                  }, 0) / periodStats.length
                                   return isNaN(avg) ? '0.0' : avg.toFixed(1)
                                 })()
                               : '0.0'}%
@@ -271,38 +317,46 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                               <TableBody>
                                 {periodStats.map((stat, index) => {
                                   const s = stat as any
+                                  const safePnl = (s.cumulativePnl || 0)
+                                  const safeWinRate = isNaN(s.winRate) ? 0 : (s.winRate || 0)
+                                  const safeProfitFactor = isNaN(s.profitFactor) ? 0 : (s.profitFactor || 0)
+                                  const safeNbTrades = s.nbTrades || 0
+                                  const safeNbWin = s.nbWin || 0
+                                  const safeNbLoss = s.nbLoss || 0
+                                  const safeFees = s.cumulativeFees || 0
+                                  
                                   return (
-                                    <TableRow key={`${s.period}-${index}`}>
-                                      <TableCell className="font-medium">{s.periodLabel}</TableCell>
+                                    <TableRow key={`${s.period || index}-${index}`}>
+                                      <TableCell className="font-medium">{s.periodLabel || s.period || 'N/A'}</TableCell>
                                       <TableCell className={`text-right font-medium ${
-                                        s.cumulativePnl >= 0 ? 'text-green-500' : 'text-red-500'
+                                        safePnl >= 0 ? 'text-green-500' : 'text-red-500'
                                       }`}>
                                         <div className="flex items-center justify-end gap-1">
-                                          {s.cumulativePnl >= 0 ? (
+                                          {safePnl >= 0 ? (
                                             <TrendingUp className="w-4 h-4" />
                                           ) : (
                                             <TrendingDown className="w-4 h-4" />
                                           )}
-                                          {formatCurrency(s.cumulativePnl)}
+                                          {formatCurrency(safePnl)}
                                         </div>
                                       </TableCell>
-                                      <TableCell className="text-right">{s.nbTrades}</TableCell>
+                                      <TableCell className="text-right">{safeNbTrades}</TableCell>
                                       <TableCell className="text-right">
-                                        <Badge variant={(s.winRate || 0) >= 50 ? 'default' : 'secondary'}>
-                                          {isNaN(s.winRate) ? '0.0' : s.winRate.toFixed(1)}%
+                                        <Badge variant={safeWinRate >= 50 ? 'default' : 'secondary'}>
+                                          {safeWinRate.toFixed(1)}%
                                         </Badge>
                                       </TableCell>
-                                      <TableCell className="text-right text-green-500">{s.nbWin || 0}</TableCell>
-                                      <TableCell className="text-right text-red-500">{s.nbLoss || 0}</TableCell>
+                                      <TableCell className="text-right text-green-500">{safeNbWin}</TableCell>
+                                      <TableCell className="text-right text-red-500">{safeNbLoss}</TableCell>
                                       <TableCell className="text-right">
-                                        {s.profitFactor === Number.POSITIVE_INFINITY ? (
+                                        {safeProfitFactor === Number.POSITIVE_INFINITY ? (
                                           <span className="text-green-500">∞</span>
                                         ) : (
-                                          isNaN(s.profitFactor) ? '0.00' : s.profitFactor.toFixed(2)
+                                          safeProfitFactor.toFixed(2)
                                         )}
                                       </TableCell>
                                       <TableCell className="text-right text-muted-foreground">
-                                        {formatCurrency(s.cumulativeFees)}
+                                        {formatCurrency(safeFees)}
                                       </TableCell>
                                     </TableRow>
                                   )
@@ -317,6 +371,211 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                 )}
               </TabsContent>
 
+              {/* By Date Tab */}
+              <TabsContent value="bydate" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Statistics by Date</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      View daily performance breakdown for all trades and strategies
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Summary Cards */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {(() => {
+                          try {
+                            const dailyStats = calculatePeriodStatistics(
+                              formattedTrades || [],
+                              strategies || [],
+                              accounts || [],
+                              'daily'
+                            )
+                            const totalPnl = dailyStats.reduce((sum, s) => {
+                              const pnl = (s as any).cumulativePnl || 0
+                              return sum + (isNaN(pnl) ? 0 : pnl)
+                            }, 0)
+                            const profitableDays = dailyStats.filter((s: any) => {
+                              const pnl = (s as any).cumulativePnl || 0
+                              return !isNaN(pnl) && pnl > 0
+                            }).length
+                            const losingDays = dailyStats.filter((s: any) => {
+                              const pnl = (s as any).cumulativePnl || 0
+                              return !isNaN(pnl) && pnl < 0
+                            }).length
+                            
+                            return (
+                              <>
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="text-sm text-muted-foreground mb-1">Total Days</div>
+                                    <div className="text-2xl font-bold">{dailyStats.length}</div>
+                                  </CardContent>
+                                </Card>
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="text-sm text-muted-foreground mb-1">Total P&L</div>
+                                    <div className={`text-2xl font-bold ${
+                                      totalPnl >= 0 ? 'text-green-500' : 'text-red-500'
+                                    }`}>
+                                      {formatCurrency(totalPnl)}
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="text-sm text-muted-foreground mb-1">Profitable Days</div>
+                                    <div className="text-2xl font-bold text-green-500">{profitableDays}</div>
+                                  </CardContent>
+                                </Card>
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="text-sm text-muted-foreground mb-1">Losing Days</div>
+                                    <div className="text-2xl font-bold text-red-500">{losingDays}</div>
+                                  </CardContent>
+                                </Card>
+                              </>
+                            )
+                          } catch (error) {
+                            console.error('[Full Statistics] Error calculating daily summary:', error)
+                            return (
+                              <>
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="text-sm text-muted-foreground mb-1">Total Days</div>
+                                    <div className="text-2xl font-bold">0</div>
+                                  </CardContent>
+                                </Card>
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="text-sm text-muted-foreground mb-1">Total P&L</div>
+                                    <div className="text-2xl font-bold">-</div>
+                                  </CardContent>
+                                </Card>
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="text-sm text-muted-foreground mb-1">Profitable Days</div>
+                                    <div className="text-2xl font-bold">0</div>
+                                  </CardContent>
+                                </Card>
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="text-sm text-muted-foreground mb-1">Losing Days</div>
+                                    <div className="text-2xl font-bold">0</div>
+                                  </CardContent>
+                                </Card>
+                              </>
+                            )
+                          }
+                        })()}
+                      </div>
+
+                      {/* Daily Statistics Table */}
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Date</TableHead>
+                                <TableHead className="text-right">P&L</TableHead>
+                                <TableHead className="text-right">Trades</TableHead>
+                                <TableHead className="text-right">Wins</TableHead>
+                                <TableHead className="text-right">Losses</TableHead>
+                                <TableHead className="text-right">Win Rate</TableHead>
+                                <TableHead className="text-right">Profit Factor</TableHead>
+                                <TableHead className="text-right">Fees</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {(() => {
+                                try {
+                                  const dailyStats = calculatePeriodStatistics(
+                                    formattedTrades || [],
+                                    strategies || [],
+                                    accounts || [],
+                                    'daily'
+                                  )
+                                  // Sort by date descending (most recent first)
+                                  return dailyStats
+                                    .sort((a, b) => {
+                                      try {
+                                        const dateA = new Date((a as any).period)
+                                        const dateB = new Date((b as any).period)
+                                        if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+                                          return (b as any).period.localeCompare((a as any).period)
+                                        }
+                                        return dateB.getTime() - dateA.getTime()
+                                      } catch {
+                                        return (b as any).period.localeCompare((a as any).period)
+                                      }
+                                    })
+                                    .map((stat, index) => {
+                                      const s = stat as any
+                                      const safePnl = (s.cumulativePnl || 0)
+                                      const safeWinRate = isNaN(s.winRate) ? 0 : (s.winRate || 0)
+                                      const safeProfitFactor = isNaN(s.profitFactor) ? 0 : (s.profitFactor || 0)
+                                      const safeNbTrades = s.nbTrades || 0
+                                      const safeNbWin = s.nbWin || 0
+                                      const safeNbLoss = s.nbLoss || 0
+                                      const safeFees = s.cumulativeFees || 0
+                                      
+                                      return (
+                                        <TableRow key={`${s.period || index}-${index}`}>
+                                          <TableCell className="font-medium">{s.periodLabel || s.period || 'N/A'}</TableCell>
+                                          <TableCell className={`text-right font-medium ${
+                                            safePnl >= 0 ? 'text-green-500' : 'text-red-500'
+                                          }`}>
+                                            <div className="flex items-center justify-end gap-1">
+                                              {safePnl >= 0 ? (
+                                                <TrendingUp className="w-4 h-4" />
+                                              ) : (
+                                                <TrendingDown className="w-4 h-4" />
+                                              )}
+                                              {formatCurrency(safePnl)}
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="text-right">{safeNbTrades}</TableCell>
+                                          <TableCell className="text-right text-green-500">{safeNbWin}</TableCell>
+                                          <TableCell className="text-right text-red-500">{safeNbLoss}</TableCell>
+                                          <TableCell className="text-right">
+                                            <Badge variant={safeWinRate >= 50 ? 'default' : 'secondary'}>
+                                              {safeWinRate.toFixed(1)}%
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell className="text-right">
+                                            {safeProfitFactor === Number.POSITIVE_INFINITY ? (
+                                              <span className="text-green-500">∞</span>
+                                            ) : (
+                                              safeProfitFactor.toFixed(2)
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="text-right text-muted-foreground">
+                                            {formatCurrency(safeFees)}
+                                          </TableCell>
+                                        </TableRow>
+                                      )
+                                    })
+                                } catch (error) {
+                                  console.error('[Full Statistics] Error rendering daily stats:', error)
+                                  return (
+                                    <TableRow>
+                                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                                        Error loading daily statistics
+                                      </TableCell>
+                                    </TableRow>
+                                  )
+                                }
+                              })()}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
               {/* Performance Tab */}
               <TabsContent value="performance" className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -328,34 +587,34 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Winning Trades</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-green-500 font-bold">{nbWin}</span>
+                          <span className="text-green-500 font-bold">{safeNbWin}</span>
                           <span className="text-sm text-muted-foreground">
-                            ({((nbWin / nbTrades) * 100).toFixed(1)}%)
+                            ({safeNbTrades > 0 ? ((safeNbWin / safeNbTrades) * 100).toFixed(1) : '0.0'}%)
                           </span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Losing Trades</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-red-500 font-bold">{nbLoss}</span>
+                          <span className="text-red-500 font-bold">{safeNbLoss}</span>
                           <span className="text-sm text-muted-foreground">
-                            ({((nbLoss / nbTrades) * 100).toFixed(1)}%)
+                            ({safeNbTrades > 0 ? ((safeNbLoss / safeNbTrades) * 100).toFixed(1) : '0.0'}%)
                           </span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Break Even</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground font-bold">{nbBe}</span>
+                          <span className="text-muted-foreground font-bold">{safeNbBe}</span>
                           <span className="text-sm text-muted-foreground">
-                            ({((nbBe / nbTrades) * 100).toFixed(1)}%)
+                            ({safeNbTrades > 0 ? ((safeNbBe / safeNbTrades) * 100).toFixed(1) : '0.0'}%)
                           </span>
                         </div>
                       </div>
                       <div className="border-t pt-4">
                         <div className="flex justify-between items-center">
                           <span className="font-medium">Total Trades</span>
-                          <span className="font-bold text-lg">{nbTrades}</span>
+                          <span className="font-bold text-lg">{safeNbTrades}</span>
                         </div>
                       </div>
                     </CardContent>
@@ -368,20 +627,20 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                     <CardContent className="space-y-4">
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Gross Profit</span>
-                        <span className="text-green-500 font-bold">{formatCurrency(grossWin)}</span>
+                        <span className="text-green-500 font-bold">{formatCurrency(safeGrossWin)}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Gross Loss</span>
-                        <span className="text-red-500 font-bold">-{formatCurrency(grossLosses)}</span>
+                        <span className="text-red-500 font-bold">-{formatCurrency(safeGrossLosses)}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Total Fees</span>
-                        <span className="text-red-500 font-bold">-{formatCurrency(cumulativeFees)}</span>
+                        <span className="text-red-500 font-bold">-{formatCurrency(safeCumulativeFees)}</span>
                       </div>
-                      {nbPayouts > 0 && (
+                      {(nbPayouts || 0) > 0 && (
                         <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Payouts ({nbPayouts})</span>
-                          <span className="text-red-500 font-bold">-{formatCurrency(totalPayouts)}</span>
+                          <span className="text-muted-foreground">Payouts ({nbPayouts || 0})</span>
+                          <span className="text-red-500 font-bold">-{formatCurrency(safeTotalPayouts)}</span>
                         </div>
                       )}
                       <div className="border-t pt-4">
@@ -410,7 +669,7 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Average Position Time</span>
-                        <span className="font-bold">{averagePositionTime}</span>
+                        <span className="font-bold">{safeAveragePositionTime}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Risk/Reward Ratio</span>
@@ -419,7 +678,7 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                           riskRewardRatio >= 1 ? 'text-yellow-500' : 
                           'text-red-500'
                         }`}>
-                          {riskRewardRatio.toFixed(2)}:1
+                          {isNaN(riskRewardRatio) ? '0.00' : riskRewardRatio.toFixed(2)}:1
                         </span>
                       </div>
                     </CardContent>
@@ -432,26 +691,26 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                     <CardContent className="space-y-4">
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Win Rate</span>
-                        <span className="text-blue-500 font-bold">{winRate.toFixed(2)}%</span>
+                        <span className="text-blue-500 font-bold">{safeWinRate.toFixed(2)}%</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Profit Factor</span>
                         <span className={`font-bold ${
-                          profitFactor > 1 ? 'text-green-500' : 
-                          profitFactor > 0 ? 'text-yellow-500' : 
+                          safeProfitFactor > 1 ? 'text-green-500' : 
+                          safeProfitFactor > 0 ? 'text-yellow-500' : 
                           'text-red-500'
                         }`}>
-                          {profitFactor === Number.POSITIVE_INFINITY ? '∞' : profitFactor.toFixed(2)}
+                          {safeProfitFactor === Number.POSITIVE_INFINITY ? '∞' : safeProfitFactor.toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Winning Streak</span>
-                        <span className="text-blue-500 font-bold">{winningStreak}</span>
+                        <span className="text-blue-500 font-bold">{safeWinningStreak}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Total Cumulative P&L</span>
-                        <span className={`font-bold ${cumulativePnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {formatCurrency(cumulativePnl)}
+                        <span className={`font-bold ${safeCumulativePnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {formatCurrency(safeCumulativePnl)}
                         </span>
                       </div>
                     </CardContent>
@@ -472,19 +731,19 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span className="text-sm">Total Trades</span>
-                            <span className="font-medium">{nbTrades}</span>
+                            <span className="font-medium">{safeNbTrades}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm">Wins</span>
-                            <span className="font-medium text-green-500">{nbWin}</span>
+                            <span className="font-medium text-green-500">{safeNbWin}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm">Losses</span>
-                            <span className="font-medium text-red-500">{nbLoss}</span>
+                            <span className="font-medium text-red-500">{safeNbLoss}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm">Break Even</span>
-                            <span className="font-medium">{nbBe}</span>
+                            <span className="font-medium">{safeNbBe}</span>
                           </div>
                         </div>
                       </div>
@@ -494,15 +753,15 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span className="text-sm">Gross Profit</span>
-                            <span className="font-medium text-green-500">{formatCurrency(grossWin)}</span>
+                            <span className="font-medium text-green-500">{formatCurrency(safeGrossWin)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm">Gross Loss</span>
-                            <span className="font-medium text-red-500">{formatCurrency(grossLosses)}</span>
+                            <span className="font-medium text-red-500">{formatCurrency(safeGrossLosses)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm">Total Fees</span>
-                            <span className="font-medium">{formatCurrency(cumulativeFees)}</span>
+                            <span className="font-medium">{formatCurrency(safeCumulativeFees)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm">Net P&L</span>
@@ -518,21 +777,21 @@ export default function FullStatisticsDialog({ trigger }: FullStatisticsDialogPr
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span className="text-sm">Win Rate</span>
-                            <span className="font-medium">{winRate.toFixed(2)}%</span>
+                            <span className="font-medium">{safeWinRate.toFixed(2)}%</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm">Profit Factor</span>
                             <span className="font-medium">
-                              {profitFactor === Number.POSITIVE_INFINITY ? '∞' : profitFactor.toFixed(2)}
+                              {safeProfitFactor === Number.POSITIVE_INFINITY ? '∞' : safeProfitFactor.toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm">Risk/Reward</span>
-                            <span className="font-medium">{riskRewardRatio.toFixed(2)}:1</span>
+                            <span className="font-medium">{isNaN(riskRewardRatio) ? '0.00' : riskRewardRatio.toFixed(2)}:1</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm">Avg Position Time</span>
-                            <span className="font-medium">{averagePositionTime}</span>
+                            <span className="font-medium">{safeAveragePositionTime}</span>
                           </div>
                         </div>
                       </div>
