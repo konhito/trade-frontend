@@ -28,7 +28,6 @@ import { getDashboardStats } from '@/lib/services/dashboard'
 import { format } from 'date-fns'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import PeriodStatisticsComponent from './components/statistics/period-statistics'
 
 export default function Home() {
   const [selectedTimeframe, setSelectedTimeframe] = useState('W')
@@ -918,7 +917,7 @@ export default function Home() {
         </Card>
         </motion.div>
 
-        {/* Avg Win Ratio */}
+        {/* Win Rate */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -929,21 +928,24 @@ export default function Home() {
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Avg Win Ratio</span>
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Win Rate</span>
               </div>
               <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 opacity-80" />
             </div>
             <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-blue-500 mb-1 sm:mb-2 break-words">
-              {dashboardStatsLoading ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : hasNoData ? '₹0' : (() => {
-                // Calculate average win from both trades and strategies (already included in statistics)
-                const avgWin = statistics?.nbWin && statistics.nbWin > 0 
-                  ? (statistics.grossWin || 0) / statistics.nbWin 
-                  : 0
-                return `₹${avgWin.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+              {dashboardStatsLoading ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : hasNoData ? '0%' : (() => {
+                // Calculate win rate from statistics which includes both trades and strategies
+                // statistics.nbWin and statistics.nbLoss are calculated from calculateStatistics() 
+                // which processes both trades and strategies historical data
+                const totalTrades = (statistics?.nbWin || 0) + (statistics?.nbLoss || 0)
+                const winRate = totalTrades > 0 ? ((statistics?.nbWin || 0) / totalTrades) * 100 : 0
+                return `${winRate.toFixed(1)}%`
               })()}
             </div>
             <div className="text-xs sm:text-sm text-blue-500/90 mb-2 sm:mb-3">
               {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : (() => {
+                // All calculations use statistics which includes both trades and strategies
+                const totalTrades = (statistics?.nbWin || 0) + (statistics?.nbLoss || 0)
                 const avgLoss = statistics?.nbLoss && statistics.nbLoss > 0 
                   ? (statistics.grossLosses || 0) / statistics.nbLoss 
                   : 0
@@ -951,28 +953,19 @@ export default function Home() {
                   ? (statistics.grossWin || 0) / statistics.nbWin 
                   : 0
                 const winLossRatio = avgLoss > 0 ? (avgWin / avgLoss).toFixed(2) : '0.00'
-                return `Win/Loss: ${winLossRatio}:1 • ${statistics?.nbWin || 0} wins`
+                return `Win/Loss: ${winLossRatio}:1 • ${totalTrades} trades & strategies`
               })()}
             </div>
             <Progress value={dashboardStatsLoading ? 0 : hasNoData ? 0 : (() => {
-              const avgLoss = statistics?.nbLoss && statistics.nbLoss > 0 
-                ? (statistics.grossLosses || 0) / statistics.nbLoss 
-                : 0
-              const avgWin = statistics?.nbWin && statistics.nbWin > 0 
-                ? (statistics.grossWin || 0) / statistics.nbWin 
-                : 0
-              const winLossRatio = avgLoss > 0 ? avgWin / avgLoss : 0
-              return Math.min(winLossRatio * 20, 100) // Scale ratio to 0-100% (1:1 = 20%, 2:1 = 40%, etc.)
+              // Calculate win rate percentage for progress bar
+              const totalTrades = (statistics?.nbWin || 0) + (statistics?.nbLoss || 0)
+              const winRate = totalTrades > 0 ? ((statistics?.nbWin || 0) / totalTrades) * 100 : 0
+              return winRate
             })()} className="h-2 bg-muted">
               <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${dashboardStatsLoading ? 0 : hasNoData ? 0 : (() => {
-                const avgLoss = statistics?.nbLoss && statistics.nbLoss > 0 
-                  ? (statistics.grossLosses || 0) / statistics.nbLoss 
-                  : 0
-                const avgWin = statistics?.nbWin && statistics.nbWin > 0 
-                  ? (statistics.grossWin || 0) / statistics.nbWin 
-                  : 0
-                const winLossRatio = avgLoss > 0 ? avgWin / avgLoss : 0
-                return Math.min(winLossRatio * 20, 100)
+                const totalTrades = (statistics?.nbWin || 0) + (statistics?.nbLoss || 0)
+                const winRate = totalTrades > 0 ? ((statistics?.nbWin || 0) / totalTrades) * 100 : 0
+                return winRate
               })()}%` }}></div>
             </Progress>
           </CardContent>
@@ -1007,7 +1000,7 @@ export default function Home() {
         </Card>
         </motion.div>
 
-        {/* Trades This Month */}
+        {/* Highest P&L */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1018,23 +1011,32 @@ export default function Home() {
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Trades This Month</span>
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Highest P&L</span>
               </div>
               <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 opacity-80" />
             </div>
-            <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-orange-500 mb-1 sm:mb-2 break-words">
-              {dashboardStatsLoading ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : hasNoData ? '0' : (statistics?.winningStreak || 0)}
+            <div className={`text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold mb-1 sm:mb-2 break-words ${
+              dashboardStatsLoading || hasNoData ? 'text-muted-foreground' : 
+              metrics.highestPnL >= 0 ? 'text-green-500' : 'text-red-500'
+            }`}>
+              {dashboardStatsLoading ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : hasNoData ? '₹0' : (() => {
+                const sign = metrics.highestPnL >= 0 ? '+' : ''
+                return `${sign}₹${Math.abs(metrics.highestPnL).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+              })()}
             </div>
             <div className="text-xs sm:text-sm text-orange-500/90 mb-2 sm:mb-3">
               {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : (() => {
-                const profitFactor = statistics?.profitFactor || 0
-                const profitFactorDisplay = profitFactor === Number.POSITIVE_INFINITY ? '∞' : profitFactor.toFixed(2)
-                return `Profit Factor: ${profitFactorDisplay} • Total Trades: ${metrics.tradesThisMonth}`
+                const avgWin = statistics?.nbWin && statistics.nbWin > 0 
+                  ? (statistics.grossWin || 0) / statistics.nbWin 
+                  : 0
+                return `Avg Win: ₹${avgWin.toLocaleString('en-IN', { maximumFractionDigits: 0 })} • Best single trade/strategy`
               })()}
             </div>
-            <Progress value={dashboardStatsLoading ? 0 : hasNoData ? 0 : Math.min(((statistics?.winningStreak || 0) / Math.max(metrics.tradesThisMonth || 1, 1)) * 100, 100)} className="h-2 bg-muted">
-              <div className="h-full bg-orange-500 rounded-full transition-all" style={{ width: `${dashboardStatsLoading ? 0 : hasNoData ? 0 : Math.min(((statistics?.winningStreak || 0) / Math.max(metrics.tradesThisMonth || 1, 1)) * 100, 100)}%` }}></div>
-            </Progress>
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div className={`h-full rounded-full transition-all ${
+                metrics.highestPnL >= 0 ? 'bg-green-500' : 'bg-red-500'
+              }`} style={{ width: dashboardStatsLoading || hasNoData ? '0%' : '100%' }}></div>
+            </div>
           </CardContent>
         </Card>
         </motion.div>
@@ -1342,15 +1344,6 @@ export default function Home() {
           </Card>
         </motion.div>
       )}
-
-      {/* Period Statistics Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.4 }}
-      >
-        <PeriodStatisticsComponent />
-      </motion.div>
 
     </div>
   )
