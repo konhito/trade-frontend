@@ -918,7 +918,7 @@ export default function Home() {
         </Card>
         </motion.div>
 
-        {/* Win Rate */}
+        {/* Largest Win */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -929,15 +929,26 @@ export default function Home() {
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Win Rate</span>
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Largest Win</span>
               </div>
               <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 opacity-80" />
             </div>
             <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-blue-500 mb-1 sm:mb-2 break-words">
-              {dashboardStatsLoading ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : hasNoData ? '0%' : `${metrics.winRate.toFixed(1)}%`}
+              {dashboardStatsLoading ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : hasNoData ? '₹0' : (() => {
+                const largestWin = metrics.highestPnL || 0
+                return `₹${largestWin.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+              })()}
             </div>
-            <Progress value={metrics.winRate} className="h-2 bg-muted mt-2 sm:mt-3">
-              <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${metrics.winRate}%` }}></div>
+            <div className="text-xs sm:text-sm text-blue-500/90 mb-2 sm:mb-3">
+              {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : (() => {
+                const avgWin = statistics?.nbWin && statistics.nbWin > 0 
+                  ? (statistics.grossWin || 0) / statistics.nbWin 
+                  : 0
+                return `Avg Win: ₹${avgWin.toLocaleString('en-IN', { maximumFractionDigits: 0 })} • ${statistics?.nbWin || 0} wins`
+              })()}
+            </div>
+            <Progress value={dashboardStatsLoading ? 0 : hasNoData ? 0 : Math.min((metrics.highestPnL / Math.max(statistics?.grossWin || 1, 1)) * 100, 100)} className="h-2 bg-muted">
+              <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${dashboardStatsLoading ? 0 : hasNoData ? 0 : Math.min((metrics.highestPnL / Math.max(statistics?.grossWin || 1, 1)) * 100, 100)}%` }}></div>
             </Progress>
           </CardContent>
         </Card>
