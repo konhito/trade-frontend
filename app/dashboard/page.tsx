@@ -169,8 +169,17 @@ export default function Home() {
       // Get main metrics - prioritize statistics from useData() which includes trades + strategies
       const highestPnL = overview.highestPnL || 0
       
-      // Use statistics from useData() for winRate (includes trades + strategies)
-      const winRate = statistics?.winRate ?? overview.winRate ?? 0
+      // Calculate winRate from statistics (includes trades + strategies)
+      // Win rate = (Wins / (Wins + Losses)) * 100
+      let winRate = 0
+      if (statistics && statistics.nbWin !== undefined && statistics.nbLoss !== undefined) {
+        const totalTrades = statistics.nbWin + statistics.nbLoss
+        winRate = totalTrades > 0 ? (statistics.nbWin / totalTrades) * 100 : 0
+      } else if (overview.winRate !== undefined) {
+        winRate = overview.winRate
+      } else {
+        winRate = 0
+      }
       const tradesThisMonth = overview.totalTrades || 0
       
       // Calculate risk/reward from statistics (includes trades + strategies)
@@ -612,9 +621,17 @@ export default function Home() {
       return sum + (isNaN(dayPnL) ? 0 : dayPnL)
     }, 0)
     
-    // Use statistics from useData() for winRate (includes trades + strategies)
-    // Fallback to calculating from daily P&L data if statistics not available
-    const winRate = statistics?.winRate ?? (dailyPnLData.length > 0 ? (dailyPnLData.filter(day => day.pnl > 0).length / dailyPnLData.length) * 100 : 0)
+    // Calculate winRate from statistics (includes trades + strategies)
+    // Win rate = (Wins / (Wins + Losses)) * 100
+    let winRate = 0
+    if (statistics && statistics.nbWin !== undefined && statistics.nbLoss !== undefined) {
+      const totalTrades = statistics.nbWin + statistics.nbLoss
+      winRate = totalTrades > 0 ? (statistics.nbWin / totalTrades) * 100 : 0
+    } else if (statistics?.winRate !== undefined) {
+      winRate = statistics.winRate
+    } else {
+      winRate = 0
+    }
     
     // Calculate risk/reward from statistics (includes trades + strategies)
     let riskReward = '1:0'
