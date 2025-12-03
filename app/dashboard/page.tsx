@@ -919,10 +919,7 @@ export default function Home() {
             <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-blue-500 mb-1 sm:mb-2 break-words">
               {dashboardStatsLoading ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : hasNoData ? '0%' : `${metrics.winRate.toFixed(1)}%`}
             </div>
-            <div className="text-xs sm:text-sm text-blue-500/90 mb-2 sm:mb-3">
-              {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : `${dashboardStats?.overview?.closedTrades || 0} closed trades`}
-            </div>
-            <Progress value={metrics.winRate} className="h-2 bg-muted">
+            <Progress value={metrics.winRate} className="h-2 bg-muted mt-2 sm:mt-3">
               <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${metrics.winRate}%` }}></div>
             </Progress>
           </CardContent>
@@ -976,7 +973,18 @@ export default function Home() {
               {dashboardStatsLoading ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : hasNoData ? '0' : metrics.tradesThisMonth}
             </div>
             <div className="text-xs sm:text-sm text-orange-500/90 mb-2 sm:mb-3">
-              {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : `Total: ${dashboardStats?.overview?.totalTrades || 0} trades`}
+              {dashboardStatsLoading ? 'Loading...' : hasNoData ? 'No trades' : (() => {
+                const avgPnL = statistics?.nbTrades && statistics.nbTrades > 0 
+                  ? (statistics.cumulativePnl || 0) / statistics.nbTrades 
+                  : 0
+                const avgWin = statistics?.nbWin && statistics.nbWin > 0 
+                  ? (statistics.grossWin || 0) / statistics.nbWin 
+                  : 0
+                const avgLoss = statistics?.nbLoss && statistics.nbLoss > 0 
+                  ? (statistics.grossLosses || 0) / statistics.nbLoss 
+                  : 0
+                return `Avg P&L: ${avgPnL >= 0 ? '+' : ''}₹${Math.abs(avgPnL).toLocaleString('en-IN', { maximumFractionDigits: 0 })} • Win/Loss: ₹${avgWin.toLocaleString('en-IN', { maximumFractionDigits: 0 })}/₹${avgLoss.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+              })()}
             </div>
             <Progress value={dashboardStatsLoading ? 0 : hasNoData ? 0 : Math.min((metrics.tradesThisMonth / Math.max(dashboardStats?.overview?.totalTrades || 1, 1)) * 100, 100)} className="h-2 bg-muted">
               <div className="h-full bg-orange-500 rounded-full transition-all" style={{ width: `${dashboardStatsLoading ? 0 : hasNoData ? 0 : Math.min((metrics.tradesThisMonth / Math.max(dashboardStats?.overview?.totalTrades || 1, 1)) * 100, 100)}%` }}></div>

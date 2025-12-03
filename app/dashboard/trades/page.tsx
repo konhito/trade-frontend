@@ -35,7 +35,6 @@ import { useAuth } from '@/context/auth-provider'
 import { useData } from '@/context/data-provider'
 import { useEffect } from 'react'
 import { listTrades, createTrade, updateTrade, deleteTrade } from '@/lib/services/trades'
-import PeriodStatisticsComponent from '../components/statistics/period-statistics'
 import FullStatisticsDialog from '../components/statistics/full-statistics-dialog'
 
 export default function TradesPage() {
@@ -733,9 +732,6 @@ export default function TradesPage() {
         </CardContent>
       </Card>
 
-      {/* Period Statistics Section */}
-      <PeriodStatisticsComponent />
-
       {/* Add Trade Modal */}
       <Dialog open={showAddModal} onOpenChange={handleCloseModal}>
         <DialogContent className="max-w-4xl max-h-[90vh] bg-background border-border text-foreground shadow-2xl fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] flex flex-col w-[95vw] sm:w-full mx-4 sm:mx-0 overflow-hidden">
@@ -862,7 +858,7 @@ export default function TradesPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="convenienceFee">Convenience Fee</Label>
+                    <Label htmlFor="convenienceFee">Brokerage & charges</Label>
                     <Input
                       id="convenienceFee"
                       type="number"
@@ -1252,7 +1248,7 @@ export default function TradesPage() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="edit-convenienceFee">Convenience Fee</Label>
+                    <Label htmlFor="edit-convenienceFee">Brokerage & charges</Label>
                     <Input
                       id="edit-convenienceFee"
                       type="number"
