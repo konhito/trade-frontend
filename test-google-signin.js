@@ -5,7 +5,7 @@
  * Usage: node test-google-signin.js
  */
 
-const BACKEND_URL = 'https://www.backend.mytradejournal.co.in'
+const BACKEND_URL = 'https://backend.mytradejournal.co.in'
 const FRONTEND_URL = 'https://www.mytradejournal.co.in'
 
 // Color codes for console output

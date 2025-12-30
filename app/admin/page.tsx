@@ -102,7 +102,7 @@ export default function AdminDashboard() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
-  const backendUrl = 'https://www.backend.mytradejournal.co.in'
+  const backendUrl = 'https://backend.mytradejournal.co.in'
 
   useEffect(() => {
     // Check if we're on admin subdomain

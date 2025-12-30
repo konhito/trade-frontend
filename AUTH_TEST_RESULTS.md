@@ -15,7 +15,7 @@
 
 ## Test Details
 
-**Backend URL**: `https://www.backend.mytradejournal.co.in`
+**Backend URL**: `https://backend.mytradejournal.co.in`
 
 **Test Results**:
 - Registration endpoint working correctly
@@ -74,7 +74,7 @@
 ## Configuration
 
 The frontend is configured to use the production backend by default:
-- `NEXT_PUBLIC_BACKEND_URL`: `https://www.backend.mytradejournal.co.in`
+- `NEXT_PUBLIC_BACKEND_URL`: `https://backend.mytradejournal.co.in`
 
 You can override this by setting the environment variable in your `.env.local` file.
 

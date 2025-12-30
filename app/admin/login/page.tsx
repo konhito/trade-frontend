@@ -39,7 +39,7 @@ export default function AdminLoginPage() {
     setLoading(true)
 
     try {
-      const backendUrl = 'https://www.backend.mytradejournal.co.in'
+      const backendUrl = 'https://backend.mytradejournal.co.in'
       const response = await fetch(`${backendUrl}/admin/login`, {
         method: 'POST',
         headers: {

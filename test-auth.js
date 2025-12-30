@@ -3,7 +3,7 @@
  * Tests the complete auth flow: registration, login, token validation, and redirects
  */
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://www.backend.mytradejournal.co.in'
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend.mytradejournal.co.in'
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
 // Test user credentials
