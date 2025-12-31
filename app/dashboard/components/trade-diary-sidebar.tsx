@@ -12,7 +12,8 @@ import {
   Handshake, 
   GraduationCap,
   Moon,
-  ChevronDown
+  ChevronDown,
+  FileSpreadsheet
 } from "lucide-react"
 
 const navigationItems = [
@@ -21,6 +22,7 @@ const navigationItems = [
   { name: 'Strategies', icon: Lightbulb, active: false },
   { name: 'Calendar', icon: Calendar, active: false },
   { name: 'AI Summarizer', icon: Bot, active: false },
+  { name: 'Sheet Journal', icon: FileSpreadsheet, active: false },
   { name: 'Tools', icon: Hammer, active: false },
   { name: 'Affiliate', icon: Handshake, active: false },
   { name: 'Tutorials', icon: GraduationCap, active: false },

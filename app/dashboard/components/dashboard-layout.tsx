@@ -18,7 +18,8 @@ import {
   ChevronRight,
   Menu,
   Settings,
-  BookOpen
+  BookOpen,
+  FileSpreadsheet
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
@@ -102,6 +103,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Strategies', icon: Lightbulb, id: 'strategies', path: '/dashboard/strategies' },
     { name: 'Calendar', icon: Calendar, id: 'calendar', path: '/dashboard/calendar' },
     { name: 'AI Summarizer', icon: Bot, id: 'ai', path: '/dashboard/ai-summarizer' },
+    { name: 'Sheet Journal', icon: FileSpreadsheet, id: 'google-sheet-journal', path: '/dashboard/google-sheet-journal' },
     { name: 'Tools', icon: Hammer, id: 'tools', path: '/dashboard/tools' },
     { name: 'Profile', icon: User, id: 'profile', path: '/dashboard/profile' },
     { name: 'How to Use', icon: BookOpen, id: 'how-to-use', path: '/dashboard/how-to-use' },
