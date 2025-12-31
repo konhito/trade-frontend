@@ -55,7 +55,7 @@ export function ImportFeature() {
             <Image src="/logos/ninjatrader.png" alt="NinjaTrader" width={24} height={24} />
           </Circle>
           <Circle ref={div4Ref} className="size-16">
-            <Logo className="size-8" />
+            <Logo width={32} height={32} className="block" />
           </Circle>
           <Circle ref={div6Ref}>
             <Image src="/logos/quantower.png" alt="Quantower" width={24} height={24} />

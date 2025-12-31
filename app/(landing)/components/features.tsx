@@ -1,7 +1,9 @@
-import { BarChart3, Calendar, Database, Brain } from "lucide-react"
+import { BarChart3, Calendar, Database, Brain, FileSpreadsheet } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import Image from "next/image"
+import Link from "next/link"
 import { ImportFeature } from "./import-feature"
 import TradingChatAssistant from "./chat-feature"
 
@@ -44,6 +46,15 @@ export default function Features() {
       description: "Easily import your trading data from various sources",
       stat: "Multiple Formats",
       image: <ImportFeature />
+    },
+    {
+      id: "google-sheet-journal",
+      title: "Google Sheet Journal",
+      icon: <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />,
+      description: "Multi-client trade journal template with heatmaps and analytics",
+      stat: "Template Available",
+      image: null,
+      link: "/google-sheet-journal"
     }
   ]
 
@@ -57,8 +68,7 @@ export default function Features() {
             id={feature.id} 
             key={feature.id} 
             className={`bg-card ${
-              index < 2 ? 'lg:col-span-3' : 
-              index === 2 ? 'lg:col-span-4' : 'lg:col-span-2'
+              index < 2 ? 'lg:col-span-3' : 'lg:col-span-2'
             }`}
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -80,28 +90,41 @@ export default function Features() {
                     {feature.description}
                   </p>
                 </div>
-                <div className="relative h-[300px] w-full flex justify-center items-center">
-                  {typeof feature.image === 'object' && 'light' in feature.image ? (
-                    <>
-                      <Image
-                        src={feature.image.light}
-                        alt={`${feature.title} visualization`}
-                        layout="fill"
-                        objectFit="contain"
-                        className="rounded-md dark:hidden"
-                      />
-                      <Image
-                        src={feature.image.dark}
-                        alt={`${feature.title} visualization`}
-                        layout="fill"
-                        objectFit="contain"
-                        className="rounded-md hidden dark:block"
-                      />
-                    </>
-                  ) : (
-                    feature.image
-                  )}
-                </div>
+                {feature.link ? (
+                  <div className="relative h-[300px] w-full flex flex-col justify-center items-center gap-4 bg-muted/50 rounded-md">
+                    <FileSpreadsheet className="h-16 w-16 text-muted-foreground" />
+                    <Link href={feature.link}>
+                      <Button variant="default" className="gap-2">
+                        View Template
+                        <FileSpreadsheet className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <p className="text-xs text-muted-foreground text-center px-4">
+                      Google Sheets template with daily PNL tracking, heatmaps, and multi-client analytics
+                    </p>
+                  </div>
+                ) : (
+                  <div className="relative h-[300px] w-full flex justify-center items-center">
+                    {typeof feature.image === 'object' && 'light' in feature.image ? (
+                      <>
+                        <Image
+                          src={feature.image.light}
+                          alt={`${feature.title} visualization`}
+                          fill
+                          className="rounded-md dark:hidden object-contain"
+                        />
+                        <Image
+                          src={feature.image.dark}
+                          alt={`${feature.title} visualization`}
+                          fill
+                          className="rounded-md hidden dark:block object-contain"
+                        />
+                      </>
+                    ) : (
+                      feature.image
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
