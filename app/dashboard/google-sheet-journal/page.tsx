@@ -137,7 +137,7 @@ export default function GoogleSheetJournalPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-foreground">
-                  Sheet Journal
+                  Premium Trade Journal 2026
                 </h1>
                 <p className="text-muted-foreground">
                   Google Sheets template for tracking trading performance

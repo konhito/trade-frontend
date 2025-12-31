@@ -134,7 +134,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       path: "/dashboard/ai-summarizer",
     },
     {
-      name: "Sheet Journal",
+      name: "Trade Journal 2026",
       icon: FileSpreadsheet,
       id: "google-sheet-journal",
       path: "/dashboard/google-sheet-journal",
