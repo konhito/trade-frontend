@@ -1,16 +1,16 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
-import { useTheme } from '@/context/theme-provider'
-import { useAuth } from '@/context/auth-provider'
-import { 
-  Clock, 
-  ArrowLeftRight, 
-  Lightbulb, 
-  Calendar, 
-  Bot, 
-  Hammer, 
+import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useTheme } from "@/context/theme-provider";
+import { useAuth } from "@/context/auth-provider";
+import {
+  Clock,
+  ArrowLeftRight,
+  Lightbulb,
+  Calendar,
+  Bot,
+  Hammer,
   Handshake,
   LogOut,
   User,
@@ -19,12 +19,12 @@ import {
   Menu,
   Settings,
   BookOpen,
-  FileSpreadsheet
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Logo } from "@/components/logo"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { formatAvatarUrl, getUserInitials } from "@/lib/user-utils"
+  FileSpreadsheet,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatAvatarUrl, getUserInitials } from "@/lib/user-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,134 +32,179 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
 interface DashboardLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { effectiveTheme } = useTheme()
-  const { isAuthenticated, isLoading, user, logout } = useAuth()
-  const router = useRouter()
-  const pathname = usePathname()
-  const [activeItem, setActiveItem] = useState('dashboard')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true) // Default to collapsed
-  const [isMobile, setIsMobile] = useState(false)
+  const { effectiveTheme } = useTheme();
+  const { isAuthenticated, isLoading, user, logout } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [activeItem, setActiveItem] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Default to collapsed
+  const [isMobile, setIsMobile] = useState(false);
 
   // Detect mobile on mount and resize
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Redirect to signin if not authenticated (but wait if we have a fresh OAuth token)
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-      const isFreshOAuthToken = typeof window !== 'undefined' ? localStorage.getItem('oauth_token_fresh') === 'true' : false
-      
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const isFreshOAuthToken =
+        typeof window !== "undefined"
+          ? localStorage.getItem("oauth_token_fresh") === "true"
+          : false;
+
       // If we have a fresh OAuth token, wait much longer before redirecting
       if (token && isFreshOAuthToken) {
-        console.log('[DashboardLayout] Waiting for OAuth token validation before redirecting...')
+        console.log(
+          "[DashboardLayout] Waiting for OAuth token validation before redirecting..."
+        );
         const timeout = setTimeout(() => {
           // Only redirect if still not authenticated after waiting
           if (!isAuthenticated) {
-            console.log('[DashboardLayout] ⚠️ OAuth token validation timeout after 5s, but keeping user on dashboard')
+            console.log(
+              "[DashboardLayout] ⚠️ OAuth token validation timeout after 5s, but keeping user on dashboard"
+            );
             // Don't redirect - keep them on dashboard and let them try again
             // The token is still in localStorage, so they can refresh
           }
-        }, 5000) // Wait 5 seconds for validation
-        
-        return () => clearTimeout(timeout)
+        }, 5000); // Wait 5 seconds for validation
+
+        return () => clearTimeout(timeout);
       } else if (!token) {
         // No token - redirect immediately
-        console.log('[DashboardLayout] No token found, redirecting to signin')
-        const signInUrl = `/signin?next=${encodeURIComponent(pathname || '/dashboard')}`
-        router.replace(signInUrl)
+        console.log("[DashboardLayout] No token found, redirecting to signin");
+        const signInUrl = `/signin?next=${encodeURIComponent(pathname || "/dashboard")}`;
+        router.replace(signInUrl);
       }
       // If token exists but not fresh, wait a moment before redirecting (might be validating)
       else {
         const timeout = setTimeout(() => {
           if (!isAuthenticated) {
-            console.log('[DashboardLayout] Token exists but validation failed, redirecting to signin')
-      const signInUrl = `/signin?next=${encodeURIComponent(pathname || '/dashboard')}`
-      router.replace(signInUrl)
+            console.log(
+              "[DashboardLayout] Token exists but validation failed, redirecting to signin"
+            );
+            const signInUrl = `/signin?next=${encodeURIComponent(pathname || "/dashboard")}`;
+            router.replace(signInUrl);
           }
-        }, 2000)
-        return () => clearTimeout(timeout)
+        }, 2000);
+        return () => clearTimeout(timeout);
       }
     }
-  }, [isAuthenticated, isLoading, router, pathname])
+  }, [isAuthenticated, isLoading, router, pathname]);
 
   const navigationItems = [
-    { name: 'Dashboard', icon: Clock, id: 'dashboard', path: '/dashboard' },
-    { name: 'Trades', icon: ArrowLeftRight, id: 'trades', path: '/dashboard/trades' },
-    { name: 'Strategies', icon: Lightbulb, id: 'strategies', path: '/dashboard/strategies' },
-    { name: 'Calendar', icon: Calendar, id: 'calendar', path: '/dashboard/calendar' },
-    { name: 'AI Summarizer', icon: Bot, id: 'ai', path: '/dashboard/ai-summarizer' },
-    { name: 'Sheet Journal', icon: FileSpreadsheet, id: 'google-sheet-journal', path: '/dashboard/google-sheet-journal' },
-    { name: 'Tools', icon: Hammer, id: 'tools', path: '/dashboard/tools' },
-    { name: 'Profile', icon: User, id: 'profile', path: '/dashboard/profile' },
-    { name: 'How to Use', icon: BookOpen, id: 'how-to-use', path: '/dashboard/how-to-use' },
-    { name: 'Contact Us', icon: Handshake, id: 'contact', path: '/contact' },
-  ]
+    { name: "Dashboard", icon: Clock, id: "dashboard", path: "/dashboard" },
+    {
+      name: "Trades",
+      icon: ArrowLeftRight,
+      id: "trades",
+      path: "/dashboard/trades",
+    },
+    {
+      name: "Strategies",
+      icon: Lightbulb,
+      id: "strategies",
+      path: "/dashboard/strategies",
+    },
+    {
+      name: "Calendar",
+      icon: Calendar,
+      id: "calendar",
+      path: "/dashboard/calendar",
+    },
+    {
+      name: "AI Summarizer",
+      icon: Bot,
+      id: "ai",
+      path: "/dashboard/ai-summarizer",
+    },
+    {
+      name: "Sheet Journal",
+      icon: FileSpreadsheet,
+      id: "google-sheet-journal",
+      path: "/dashboard/google-sheet-journal",
+    },
+    { name: "Tools", icon: Hammer, id: "tools", path: "/dashboard/tools" },
+    { name: "Profile", icon: User, id: "profile", path: "/dashboard/profile" },
+    {
+      name: "How to Use",
+      icon: BookOpen,
+      id: "how-to-use",
+      path: "/dashboard/how-to-use",
+    },
+    { name: "Contact Us", icon: Handshake, id: "contact", path: "/contact" },
+  ];
 
   // Set active item based on current pathname
   useEffect(() => {
-    const currentItem = navigationItems.find(item => {
-      if (item.path === '/dashboard') {
-        return pathname === '/dashboard'
+    const currentItem = navigationItems.find((item) => {
+      if (item.path === "/dashboard") {
+        return pathname === "/dashboard";
       }
-      return pathname === item.path || pathname?.startsWith(item.path + '/')
-    })
-    
+      return pathname === item.path || pathname?.startsWith(item.path + "/");
+    });
+
     if (currentItem) {
-      setActiveItem(currentItem.id)
+      setActiveItem(currentItem.id);
     }
-  }, [pathname])
+  }, [pathname]);
 
   const handleItemClick = (item: any) => {
-    setActiveItem(item.id)
+    setActiveItem(item.id);
     if (item.path) {
-      router.push(item.path)
+      router.push(item.path);
     }
-    setSidebarOpen(false) // Close mobile sidebar after navigation
-  }
+    setSidebarOpen(false); // Close mobile sidebar after navigation
+  };
 
   // Prefetch route on hover for instant navigation
   const handleItemHover = (item: any) => {
     if (item.path) {
-      router.prefetch(item.path)
+      router.prefetch(item.path);
     }
-  }
+  };
 
   // Retry validation if we have a token but aren't authenticated yet (OAuth callback case)
   useEffect(() => {
-    if (!isAuthenticated && !isLoading && typeof window !== 'undefined') {
-      const token = localStorage.getItem('token')
-      const isFreshOAuthToken = localStorage.getItem('oauth_token_fresh') === 'true'
-      
+    if (!isAuthenticated && !isLoading && typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      const isFreshOAuthToken =
+        localStorage.getItem("oauth_token_fresh") === "true";
+
       if (token && isFreshOAuthToken) {
-        console.log('[DashboardLayout] Token exists but not authenticated - triggering validation')
+        console.log(
+          "[DashboardLayout] Token exists but not authenticated - triggering validation"
+        );
         // Trigger validation by dispatching event
-        window.dispatchEvent(new Event('auth-token-stored'))
-        
+        window.dispatchEvent(new Event("auth-token-stored"));
+
         // Also try direct validation after a short delay
         setTimeout(() => {
           if (!isAuthenticated && token) {
-            console.log('[DashboardLayout] Still not authenticated, retrying validation')
-            window.dispatchEvent(new Event('auth-token-stored'))
+            console.log(
+              "[DashboardLayout] Still not authenticated, retrying validation"
+            );
+            window.dispatchEvent(new Event("auth-token-stored"));
           }
-        }, 1000)
+        }, 1000);
       }
     }
-  }, [isAuthenticated, isLoading])
+  }, [isAuthenticated, isLoading]);
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -170,15 +215,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
-    )
+    );
   }
 
   // Don't render dashboard if not authenticated (redirect will happen)
   // But wait a bit longer if we have a fresh OAuth token
   if (!isAuthenticated) {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-    const isFreshOAuthToken = typeof window !== 'undefined' ? localStorage.getItem('oauth_token_fresh') === 'true' : false
-    
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const isFreshOAuthToken =
+      typeof window !== "undefined"
+        ? localStorage.getItem("oauth_token_fresh") === "true"
+        : false;
+
     // If we have a fresh OAuth token, show loading instead of redirecting immediately
     if (token && isFreshOAuthToken) {
       return (
@@ -188,10 +237,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <p className="text-sm text-muted-foreground">Signing you in...</p>
           </div>
         </div>
-      )
+      );
     }
-    
-    return null
+
+    return null;
   }
 
   return (
@@ -202,52 +251,72 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           className="fixed inset-0 bg-black/60 z-40 md:hidden"
           onClick={(e) => {
             // Don't close if clicking on dropdown menu
-            const target = e.target as HTMLElement
-            if (target.closest('[role="menu"]') || target.closest('[data-radix-portal]')) {
-              return
+            const target = e.target as HTMLElement;
+            if (
+              target.closest('[role="menu"]') ||
+              target.closest("[data-radix-portal]")
+            ) {
+              return;
             }
-            setSidebarOpen(false)
+            setSidebarOpen(false);
           }}
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
         />
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out md:fixed ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-      } ${sidebarCollapsed ? 'md:w-16' : 'md:w-64'} w-64 overflow-hidden`}>
-        <div 
-          className={`h-screen flex flex-col border-r border-sidebar-border/50 transition-all duration-300 backdrop-blur-xl ${sidebarCollapsed ? 'md:w-16 w-64' : 'w-64'}`} 
-          style={{ 
-            backgroundColor: effectiveTheme === 'dark' 
-              ? 'rgba(15, 23, 42, 0.85)' 
-              : 'rgba(255, 255, 255, 0.85)', 
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)'
+      <div
+        className={`fixed inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out md:fixed ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        } ${sidebarCollapsed ? "md:w-16" : "md:w-64"} w-64 overflow-hidden`}
+      >
+        <div
+          className={`h-screen flex flex-col border-r border-sidebar-border/50 transition-all duration-300 backdrop-blur-xl ${sidebarCollapsed ? "md:w-16 w-64" : "w-64"}`}
+          style={{
+            backgroundColor:
+              effectiveTheme === "dark"
+                ? "rgba(15, 23, 42, 0.85)"
+                : "rgba(255, 255, 255, 0.85)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
           }}
         >
           {/* Logo Section */}
-          <div className={`border-b border-sidebar-border ${sidebarCollapsed ? 'md:p-2' : 'p-4 md:p-6'} p-4`}>
-            <div 
-              className={`cursor-pointer flex items-center gap-1 md:flex-col md:items-center ${sidebarCollapsed ? '' : 'md:gap-3'}`}
-              onClick={() => router.push('/')}
+          <div
+            className={`border-b border-sidebar-border ${sidebarCollapsed ? "md:p-2" : "p-4 md:p-6"} p-4`}
+          >
+            <div
+              className={`cursor-pointer flex items-center gap-1 md:flex-col md:items-center ${sidebarCollapsed ? "" : "md:gap-3"}`}
+              onClick={() => router.push("/")}
             >
-              <Logo className={`flex-shrink-0 ${sidebarCollapsed ? 'h-14 w-14 md:h-12 md:w-12' : 'h-14 w-14 md:h-24 md:w-24'}`} />
+              <Logo
+                className={`flex-shrink-0 ${sidebarCollapsed ? "h-14 w-14 md:h-12 md:w-12" : "h-14 w-14 md:h-24 md:w-24"}`}
+              />
               {/* Mobile: Always show title */}
-              <h1 className={`font-bold whitespace-nowrap tracking-tight leading-tight md:hidden ${
-                effectiveTheme === 'light' ? 'text-black' : 'text-white'
-              } text-base`}>MyTradeJournal</h1>
+              <h1
+                className={`font-bold whitespace-nowrap tracking-tight leading-tight md:hidden ${
+                  effectiveTheme === "light" ? "text-black" : "text-white"
+                } text-base`}
+              >
+                MyTradeJournal
+              </h1>
               {/* Desktop: Show title only when not collapsed */}
               {!sidebarCollapsed && (
-                <h1 className={`hidden md:block text-base font-bold whitespace-nowrap tracking-tight leading-tight ${
-                  effectiveTheme === 'light' ? 'text-black' : 'text-white'
-                }`}>MyTradeJournal</h1>
+                <h1
+                  className={`hidden md:block text-base font-bold whitespace-nowrap tracking-tight leading-tight ${
+                    effectiveTheme === "light" ? "text-black" : "text-white"
+                  }`}
+                >
+                  MyTradeJournal
+                </h1>
               )}
             </div>
           </div>
 
           {/* Toggle Button - Desktop Only */}
-          <div className={`hidden md:flex border-b border-sidebar-border ${sidebarCollapsed ? 'justify-center p-2' : 'justify-end p-2'}`}>
+          <div
+            className={`hidden md:flex border-b border-sidebar-border ${sidebarCollapsed ? "justify-center p-2" : "justify-end p-2"}`}
+          >
             <Button
               variant="ghost"
               size="sm"
@@ -263,19 +332,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           {/* Navigation */}
-          <nav className={`flex-1 overflow-y-auto overflow-x-hidden ${sidebarCollapsed ? 'md:p-2' : 'p-4'} space-y-2`}>
+          <nav
+            className={`flex-1 overflow-y-auto overflow-x-hidden ${sidebarCollapsed ? "md:p-2" : "p-4"} space-y-2`}
+          >
             {navigationItems.map((item, index) => {
-              const Icon = item.icon
-              const isActive = activeItem === item.id
+              const Icon = item.icon;
+              const isActive = activeItem === item.id;
               return (
                 <Button
                   key={index}
                   variant="ghost"
                   onMouseEnter={() => handleItemHover(item)}
                   className={`w-full h-12 min-w-0 ${
-                    sidebarCollapsed 
-                      ? 'md:justify-center md:px-0 justify-start px-4' 
-                      : 'justify-start px-4'
+                    sidebarCollapsed
+                      ? "md:justify-center md:px-0 justify-start px-4"
+                      : "justify-start px-4"
                   } ${
                     isActive
                       ? "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
@@ -286,73 +357,95 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 >
                   <Icon className="flex-shrink-0 w-5 h-5" />
                   {/* Mobile: Always show text */}
-                  <span className="font-medium ml-3 whitespace-nowrap truncate md:hidden">{item.name}</span>
+                  <span className="font-medium ml-3 whitespace-nowrap truncate md:hidden">
+                    {item.name}
+                  </span>
                   {/* Desktop: Show text only when not collapsed */}
                   {!sidebarCollapsed && (
-                    <span className="hidden md:inline font-medium ml-3 whitespace-nowrap truncate">{item.name}</span>
+                    <span className="hidden md:inline font-medium ml-3 whitespace-nowrap truncate">
+                      {item.name}
+                    </span>
                   )}
                 </Button>
-              )
+              );
             })}
           </nav>
 
           {/* User Info and Dropdown Menu */}
-          <div className={`border-t border-sidebar-border ${sidebarCollapsed ? 'md:p-2' : 'p-3 md:p-4'}`}>
-            <DropdownMenu onOpenChange={(open) => {
-              // On mobile, close sidebar when dropdown opens
-              if (open && isMobile) {
-                // Delay closing to allow dropdown to render
-                setTimeout(() => setSidebarOpen(false), 100)
-              }
-            }}>
+          <div
+            className={`border-t border-sidebar-border ${sidebarCollapsed ? "md:p-2" : "p-3 md:p-4"}`}
+          >
+            <DropdownMenu
+              onOpenChange={(open) => {
+                // On mobile, close sidebar when dropdown opens
+                if (open && isMobile) {
+                  // Delay closing to allow dropdown to render
+                  setTimeout(() => setSidebarOpen(false), 100);
+                }
+              }}
+            >
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   className={`w-full h-auto p-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
-                    sidebarCollapsed 
-                      ? 'md:justify-center md:px-0 justify-start px-0' 
-                      : 'justify-start px-0'
+                    sidebarCollapsed
+                      ? "md:justify-center md:px-0 justify-start px-0"
+                      : "justify-start px-0"
                   }`}
                 >
                   {/* Mobile: Always show full user info */}
                   <div className="flex items-center space-x-3 w-full p-2 rounded-md hover:bg-sidebar-accent/50 transition-colors md:hidden">
                     <Avatar className="w-8 h-8 flex-shrink-0">
-                      <AvatarImage src={formatAvatarUrl(user?.avatar || null)} />
+                      <AvatarImage
+                        src={formatAvatarUrl(user?.avatar || null)}
+                      />
                       <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                         {getUserInitials(user)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0 overflow-hidden text-left">
                       <p className="text-sm font-medium text-sidebar-foreground truncate">
-                        {user?.firstName || user?.lastName 
-                          ? [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email 
-                          : user?.email || 'User'}
+                        {user?.firstName || user?.lastName
+                          ? [user?.firstName, user?.lastName]
+                              .filter(Boolean)
+                              .join(" ") || user?.email
+                          : user?.email || "User"}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">Trading Dashboard</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Trading Dashboard
+                      </p>
                     </div>
                   </div>
                   {/* Desktop: Show based on collapsed state */}
                   {!sidebarCollapsed ? (
                     <div className="hidden md:flex items-center space-x-3 w-full p-2 rounded-md hover:bg-sidebar-accent/50 transition-colors">
                       <Avatar className="w-8 h-8 flex-shrink-0">
-                        <AvatarImage src={formatAvatarUrl(user?.avatar || null)} />
+                        <AvatarImage
+                          src={formatAvatarUrl(user?.avatar || null)}
+                        />
                         <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                           {getUserInitials(user)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0 overflow-hidden text-left">
                         <p className="text-sm font-medium text-sidebar-foreground truncate">
-                          {user?.firstName || user?.lastName 
-                            ? [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email 
-                            : user?.email || 'User'}
+                          {user?.firstName || user?.lastName
+                            ? [user?.firstName, user?.lastName]
+                                .filter(Boolean)
+                                .join(" ") || user?.email
+                            : user?.email || "User"}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">Trading Dashboard</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          Trading Dashboard
+                        </p>
                       </div>
                     </div>
                   ) : (
                     <div className="hidden md:flex md:justify-center md:items-center md:p-2 md:rounded-md md:hover:bg-sidebar-accent/50 md:transition-colors">
                       <Avatar className="w-8 h-8">
-                        <AvatarImage src={formatAvatarUrl(user?.avatar || null)} />
+                        <AvatarImage
+                          src={formatAvatarUrl(user?.avatar || null)}
+                        />
                         <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                           {getUserInitials(user)}
                         </AvatarFallback>
@@ -361,32 +454,34 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent 
-                align={isMobile ? "start" : (sidebarCollapsed ? "start" : "end")} 
-                side={isMobile ? "right" : (sidebarCollapsed ? "right" : "top")}
+              <DropdownMenuContent
+                align={isMobile ? "start" : sidebarCollapsed ? "start" : "end"}
+                side={isMobile ? "right" : sidebarCollapsed ? "right" : "top"}
                 className="w-56 bg-popover border-border text-popover-foreground"
                 style={{ zIndex: 9999 }}
                 onCloseAutoFocus={(e) => {
                   // Prevent focus trap on mobile
                   if (isMobile) {
-                    e.preventDefault()
+                    e.preventDefault();
                   }
                 }}
                 onClick={(e) => {
                   // Prevent click from closing sidebar overlay
-                  e.stopPropagation()
+                  e.stopPropagation();
                 }}
               >
                 <DropdownMenuLabel className="text-foreground">
-                  {user?.firstName || user?.lastName 
-                    ? [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email 
-                    : user?.email || 'User Account'}
+                  {user?.firstName || user?.lastName
+                    ? [user?.firstName, user?.lastName]
+                        .filter(Boolean)
+                        .join(" ") || user?.email
+                    : user?.email || "User Account"}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-border" />
                 <DropdownMenuItem
                   onClick={() => {
-                    router.push('/dashboard/profile')
-                    setSidebarOpen(false)
+                    router.push("/dashboard/profile");
+                    setSidebarOpen(false);
                   }}
                   className="cursor-pointer text-foreground hover:bg-accent focus:bg-accent"
                 >
@@ -395,8 +490,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    router.push('/dashboard/settings')
-                    setSidebarOpen(false)
+                    router.push("/dashboard/settings");
+                    setSidebarOpen(false);
                   }}
                   className="cursor-pointer text-foreground hover:bg-accent focus:bg-accent"
                 >
@@ -406,8 +501,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <DropdownMenuSeparator className="bg-border" />
                 <DropdownMenuItem
                   onClick={() => {
-                    logout()
-                    setSidebarOpen(false)
+                    logout();
+                    setSidebarOpen(false);
                   }}
                   className="cursor-pointer text-destructive focus:text-destructive hover:bg-destructive/10 focus:bg-destructive/10"
                 >
@@ -421,10 +516,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Main Content Area */}
-      <div 
+      <div
         className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
         style={{
-          marginLeft: isMobile ? 0 : (sidebarCollapsed ? '64px' : '256px')
+          marginLeft: isMobile ? 0 : sidebarCollapsed ? "64px" : "256px",
         }}
       >
         {/* Mobile Header with Menu Button */}
@@ -437,7 +532,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           >
             <Menu className="w-6 h-6" />
           </Button>
-          <h1 className="text-lg font-semibold text-foreground">My Trade Journal</h1>
+          <h1 className="text-lg font-semibold text-foreground">
+            My Trade Journal
+          </h1>
           <div className="w-6" /> {/* Spacer for centering */}
         </div>
 
@@ -453,14 +550,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Menu className="w-5 h-5" />
             </Button>
           )}
-          <h1 className="text-lg font-semibold text-foreground">My Trade Journal</h1>
+          <h1 className="text-lg font-semibold text-foreground">
+            My Trade Journal
+          </h1>
         </div>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-auto">
-          {children}
-        </div>
+        <div className="flex-1 overflow-auto">{children}</div>
       </div>
     </div>
-  )
+  );
 }
