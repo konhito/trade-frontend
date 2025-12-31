@@ -1,22 +1,21 @@
 'use client'
 
 import React from 'react'
-import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { 
   Calendar, 
   BarChart3, 
   Users, 
-  Database, 
   ExternalLink, 
   TrendingUp, 
-  TrendingDown,
   CheckCircle2,
-  ArrowLeft,
   Grid3x3,
-  PieChart
+  PieChart,
+  FileSpreadsheet,
+  Copy,
+  Settings,
+  LineChart
 } from 'lucide-react'
 
 export default function GoogleSheetJournalPage() {
@@ -26,7 +25,7 @@ export default function GoogleSheetJournalPage() {
     {
       id: 'daily-pnl',
       title: 'Clients Daily PNL',
-      icon: <Calendar className="h-6 w-6" />,
+      icon: Calendar,
       description: 'Track daily profit and loss for all your clients with comprehensive metrics',
       features: [
         'Daily PNL tracking by date',
@@ -43,7 +42,7 @@ export default function GoogleSheetJournalPage() {
     {
       id: 'overall-dashboard',
       title: 'Overall Dashboard',
-      icon: <BarChart3 className="h-6 w-6" />,
+      icon: BarChart3,
       description: 'Comprehensive overview with heatmap visualization and performance metrics',
       features: [
         'Win/Loss ratio tracking',
@@ -64,44 +63,68 @@ export default function GoogleSheetJournalPage() {
     {
       title: 'Multi-Client Management',
       description: 'Track multiple clients or trading strategies in one unified system',
-      icon: <Users className="h-5 w-5" />
+      icon: Users
     },
     {
       title: 'Real-time Analytics',
       description: 'Get instant insights into your trading performance with automated calculations',
-      icon: <TrendingUp className="h-5 w-5" />
+      icon: TrendingUp
     },
     {
       title: 'Visual Heatmaps',
       description: 'See your trading patterns at a glance with color-coded calendar views',
-      icon: <Grid3x3 className="h-5 w-5" />
+      icon: Grid3x3
     },
     {
       title: 'Comprehensive Metrics',
       description: 'Track win ratios, drawdowns, average profits, and more',
-      icon: <PieChart className="h-5 w-5" />
+      icon: PieChart
+    }
+  ]
+
+  const howToSteps = [
+    {
+      step: '1',
+      title: 'Make a Copy',
+      description: 'Click the "Open Google Sheet" button and make a copy of the template to your Google Drive.',
+      icon: Copy
+    },
+    {
+      step: '2',
+      title: 'Customize for Your Needs',
+      description: 'Add your client names, update capital amounts, and customize the sheets according to your trading setup.',
+      icon: Settings
+    },
+    {
+      step: '3',
+      title: 'Start Tracking',
+      description: 'Begin entering your daily PNL data in the "Clients Daily PNL" sheet. The dashboard will automatically calculate metrics.',
+      icon: FileSpreadsheet
+    },
+    {
+      step: '4',
+      title: 'Analyze Performance',
+      description: 'Use the Overall Dashboard to analyze your trading patterns and make data-driven improvements.',
+      icon: LineChart
     }
   ]
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-muted/50">
-        <div className="container mx-auto px-4 py-6">
-          <Link href="/#features">
-            <Button variant="ghost" className="mb-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Features
-            </Button>
-          </Link>
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-4xl font-bold mb-2">My trade journal 2026</h1>
-              <p className="text-xl text-muted-foreground">
-                A comprehensive Google Sheets solution for tracking and analyzing trading performance
-              </p>
+    <div className="flex-1 bg-background p-3 sm:p-6">
+      <div className="max-w-full">
+        {/* Header Section */}
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <FileSpreadsheet className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Sheet Journal</h1>
+                <p className="text-muted-foreground">Google Sheets template for tracking trading performance</p>
+              </div>
             </div>
-            <Button asChild size="lg" className="gap-2">
+            <Button asChild size="default" className="gap-2">
               <a href={googleSheetUrl} target="_blank" rel="noopener noreferrer">
                 Open Google Sheet
                 <ExternalLink className="h-4 w-4" />
@@ -109,137 +132,108 @@ export default function GoogleSheetJournalPage() {
             </Button>
           </div>
         </div>
-      </div>
 
-      <main className="container mx-auto px-4 py-12">
-        {/* Overview Section */}
-        <section className="mb-16">
-          <div className="max-w-3xl mx-auto text-center mb-8">
-            <h2 className="text-3xl font-bold mb-4">Complete Trading Journal Solution</h2>
-            <p className="text-lg text-muted-foreground">
-              This comprehensive Google Sheets template provides everything you need to track, analyze, and improve your trading performance. 
-              Whether you're managing your own trades or tracking multiple clients, this comprehensive system offers powerful analytics 
-              and visualizations to help you make data-driven decisions.
-            </p>
-          </div>
-
-          {/* Key Benefits Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-            {keyBenefits.map((benefit, index) => (
-              <Card key={index} className="bg-card">
-                <CardHeader>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {keyBenefits.map((benefit, index) => {
+            const Icon = benefit.icon
+            return (
+              <Card key={index} className="bg-card border-border">
+                <CardContent className="p-4">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-primary/10 rounded-lg">
-                      {benefit.icon}
+                      <Icon className="h-4 w-4 text-primary" />
                     </div>
-                    <CardTitle className="text-lg">{benefit.title}</CardTitle>
+                    <div className="text-sm font-medium text-foreground">{benefit.title}</div>
                   </div>
-                  <CardDescription>{benefit.description}</CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        {/* Sheet Features */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-center mb-12">Sheet Features</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {sheetFeatures.map((sheet) => (
-              <Card 
-                key={sheet.id} 
-                className={`bg-card border-2 ${sheet.borderColor} hover:shadow-lg transition-shadow`}
-              >
-                <CardHeader>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-3 rounded-lg ${sheet.color}`}>
-                        {sheet.icon}
-                      </div>
-                      <CardTitle className="text-2xl">{sheet.title}</CardTitle>
-                    </div>
-                  </div>
-                  <CardDescription className="text-base">
-                    {sheet.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {sheet.features.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="text-xs text-muted-foreground">{benefit.description}</p>
                 </CardContent>
               </Card>
-            ))}
+            )
+          })}
+        </div>
+
+        {/* Sheet Features */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Sheet Features</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {sheetFeatures.map((sheet) => {
+              const Icon = sheet.icon
+              return (
+                <Card 
+                  key={sheet.id} 
+                  className={`bg-card border-2 ${sheet.borderColor} hover:shadow-lg transition-shadow`}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className={`p-2 rounded-lg ${sheet.color}`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <CardTitle className="text-lg">{sheet.title}</CardTitle>
+                    </div>
+                    <CardDescription className="text-sm">
+                      {sheet.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {sheet.features.map((feature, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm text-muted-foreground">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
-        </section>
+        </div>
+
+        {/* How to Use Section */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4">How to Use</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {howToSteps.map((step, index) => {
+              const Icon = step.icon
+              return (
+                <Card key={index} className="bg-card border-border">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-bold text-primary">{step.step}</span>
+                      </div>
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-semibold text-foreground mb-1">{step.title}</h3>
+                    <p className="text-xs text-muted-foreground">{step.description}</p>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
 
         {/* CTA Section */}
-        <section className="bg-muted/50 rounded-lg p-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
-          <p className="text-lg text-muted-foreground mb-4 max-w-2xl mx-auto">
-            Access the full Google Sheets template and start tracking your trading performance today. 
-            The template is fully customizable and ready to use.
-          </p>
-          <p className="text-base font-semibold mb-6 max-w-2xl mx-auto text-foreground">
-            Sign up to complete your setup and unlock the full power of MyTradeJournal!
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="gap-2">
-              <Link href="/signup">
-                Sign Up to Get Started
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="gap-2">
-              <a href={googleSheetUrl} target="_blank" rel="noopener noreferrer">
-                Open Google Sheet Template
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
-          </div>
-        </section>
-
-        {/* Additional Info */}
-        <section className="mt-16 max-w-3xl mx-auto">
-          <Card className="bg-card">
-            <CardHeader>
-              <CardTitle>How to Use</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-semibold mb-2">1. Make a Copy</h3>
-                <p className="text-muted-foreground">
-                  Click the "Open Google Sheet" button above and make a copy of the template to your Google Drive.
-                </p>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">2. Customize for Your Needs</h3>
-                <p className="text-muted-foreground">
-                  Add your client names, update capital amounts, and customize the sheets according to your trading setup.
-                </p>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">3. Start Tracking</h3>
-                <p className="text-muted-foreground">
-                  Begin entering your daily PNL data in the "Clients Daily PNL" sheet. The dashboard will automatically 
-                  calculate and visualize your performance metrics.
-                </p>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">4. Analyze Performance</h3>
-                <p className="text-muted-foreground">
-                  Use the Overall Dashboard and Client Dashboard to analyze your trading patterns, identify strengths 
-                  and weaknesses, and make data-driven improvements.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-      </main>
+        <Card className="bg-muted/50 border-border">
+          <CardContent className="p-6 text-center">
+            <h2 className="text-xl font-bold text-foreground mb-2">Ready to Get Started?</h2>
+            <p className="text-sm text-muted-foreground mb-4 max-w-2xl mx-auto">
+              Access the full Google Sheets template and start tracking your trading performance today. 
+              The template is fully customizable and ready to use.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button asChild size="default" className="gap-2">
+                <a href={googleSheetUrl} target="_blank" rel="noopener noreferrer">
+                  Open Google Sheet Template
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
