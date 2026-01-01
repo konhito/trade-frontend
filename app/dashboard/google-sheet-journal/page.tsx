@@ -26,7 +26,7 @@ import {
 
 export default function GoogleSheetJournalPage() {
   const googleSheetUrl =
-    "https://docs.google.com/spreadsheets/d/1HOe_Rzu91IKjBKJIMy983qw2BkH1rh0vK-bmsnAh85w/edit?usp=sharing";
+    "https://docs.google.com/spreadsheets/d/1c9ACoVYSaGGSitrxMDkGg1IypKkCD_fH6j-7Z5Vi7ZA/edit?gid=0#gid=0";
 
   const sheetFeatures = [
     {
