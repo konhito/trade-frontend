@@ -41,6 +41,11 @@ export function middleware(request: NextRequest) {
   // Middleware can't access localStorage, so we can't check tokens stored there
   // Client-side components will handle redirects and auth checks
 
+  // Let /algo routes pass completely unhindered
+  if (pathname.startsWith('/algo')) {
+    return NextResponse.next()
+  }
+
   // If accessing auth route with token in cookie/header, redirect to dashboard
   // This only works if token is in cookies/headers (not localStorage)
   if (isAuthRoute && token && token.length > 20) {
