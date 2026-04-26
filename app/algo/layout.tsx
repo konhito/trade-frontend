@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function AlgoLayout({
   children,
@@ -12,12 +13,12 @@ export default function AlgoLayout({
       <aside className="w-64 border-r border-slate-800 bg-slate-950/50 backdrop-blur-xl hidden md:flex flex-col sticky top-0 h-screen">
         <div className="p-6">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-rose-500 to-indigo-600 flex items-center justify-center font-bold text-lg shadow-lg shadow-rose-500/20">
-              PC
+            <div className="h-10 w-10 flex items-center justify-center">
+              <Image src="/logo2.png" alt="MyTradeJournal Logo" width={40} height={40} className="object-contain" />
             </div>
             <div>
-              <div className="font-bold tracking-tight text-white">Patni Capital</div>
-              <div className="text-xs text-slate-400 font-medium">Algo Analytics</div>
+              <div className="font-bold tracking-tight text-white">MyTradeJournal</div>
+              <div className="text-xs text-emerald-400 font-semibold tracking-wider">ALGO LAB</div>
             </div>
           </div>
         </div>
@@ -45,7 +46,7 @@ export default function AlgoLayout({
         </div>
 
         <div className="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
-          Patni Capital &copy; {new Date().getFullYear()}
+          MyTradeJournal &copy; {new Date().getFullYear()}
         </div>
       </aside>
 
@@ -53,10 +54,10 @@ export default function AlgoLayout({
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-16 md:hidden border-b border-slate-800 bg-slate-950 flex items-center px-4 justify-between sticky top-0 z-50">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-rose-500 to-indigo-600 flex items-center justify-center font-bold text-sm">
-              PC
+            <div className="h-8 w-8 flex items-center justify-center">
+              <Image src="/logo2.png" alt="MyTradeJournal Logo" width={32} height={32} className="object-contain" />
             </div>
-            <div className="font-bold">Patni Capital</div>
+            <div className="font-bold tracking-tight">MyTradeJournal</div>
           </div>
           <button className="p-2 -mr-2 text-slate-400">☰</button>
         </header>
