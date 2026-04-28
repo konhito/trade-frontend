@@ -7,9 +7,24 @@ export default function AlgoDashboardClient({ initialData }: { initialData: any 
   const [activeTab, setActiveTab] = useState('daily');
   const [searchTerm, setSearchTerm] = useState('');
   
-  const { ALL_DATA, dateRowsRaw } = initialData;
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [localData, setLocalData] = useState(initialData);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('ALGO_DB');
+      if (stored) {
+        try { setLocalData(JSON.parse(stored)); } catch (e) {}
+      }
+      if (localStorage.getItem('isAdmin') === 'true') {
+        setIsAdmin(true);
+      }
+    }
+  }, []);
+
+  const { ALL_DATA, dateRowsRaw } = localData;
   const dates = dateRowsRaw.map((d: any) => d.ds);
-  const [selectedDate, setSelectedDate] = useState(dates[dates.length - 1]);
+  const [selectedDate, setSelectedDate] = useState(dates[dates.length - 1] || '');
 
   const currentDailyData = useMemo(() => {
     let data = ALL_DATA[selectedDate] || [];
@@ -81,7 +96,8 @@ export default function AlgoDashboardClient({ initialData }: { initialData: any 
           { id: 'yearly', label: 'Yearly Performance', icon: '📈' },
           { id: 'quarterly', label: 'Quarterly', icon: '📊' },
           { id: 'custom', label: 'Custom Period', icon: '⚙️' },
-          { id: 'strategy', label: 'Strategy Analysis', icon: '🔍' }
+          { id: 'strategy', label: 'Strategy Analysis', icon: '🔍' },
+          ...(isAdmin ? [{ id: 'admin', label: 'Admin Settings', icon: '🛠️' }] : [])
         ].map(tab => (
           <button
             key={tab.id}
@@ -450,8 +466,12 @@ export default function AlgoDashboardClient({ initialData }: { initialData: any 
         </div>
       )}
 
-      {activeTab !== 'daily' && (
-        <div className="flex flex-col items-center justify-center py-32 px-4 text-center border border-dashed border-slate-800 bg-slate-900/20 rounded-3xl">
+      {activeTab === 'admin' && isAdmin && (
+        <AdminPanel localData={localData} setLocalData={setLocalData} />
+      )}
+
+      {activeTab !== 'daily' && activeTab !== 'admin' && (
+        <div className="flex flex-col items-center justify-center py-32 px-4 text-center border border-dashed border-slate-800 bg-slate-900/20 rounded-3xl relative">
           <div className="w-20 h-20 rounded-3xl bg-slate-800 flex items-center justify-center text-3xl mb-6 shadow-inner border border-slate-700/50">🚀</div>
           <h3 className="text-2xl font-bold text-white mb-3 tracking-tight capitalize">{activeTab} Analytics Engine</h3>
           <p className="text-slate-400 max-w-lg text-sm leading-relaxed">
@@ -482,4 +502,119 @@ export default function AlgoDashboardClient({ initialData }: { initialData: any 
       </div>
     );
   }
+}
+
+function AdminPanel({ localData, setLocalData }: { localData: any, setLocalData: any }) {
+  const [selectedDate, setSelectedDate] = useState(localData.dateRowsRaw[localData.dateRowsRaw.length - 1]?.ds || '');
+  const [formData, setFormData] = useState({ name: '', cap: 0, mult: 1, tpnl: 0, mpnl: 0, ypnl: 0, ytd: 0, cdd: 0 });
+
+  const dates = localData.dateRowsRaw.map((d: any) => d.ds);
+  const currentDailyData = localData.ALL_DATA[selectedDate] || [];
+
+  const handleSave = () => {
+    if (!formData.name) return alert('Strategy name required');
+    const newData = JSON.parse(JSON.stringify(localData));
+    if (!newData.ALL_DATA[selectedDate]) newData.ALL_DATA[selectedDate] = [];
+    
+    // add or update strategy
+    const existingIndex = newData.ALL_DATA[selectedDate].findIndex((s: any) => s.name === formData.name);
+    
+    const strategyData = {
+      ...formData,
+      troi: formData.cap > 0 ? (formData.tpnl / formData.cap) * 100 : 0
+    };
+
+    if (existingIndex >= 0) {
+      newData.ALL_DATA[selectedDate][existingIndex] = strategyData;
+    } else {
+      newData.ALL_DATA[selectedDate].push(strategyData);
+    }
+
+    localStorage.setItem('ALGO_DB', JSON.stringify(newData));
+    setLocalData(newData);
+    alert('Strategy saved successfully for ' + selectedDate);
+  };
+
+  const handleSelectStrat = (name: string) => {
+    const strat = currentDailyData.find((s: any) => s.name === name);
+    if (strat) {
+      setFormData({ name: strat.name, cap: strat.cap, mult: strat.mult, tpnl: strat.tpnl, mpnl: strat.mpnl, ypnl: strat.ypnl, ytd: strat.ytd || 0, cdd: strat.cdd || 0 });
+    }
+  };
+
+  return (
+    <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl animate-in fade-in slide-in-from-bottom-4">
+      <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-800">
+        <h2 className="text-xl font-bold text-white flex items-center gap-3">
+          <span className="text-2xl">🛠️</span> Data Management <span className="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded">ADMIN</span>
+        </h2>
+        <div className="text-sm text-slate-400">Add or edit strategies to instantly visualize them across the dashboard.</div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div className="space-y-6">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select Date Scope</label>
+            <select value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full bg-slate-950 border border-slate-800 text-white p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+              {dates.map((d: string) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+
+          <div>
+             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Existing Strategies in {selectedDate}</label>
+             <div className="flex flex-wrap gap-2">
+               {currentDailyData.map((s: any) => (
+                 <button key={s.name} onClick={() => handleSelectStrat(s.name)} className="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-md text-slate-300 transition">
+                   {s.name}
+                 </button>
+               ))}
+               <button onClick={() => setFormData({ name: '', cap: 0, mult: 1, tpnl: 0, mpnl: 0, ypnl: 0, ytd: 0, cdd: 0 })} className="bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-xs px-3 py-1.5 rounded-md font-bold">
+                 + New
+               </button>
+             </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+             <label className="block text-xs font-bold text-slate-500 mb-1">Strategy Name</label>
+             <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-white outline-none focus:border-indigo-500" placeholder="e.g. Sensex Basket V2" />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+               <label className="block text-xs font-bold text-slate-500 mb-1">Capital Deploy</label>
+               <input type="number" value={formData.cap} onChange={e => setFormData({...formData, cap: Number(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-white font-mono outline-none" />
+            </div>
+            <div>
+               <label className="block text-xs font-bold text-slate-500 mb-1">Lot Multiplier</label>
+               <input type="number" value={formData.mult} onChange={e => setFormData({...formData, mult: Number(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-white font-mono outline-none" />
+            </div>
+            <div>
+               <label className="block text-xs font-bold text-emerald-500/70 mb-1">Today PNL</label>
+               <input type="number" value={formData.tpnl} onChange={e => setFormData({...formData, tpnl: Number(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-white font-mono outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+               <label className="block text-xs font-bold text-emerald-500/70 mb-1">Monthly PNL</label>
+               <input type="number" value={formData.mpnl} onChange={e => setFormData({...formData, mpnl: Number(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-white font-mono outline-none" />
+            </div>
+            <div>
+               <label className="block text-xs font-bold text-slate-500 mb-1">Yearly PNL</label>
+               <input type="number" value={formData.ypnl} onChange={e => setFormData({...formData, ypnl: Number(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-white font-mono outline-none" />
+            </div>
+            <div>
+               <label className="block text-xs font-bold text-rose-500/70 mb-1">Max Drawdown %</label>
+               <input type="number" value={formData.cdd} onChange={e => setFormData({...formData, cdd: Number(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-white font-mono outline-none" />
+            </div>
+          </div>
+          
+          <div className="pt-4">
+             <button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl shadow-lg transition shadow-indigo-900/50">
+               Save Strategy Data to LocalStorage
+             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
