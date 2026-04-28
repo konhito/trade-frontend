@@ -93,17 +93,17 @@ const fCurrency = (n: number) => {
 };
 
 const valColor = (n: number) => n > 0 ? 'text-emerald-400' : n < 0 ? 'text-rose-400' : 'text-slate-500';
-const cellBg   = (n: number) => n > 0 ? 'bg-emerald-500/10' : n < 0 ? 'bg-rose-500/10' : '';
+const cellBg = (n: number) => n > 0 ? 'bg-emerald-500/10' : n < 0 ? 'bg-rose-500/10' : '';
 
 const tooltipStyle = { backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '10px', fontSize: 12 };
 
 function formatStat(stat: { value: number | string; type: string }) {
   if (stat.type === 'text') return { display: String(stat.value), color: 'text-slate-300' };
   const n = Number(stat.value);
-  if (stat.type === 'currency')    return { display: fCurrency(n), color: n >= 0 ? 'text-emerald-400' : 'text-rose-400' };
-  if (stat.type === 'percent')     return { display: n.toFixed(2), color: 'text-emerald-400' };
+  if (stat.type === 'currency') return { display: fCurrency(n), color: n >= 0 ? 'text-emerald-400' : 'text-rose-400' };
+  if (stat.type === 'percent') return { display: n.toFixed(2), color: 'text-emerald-400' };
   if (stat.type === 'percent_neg') return { display: n.toFixed(2), color: 'text-rose-400' };
-  if (stat.type === 'ratio')       return { display: n.toFixed(2), color: 'text-indigo-300' };
+  if (stat.type === 'ratio') return { display: n.toFixed(2), color: 'text-indigo-300' };
   return { display: `${n}`, color: 'text-slate-200' };
 }
 
@@ -121,24 +121,24 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function BacktestReportClient() {
-  const [qty, setQty]           = useState(1);
-  const [dte, setDte]           = useState('0 DTE');
+  const [qty, setQty] = useState(1);
+  const [dte, setDte] = useState('0 DTE');
   const [slippage, setSlippage] = useState(0);
   const [startDate, setStartDate] = useState('2024-01-01');
-  const [endDate, setEndDate]     = useState('2026-04-26');
+  const [endDate, setEndDate] = useState('2026-04-26');
   const [includeRegime, setIncludeRegime] = useState(true);
 
-  const [mcValue, setMcValue]   = useState(96);
+  const [mcValue, setMcValue] = useState(96);
   const [simRunning, setSimRunning] = useState(false);
-  const [simDone, setSimDone]   = useState(false);
+  const [simDone, setSimDone] = useState(false);
   const [simResult, setSimResult] = useState<number | null>(null);
 
   const [includeBrokerage, setIncludeBrokerage] = useState(false);
-  const [includeTaxes, setIncludeTaxes]         = useState(false);
+  const [includeTaxes, setIncludeTaxes] = useState(false);
   const [vixFrom, setVixFrom] = useState(0);
-  const [vixTo, setVixTo]     = useState(150);
+  const [vixTo, setVixTo] = useState(150);
   const [recalculating, setRecalculating] = useState(false);
-  const [aggregateEOD, setAggregateEOD]   = useState(true);
+  const [aggregateEOD, setAggregateEOD] = useState(true);
 
   const handleRunSimulations = useCallback(() => {
     setSimRunning(true); setSimDone(false);
@@ -198,13 +198,13 @@ export default function BacktestReportClient() {
               <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Qty Multiplier</span>
               <select value={qty} onChange={e => setQty(Number(e.target.value))}
                 className="bg-transparent text-sm font-bold text-white outline-none">
-                {[1,2,3,5,10].map(v => <option key={v} value={v}>{v}</option>)}
+                {[1, 2, 3, 5, 10].map(v => <option key={v} value={v}>{v}</option>)}
               </select>
             </div>
 
             {/* DTE tabs */}
             <div className="flex overflow-hidden rounded-lg border border-slate-700">
-              {['DTE','Weekdays','Budget Days'].map(l => (
+              {['DTE', 'Weekdays', 'Budget Days'].map(l => (
                 <button key={l} className="border-r border-slate-700 px-3 py-2 text-[11px] font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-white last:border-0">{l}</button>
               ))}
             </div>
@@ -213,7 +213,7 @@ export default function BacktestReportClient() {
             <div className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2">
               <select value={dte} onChange={e => setDte(e.target.value)}
                 className="bg-transparent text-sm font-bold text-white outline-none">
-                {['0 DTE','1 DTE','2 DTE','3 DTE'].map(v => <option key={v}>{v}</option>)}
+                {['0 DTE', '1 DTE', '2 DTE', '3 DTE'].map(v => <option key={v}>{v}</option>)}
               </select>
             </div>
 
@@ -222,7 +222,7 @@ export default function BacktestReportClient() {
               <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Slippage</span>
               <select value={slippage} onChange={e => setSlippage(Number(e.target.value))}
                 className="bg-transparent text-sm font-bold text-white outline-none">
-                {[0,1,2,5].map(v => <option key={v} value={v}>{v}%</option>)}
+                {[0, 1, 2, 5].map(v => <option key={v} value={v}>{v}%</option>)}
               </select>
             </div>
 
@@ -270,7 +270,7 @@ export default function BacktestReportClient() {
               <AreaChart data={CHART_DATA} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="cumPnlGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#10b981" stopOpacity={0.25} />
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
@@ -278,7 +278,7 @@ export default function BacktestReportClient() {
                 <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false}
                   axisLine={{ stroke: '#334155' }} interval={4} tick={{ fill: '#64748b' }} />
                 <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} width={58}
-                  tickFormatter={v => v >= 1000 ? `₹${(v/1000).toFixed(0)}k` : `₹${v}`} tick={{ fill: '#64748b' }} />
+                  tickFormatter={v => v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`} tick={{ fill: '#64748b' }} />
                 <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#94a3b8' }}
                   formatter={(val: number) => [fCurrency(val), 'Cumulative PnL']} />
                 <ReferenceLine y={0} stroke="#334155" strokeDasharray="3 3" />
@@ -305,7 +305,7 @@ export default function BacktestReportClient() {
               <AreaChart data={CHART_DATA} margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="ddGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.25} />
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
                     <stop offset="95%" stopColor="#ef4444" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
@@ -313,7 +313,7 @@ export default function BacktestReportClient() {
                 <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false}
                   axisLine={{ stroke: '#334155' }} interval={4} tick={{ fill: '#64748b' }} />
                 <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} width={58}
-                  tickFormatter={v => v === 0 ? '0' : `₹${(v/1000).toFixed(0)}k`} tick={{ fill: '#64748b' }} />
+                  tickFormatter={v => v === 0 ? '0' : `₹${(v / 1000).toFixed(0)}k`} tick={{ fill: '#64748b' }} />
                 <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#94a3b8' }}
                   formatter={(val: number) => [fCurrency(val), 'Drawdown']} />
                 <ReferenceLine y={0} stroke="#334155" />
@@ -351,7 +351,7 @@ export default function BacktestReportClient() {
                         <td key={i} className={`px-2 py-3 text-right font-mono ${hidden ? '' : cellBg(val)}`}>
                           {hidden
                             ? <span className="text-slate-700">—</span>
-                            : <span className={valColor(val)}>{fCurrency(val).replace('₹','').replace('-₹','-')}</span>
+                            : <span className={valColor(val)}>{fCurrency(val).replace('₹', '').replace('-₹', '-')}</span>
                           }
                         </td>
                       );
@@ -481,7 +481,7 @@ export default function BacktestReportClient() {
                     <tr key={i} className="transition-colors hover:bg-slate-800/30">
                       <td className="px-6 py-3.5">
                         <p className="font-medium text-slate-300">{stat.label}</p>
-                        <p className="mt-0.5 text-[9px] uppercase tracking-wider text-slate-600">AlgoTest.in</p>
+                        <p className="mt-0.5 text-[9px] uppercase tracking-wider text-slate-600">MYTRADEJOURNAL.COM</p>
                       </td>
                       <td className={`px-6 py-3.5 text-right font-mono font-semibold ${f.color}`}>{f.display}</td>
                       <td className={`px-6 py-3.5 text-right font-mono font-semibold ${f.color}`}>{f.display}</td>
