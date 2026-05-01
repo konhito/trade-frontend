@@ -20,6 +20,7 @@ import {
   Settings,
   BookOpen,
   FileSpreadsheet,
+  LineChart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
@@ -132,6 +133,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: Bot,
       id: "ai",
       path: "/dashboard/ai-summarizer",
+    },
+    {
+      name: "Backtest",
+      icon: LineChart,
+      id: "backtest",
+      path: "/dashboard/backtest",
     },
     {
       name: "Trade Journal 2026",
