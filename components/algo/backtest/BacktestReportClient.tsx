@@ -223,115 +223,115 @@ export default function BacktestReportClient() {
     return { yearRows, chartData, stats, fullTrades, totalCost };
   }, [qtyMultiplier, slippage, includeRegime, includeBrokerage, includeTaxes, vixFrom, vixTo]);
 
-  const pnlClass = (v: number) => (v >= 0 ? 'text-emerald-600' : 'text-rose-600');
+  const pnlClass = (v: number) => (v >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 p-4 md:p-6 space-y-6">
-      <section className="rounded-lg border p-4 space-y-3">
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6 space-y-6">
+      <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 space-y-3">
         <h3 className="text-lg">Overall Portfolio Setting</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
           <label>Qty Multiplier
-            <select className="ml-2 border rounded px-2 py-1" value={qtyMultiplier} onChange={(e) => setQtyMultiplier(Number(e.target.value))}>{[1,2,3,5,10].map((v) => <option key={v}>{v}</option>)}</select>
+            <select className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={qtyMultiplier} onChange={(e) => setQtyMultiplier(Number(e.target.value))}>{[1,2,3,5,10].map((v) => <option key={v}>{v}</option>)}</select>
           </label>
           <label>DTE
-            <select className="ml-2 border rounded px-2 py-1"><option>0 DTE</option></select>
+            <select className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1"><option>0 DTE</option></select>
           </label>
           <label>Slippage
-            <select className="ml-2 border rounded px-2 py-1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))}>{[0,0.5,1,2,5].map((v) => <option key={v} value={v}>{v}%</option>)}</select>
+            <select className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))}>{[0,0.5,1,2,5].map((v) => <option key={v} value={v}>{v}%</option>)}</select>
           </label>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
           <div className="font-medium">{strategyName}</div>
-          <label>Start Date <input type="date" className="ml-2 border rounded px-2 py-1" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
-          <label>End Date <input type="date" className="ml-2 border rounded px-2 py-1" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
+          <label>Start Date <input type="date" className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
+          <label>End Date <input type="date" className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
         </div>
       </section>
 
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h1 className="text-4xl font-light">BACKTEST RESULT</h1>
-          <button className="border rounded px-3 py-2 text-sm">Snap a Screenshot</button>
+          <button className="border border-slate-700 bg-slate-900 rounded px-3 py-2 text-sm hover:bg-slate-800">Snap a Screenshot</button>
         </div>
         <label className="text-sm flex items-center gap-2">
           <input type="checkbox" checked={includeRegime} onChange={(e) => setIncludeRegime(e.target.checked)} /> Include data from previous regime
         </label>
       </section>
 
-      <section className="border rounded p-4">
+      <section className="border border-slate-800 bg-slate-900/60 rounded p-4">
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={adjusted.chartData}>
-              <CartesianGrid stroke="#e2e8f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-              <YAxis />
+              <CartesianGrid stroke="#334155" />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} />
+              <YAxis tick={{ fill: '#94a3b8' }} />
               <Tooltip formatter={(v: number) => money(v)} />
-              <ReferenceLine y={0} stroke="#94a3b8" />
+              <ReferenceLine y={0} stroke="#475569" />
               <Area dataKey="cumPnl" stroke="#22c55e" fill="#22c55e22" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </section>
 
-      <section className="border rounded p-4">
+      <section className="border border-slate-800 bg-slate-900/60 rounded p-4">
         <div className="h-52">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={adjusted.chartData}>
-              <CartesianGrid stroke="#e2e8f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-              <YAxis />
+              <CartesianGrid stroke="#334155" />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} />
+              <YAxis tick={{ fill: '#94a3b8' }} />
               <Tooltip formatter={(v: number) => money(v)} />
-              <ReferenceLine y={0} stroke="#94a3b8" />
+              <ReferenceLine y={0} stroke="#475569" />
               <Area dataKey="drawdown" stroke="#ef4444" fill="#ef444422" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </section>
 
-      <section className="border rounded p-4 overflow-x-auto">
+      <section className="border border-slate-800 bg-slate-900/60 rounded p-4 overflow-x-auto">
         <h2 className="text-2xl font-light mb-3">Year-wise Returns</h2>
         <table className="w-full min-w-[1100px] text-sm">
-          <thead><tr className="bg-slate-100"><th className="p-2 text-left">Year</th>{monthsShort.map((m) => <th key={m} className="p-2 text-right">{m}</th>)}<th className="p-2 text-right">Total</th><th className="p-2 text-right">Max Drawdown</th><th className="p-2 text-right">Days for MDD</th><th className="p-2 text-right">*R/MDD (Yearly)</th></tr></thead>
-          <tbody>{adjusted.yearRows.map((r: any) => <tr key={r.year} className="border-b"><td className="p-2">{r.year}</td>{r.months.map((m: number, i: number) => <td key={i} className={`p-2 text-right ${pnlClass(m)}`}>{m === 0 ? '0' : m.toLocaleString('en-IN')}</td>)}<td className={`p-2 text-right font-semibold ${pnlClass(r.total)}`}>{r.total.toLocaleString('en-IN')}</td><td className="p-2 text-right text-rose-600">{r.maxDD.toLocaleString('en-IN')}</td><td className="p-2 text-right">{r.daysForMDD}<div className="text-xs text-slate-500">[{r.ddRange}]</div></td><td className="p-2 text-right">{r.rMDD}</td></tr>)}</tbody>
+          <thead><tr className="bg-slate-800/70"><th className="p-2 text-left">Year</th>{monthsShort.map((m) => <th key={m} className="p-2 text-right">{m}</th>)}<th className="p-2 text-right">Total</th><th className="p-2 text-right">Max Drawdown</th><th className="p-2 text-right">Days for MDD</th><th className="p-2 text-right">*R/MDD (Yearly)</th></tr></thead>
+          <tbody>{adjusted.yearRows.map((r: any) => <tr key={r.year} className="border-b border-slate-800"><td className="p-2">{r.year}</td>{r.months.map((m: number, i: number) => <td key={i} className={`p-2 text-right ${pnlClass(m)}`}>{m === 0 ? '0' : m.toLocaleString('en-IN')}</td>)}<td className={`p-2 text-right font-semibold ${pnlClass(r.total)}`}>{r.total.toLocaleString('en-IN')}</td><td className="p-2 text-right text-rose-400">{r.maxDD.toLocaleString('en-IN')}</td><td className="p-2 text-right">{r.daysForMDD}<div className="text-xs text-slate-400">[{r.ddRange}]</div></td><td className="p-2 text-right">{r.rMDD}</td></tr>)}</tbody>
         </table>
       </section>
 
-      <section className="border rounded p-4 space-y-3">
+      <section className="border border-slate-800 bg-slate-900/60 rounded p-4 space-y-3">
         <h3 className="text-3xl font-light">Curve Fitting Analysis: <span className="text-base">Monte Carlo Drawdown</span></h3>
         <div className="flex items-center gap-4">
           <span>1</span>
           <input type="range" min={1} max={99} value={mcValue} onChange={(e) => setMcValue(Number(e.target.value))} className="w-full" />
           <span>99</span>
-          <button className="border rounded px-3 py-1">Run 10000 Simulations</button>
+          <button className="border border-slate-700 bg-slate-900 rounded px-3 py-1 hover:bg-slate-800">Run 10000 Simulations</button>
         </div>
       </section>
 
-      <section className="border rounded p-4">
+      <section className="border border-slate-800 bg-slate-900/60 rounded p-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end text-sm">
           <label><input type="checkbox" checked={includeBrokerage} onChange={(e) => setIncludeBrokerage(e.target.checked)} /> Include Brokerage</label>
           <div>₹ {includeBrokerage ? adjusted.totalCost.toLocaleString('en-IN') : '0'}</div>
           <label><input type="checkbox" checked={includeTaxes} onChange={(e) => setIncludeTaxes(e.target.checked)} /> Taxes & charges</label>
-          <div className="flex items-center gap-2">From <input type="number" className="w-16 border rounded px-2 py-1" value={vixFrom} onChange={(e) => setVixFrom(Number(e.target.value))} /> To <input type="number" className="w-16 border rounded px-2 py-1" value={vixTo} onChange={(e) => setVixTo(Number(e.target.value))} /> <button className="bg-blue-600 text-white rounded px-3 py-1">Re-calculate</button></div>
+          <div className="flex items-center gap-2">From <input type="number" className="w-16 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={vixFrom} onChange={(e) => setVixFrom(Number(e.target.value))} /> To <input type="number" className="w-16 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={vixTo} onChange={(e) => setVixTo(Number(e.target.value))} /> <button className="bg-blue-600 text-white rounded px-3 py-1 hover:bg-blue-500">Re-calculate</button></div>
         </div>
       </section>
 
-      <section className="border rounded overflow-x-auto">
+      <section className="border border-slate-800 bg-slate-900/60 rounded overflow-x-auto">
         <div className="p-4 flex justify-between"><h3 className="text-4xl font-light">Strategy-wise Report</h3><label><input type="checkbox" checked={aggregateEOD} onChange={(e) => setAggregateEOD(e.target.checked)} /> Aggregate At End of Trading Day</label></div>
         <table className="w-full min-w-[900px] text-sm">
-          <thead><tr className="bg-slate-100"><th className="p-3 text-left">Statistic</th><th className="p-3 text-right">Aggregate</th><th className="p-3 text-right">NIFTY 0 DTE NON D...</th></tr></thead>
+          <thead><tr className="bg-slate-800/70"><th className="p-3 text-left">Statistic</th><th className="p-3 text-right">Aggregate</th><th className="p-3 text-right">NIFTY 0 DTE NON D...</th></tr></thead>
           <tbody>{adjusted.stats.map((s) => {
             const n = typeof s.value === 'number' ? s.value : 0;
-            const cls = s.type === 'currency' ? pnlClass(n) : 'text-slate-800';
-            return <tr key={s.label} className="border-b"><td className="p-3">{s.label}</td><td className={`p-3 text-right ${cls}`}>{formatStatValue(s, s.value)}</td><td className={`p-3 text-right ${cls}`}>{formatStatValue(s, s.value)}</td></tr>;
+            const cls = s.type === 'currency' ? pnlClass(n) : 'text-slate-200';
+            return <tr key={s.label} className="border-b border-slate-800"><td className="p-3">{s.label}</td><td className={`p-3 text-right ${cls}`}>{formatStatValue(s, s.value)}</td><td className={`p-3 text-right ${cls}`}>{formatStatValue(s, s.value)}</td></tr>;
           })}</tbody>
         </table>
       </section>
 
-      <section className="border rounded p-4">
+      <section className="border border-slate-800 bg-slate-900/60 rounded p-4">
         <h3 className="text-4xl font-light mb-4">Full Report</h3>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1400px] text-sm">
-            <thead><tr className="bg-slate-100"><th className="p-2">Index</th><th className="p-2">Entry Date</th><th className="p-2">Entry Time</th><th className="p-2">Exit Date</th><th className="p-2">Exit Time</th><th className="p-2">Type</th><th className="p-2">Strike</th><th className="p-2">B/S</th><th className="p-2">Qty</th><th className="p-2">Entry Price</th><th className="p-2">Exit Price</th><th className="p-2">Vix</th><th className="p-2">P/L</th></tr></thead>
-            <tbody>{adjusted.fullTrades.map((t) => <tr key={t.index} className="border-b"><td className="p-2">{t.index}</td><td className="p-2">{t.entryDate}</td><td className="p-2">{t.entryTime}</td><td className="p-2">{t.exitDate}</td><td className="p-2">{t.exitTime}</td><td className="p-2">{t.type}</td><td className="p-2">{t.strike}</td><td className="p-2">{t.bs}</td><td className="p-2">{t.qty}</td><td className="p-2">{t.entryPrice}</td><td className="p-2">{t.exitPrice}</td><td className="p-2">{t.vix}</td><td className={`p-2 ${pnlClass(t.pnl)}`}>{t.pnl.toFixed(2)}</td></tr>)}</tbody>
+            <thead><tr className="bg-slate-800/70"><th className="p-2">Index</th><th className="p-2">Entry Date</th><th className="p-2">Entry Time</th><th className="p-2">Exit Date</th><th className="p-2">Exit Time</th><th className="p-2">Type</th><th className="p-2">Strike</th><th className="p-2">B/S</th><th className="p-2">Qty</th><th className="p-2">Entry Price</th><th className="p-2">Exit Price</th><th className="p-2">Vix</th><th className="p-2">P/L</th></tr></thead>
+            <tbody>{adjusted.fullTrades.map((t) => <tr key={t.index} className="border-b border-slate-800"><td className="p-2">{t.index}</td><td className="p-2">{t.entryDate}</td><td className="p-2">{t.entryTime}</td><td className="p-2">{t.exitDate}</td><td className="p-2">{t.exitTime}</td><td className="p-2">{t.type}</td><td className="p-2">{t.strike}</td><td className="p-2">{t.bs}</td><td className="p-2">{t.qty}</td><td className="p-2">{t.entryPrice}</td><td className="p-2">{t.exitPrice}</td><td className="p-2">{t.vix}</td><td className={`p-2 ${pnlClass(t.pnl)}`}>{t.pnl.toFixed(2)}</td></tr>)}</tbody>
           </table>
         </div>
       </section>
