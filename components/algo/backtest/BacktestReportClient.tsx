@@ -27,22 +27,6 @@ type StatRow = {
   type: 'currency' | 'number' | 'percent' | 'ratio' | 'text';
 };
 
-type TradeRow = {
-  index: string;
-  entryDate: string;
-  entryTime: string;
-  exitDate: string;
-  exitTime: string;
-  type: string;
-  strike: string;
-  bs: string;
-  qty: number;
-  entryPrice: string;
-  exitPrice: string;
-  vix: string;
-  pnl: number;
-};
-
 const strategyName = 'NIFTY 0 DTE NON DIRECTIONAL STRATEGY';
 const baseQty = 1;
 const baseSlippagePct = 0;
@@ -95,18 +79,6 @@ const baseStats: StatRow[] = [
   { label: 'Max days in any drawdown(Periods)', value: 11, type: 'number' },
 ];
 
-const visibleTradeRows: TradeRow[] = [
-  { index: '1', entryDate: '2024-01-04', entryTime: '9:28:00 AM', exitDate: '2024-01-04', exitTime: '3:05:00 PM', type: '', strike: '', bs: '', qty: 65, entryPrice: '', exitPrice: '', vix: '13.97', pnl: 1131.0 },
-  { index: '1.1', entryDate: '2024-01-04', entryTime: '9:28:00 AM', exitDate: '2024-01-04', exitTime: '3:05:00 PM', type: 'CE', strike: '21500', bs: 'Sell', qty: 65, entryPrice: '114.05', exitPrice: '150.25', vix: '', pnl: -2353.0 },
-  { index: '1.2', entryDate: '2024-01-04', entryTime: '9:28:00 AM', exitDate: '2024-01-04', exitTime: '3:05:00 PM', type: 'PE', strike: '21700', bs: 'Sell', qty: 65, entryPrice: '103.45', exitPrice: '49.85', vix: '', pnl: 3484.0 },
-  { index: '2', entryDate: '2024-01-11', entryTime: '9:28:00 AM', exitDate: '2024-01-11', exitTime: '3:05:00 PM', type: '', strike: '', bs: '', qty: 65, entryPrice: '', exitPrice: '', vix: '12.96', pnl: 461.5 },
-  { index: '2.1', entryDate: '2024-01-11', entryTime: '9:28:00 AM', exitDate: '2024-01-11', exitTime: '2:12:00 PM', type: 'CE', strike: '21600', bs: 'Sell', qty: 65, entryPrice: '121.00', exitPrice: '37.90', vix: '', pnl: 5401.5 },
-  { index: '2.2', entryDate: '2024-01-11', entryTime: '9:28:00 AM', exitDate: '2024-01-11', exitTime: '3:05:00 PM', type: 'PE', strike: '21850', bs: 'Sell', qty: 65, entryPrice: '142.60', exitPrice: '204.50', vix: '', pnl: -4023.5 },
-  { index: '2.3', entryDate: '2024-01-11', entryTime: '2:12:00 PM', exitDate: '2024-01-11', exitTime: '3:05:00 PM', type: 'CE', strike: '21500', bs: 'Sell', qty: 65, entryPrice: '131.90', exitPrice: '146.00', vix: '', pnl: -916.5 },
-  { index: '3', entryDate: '2024-01-18', entryTime: '9:28:00 AM', exitDate: '2024-01-18', exitTime: '3:05:00 PM', type: '', strike: '', bs: '', qty: 65, entryPrice: '', exitPrice: '', vix: '15.13', pnl: 510.25 },
-  { index: '3.1', entryDate: '2024-01-18', entryTime: '9:28:00 AM', exitDate: '2024-01-18', exitTime: '9:49:00 AM', type: 'CE', strike: '21350', bs: 'Sell', qty: 65, entryPrice: '106.15', exitPrice: '52.40', vix: '', pnl: 3493.75 },
-  { index: '3.2', entryDate: '2024-01-18', entryTime: '9:28:00 AM', exitDate: '2024-01-18', exitTime: '3:05:00 PM', type: 'PE', strike: '21550', bs: 'Sell', qty: 65, entryPrice: '135.85', exitPrice: '98.85', vix: '', pnl: 2405.0 },
-];
 
 const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -142,11 +114,11 @@ export default function BacktestReportClient() {
   const [qtyMultiplier, setQtyMultiplier] = useState(baseQty);
   const [slippage, setSlippage] = useState(baseSlippagePct);
   const [includeRegime, setIncludeRegime] = useState(true);
-  const [startDate, setStartDate] = useState('2024-01-01');
-  const [endDate, setEndDate] = useState('2026-04-26');
-  const [mcValue, setMcValue] = useState(95);
+  const [startDate, setStartDate] = useState('2024-01');
+  const [endDate, setEndDate] = useState('2026-04');
   const [includeBrokerage, setIncludeBrokerage] = useState(false);
-  const [includeTaxes, setIncludeTaxes] = useState(false);
+  const [brokerageMode, setBrokerageMode] = useState<'per_lot' | 'per_order'>('per_order');
+  const [brokerageAmount, setBrokerageAmount] = useState(220);
   const [vixFrom, setVixFrom] = useState(0);
   const [vixTo, setVixTo] = useState(150);
   const [aggregateEOD, setAggregateEOD] = useState(true);
@@ -155,7 +127,13 @@ export default function BacktestReportClient() {
     const vixFactor = Math.max(0, Math.min(1, (vixTo - vixFrom) / 150));
     const slipFactor = 1 - slippage / 100;
     const regimeFactor = includeRegime ? 1 : 0.9;
-    const totalCost = (includeBrokerage ? 220 : 0) + (includeTaxes ? 130 : 0);
+    const totalLots = baseTradesCount * 65 * qtyMultiplier;
+    const totalOrders = baseTradesCount;
+    const totalCost = includeBrokerage
+      ? brokerageMode === 'per_lot'
+        ? Math.round(totalLots * brokerageAmount)
+        : Math.round(totalOrders * brokerageAmount)
+      : 0;
 
     const yearRows = baseYearRows.map((row) => {
       const months = row.months.map((m) => {
@@ -214,14 +192,8 @@ export default function BacktestReportClient() {
       }
     });
 
-    const fullTrades = visibleTradeRows.map((t) => ({
-      ...t,
-      qty: Math.round(t.qty * qtyMultiplier),
-      pnl: Number((t.pnl * qtyMultiplier * slipFactor * vixFactor * regimeFactor - totalCost).toFixed(2)),
-    }));
-
-    return { yearRows, chartData, stats, fullTrades, totalCost };
-  }, [qtyMultiplier, slippage, includeRegime, includeBrokerage, includeTaxes, vixFrom, vixTo]);
+    return { yearRows, chartData, stats, totalCost };
+  }, [qtyMultiplier, slippage, includeRegime, includeBrokerage, brokerageMode, brokerageAmount, vixFrom, vixTo]);
 
   const pnlClass = (v: number) => (v >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
@@ -242,8 +214,8 @@ export default function BacktestReportClient() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
           <div className="font-medium">{strategyName}</div>
-          <label>Start Date <input type="date" className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
-          <label>End Date <input type="date" className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
+          <label>Start Month <input type="month" className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
+          <label>End Month <input type="month" className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
         </div>
       </section>
 
@@ -260,25 +232,33 @@ export default function BacktestReportClient() {
       <section className="border border-slate-800 bg-slate-900/60 rounded p-4">
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={adjusted.chartData}>
+            <AreaChart data={adjusted.chartData} margin={{ top: 16, right: 20, bottom: 8, left: 20 }}>
               <CartesianGrid stroke="#334155" />
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} />
-              <YAxis tick={{ fill: '#94a3b8' }} />
+              <YAxis
+                tick={{ fill: '#94a3b8' }}
+                domain={['dataMin - 5000', 'dataMax + 5000']}
+                width={80}
+                label={{ value: 'Cumulative PnL', angle: -90, position: 'insideLeft', offset: -4, fill: '#cbd5e1', fontSize: 12 }}
+              />
               <Tooltip formatter={(v: number) => money(v)} />
               <ReferenceLine y={0} stroke="#475569" />
               <Area dataKey="cumPnl" stroke="#22c55e" fill="#22c55e22" />
             </AreaChart>
-          </ResponsiveContainer>
         </div>
       </section>
 
       <section className="border border-slate-800 bg-slate-900/60 rounded p-4">
         <div className="h-52">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={adjusted.chartData}>
+            <AreaChart data={adjusted.chartData} margin={{ top: 16, right: 20, bottom: 8, left: 20 }}>
               <CartesianGrid stroke="#334155" />
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} />
-              <YAxis tick={{ fill: '#94a3b8' }} />
+              <YAxis
+                tick={{ fill: '#94a3b8' }}
+                width={80}
+                label={{ value: 'Drawdown', angle: -90, position: 'insideLeft', offset: -4, fill: '#cbd5e1', fontSize: 12 }}
+              />
               <Tooltip formatter={(v: number) => money(v)} />
               <ReferenceLine y={0} stroke="#475569" />
               <Area dataKey="drawdown" stroke="#ef4444" fill="#ef444422" />
@@ -295,21 +275,32 @@ export default function BacktestReportClient() {
         </table>
       </section>
 
-      <section className="border border-slate-800 bg-slate-900/60 rounded p-4 space-y-3">
-        <h3 className="text-3xl font-light">Curve Fitting Analysis: <span className="text-base">Monte Carlo Drawdown</span></h3>
-        <div className="flex items-center gap-4">
-          <span>1</span>
-          <input type="range" min={1} max={99} value={mcValue} onChange={(e) => setMcValue(Number(e.target.value))} className="w-full" />
-          <span>99</span>
-          <button className="border border-slate-700 bg-slate-900 rounded px-3 py-1 hover:bg-slate-800">Run 10000 Simulations</button>
-        </div>
-      </section>
-
       <section className="border border-slate-800 bg-slate-900/60 rounded p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end text-sm">
-          <label><input type="checkbox" checked={includeBrokerage} onChange={(e) => setIncludeBrokerage(e.target.checked)} /> Include Brokerage</label>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end text-sm">
+          <div className="space-y-2">
+            <label><input type="checkbox" checked={includeBrokerage} onChange={(e) => setIncludeBrokerage(e.target.checked)} /> Include Brokerage</label>
+            {includeBrokerage && (
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  className="border border-slate-700 bg-slate-900 rounded px-2 py-1"
+                  value={brokerageMode}
+                  onChange={(e) => setBrokerageMode(e.target.value as 'per_lot' | 'per_order')}
+                >
+                  <option value="per_lot">Per lot</option>
+                  <option value="per_order">Per order</option>
+                </select>
+                <input
+                  type="number"
+                  min={0}
+                  step="1"
+                  className="w-24 border border-slate-700 bg-slate-900 rounded px-2 py-1"
+                  value={brokerageAmount}
+                  onChange={(e) => setBrokerageAmount(Number(e.target.value) || 0)}
+                />
+              </div>
+            )}
+          </div>
           <div>₹ {includeBrokerage ? adjusted.totalCost.toLocaleString('en-IN') : '0'}</div>
-          <label><input type="checkbox" checked={includeTaxes} onChange={(e) => setIncludeTaxes(e.target.checked)} /> Taxes & charges</label>
           <div className="flex items-center gap-2">From <input type="number" className="w-16 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={vixFrom} onChange={(e) => setVixFrom(Number(e.target.value))} /> To <input type="number" className="w-16 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={vixTo} onChange={(e) => setVixTo(Number(e.target.value))} /> <button className="bg-blue-600 text-white rounded px-3 py-1 hover:bg-blue-500">Re-calculate</button></div>
         </div>
       </section>
@@ -326,15 +317,26 @@ export default function BacktestReportClient() {
         </table>
       </section>
 
-      <section className="border border-slate-800 bg-slate-900/60 rounded p-4">
-        <h3 className="text-4xl font-light mb-4">Full Report</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1400px] text-sm">
-            <thead><tr className="bg-slate-800/70"><th className="p-2">Index</th><th className="p-2">Entry Date</th><th className="p-2">Entry Time</th><th className="p-2">Exit Date</th><th className="p-2">Exit Time</th><th className="p-2">Type</th><th className="p-2">Strike</th><th className="p-2">B/S</th><th className="p-2">Qty</th><th className="p-2">Entry Price</th><th className="p-2">Exit Price</th><th className="p-2">Vix</th><th className="p-2">P/L</th></tr></thead>
-            <tbody>{adjusted.fullTrades.map((t) => <tr key={t.index} className="border-b border-slate-800"><td className="p-2">{t.index}</td><td className="p-2">{t.entryDate}</td><td className="p-2">{t.entryTime}</td><td className="p-2">{t.exitDate}</td><td className="p-2">{t.exitTime}</td><td className="p-2">{t.type}</td><td className="p-2">{t.strike}</td><td className="p-2">{t.bs}</td><td className="p-2">{t.qty}</td><td className="p-2">{t.entryPrice}</td><td className="p-2">{t.exitPrice}</td><td className="p-2">{t.vix}</td><td className={`p-2 ${pnlClass(t.pnl)}`}>{t.pnl.toFixed(2)}</td></tr>)}</tbody>
-          </table>
+      <section className="border border-slate-800 bg-slate-900/60 rounded p-5 space-y-4">
+        <h3 className="text-2xl font-light">For serious traders & investors:</h3>
+        <p className="text-slate-300">📩 Get detailed strategy breakdown<br />Customized portfolio based on your capital</p>
+        <div className="flex flex-wrap gap-2">
+          <button className="bg-blue-600 text-white rounded px-3 py-2 text-sm hover:bg-blue-500">Request Live Performance Reports</button>
+          <button className="border border-slate-700 bg-slate-900 rounded px-3 py-2 text-sm hover:bg-slate-800">Request Strategy Details</button>
+          <button className="border border-slate-700 bg-slate-900 rounded px-3 py-2 text-sm hover:bg-slate-800">Get Portfolio Access</button>
+          <button className="border border-slate-700 bg-slate-900 rounded px-3 py-2 text-sm hover:bg-slate-800">👉 Portfolio Composition</button>
+        </div>
+        <div className="text-sm text-slate-300 space-y-2">
+          <p><span className="text-slate-100 font-medium">Directional Strategies (3)</span><br />Trend-based setups (Bullish / Bearish moves capture)</p>
+          <p><span className="text-slate-100 font-medium">Non-Directional Strategy (1)</span><br />Range-bound / premium decay based strategy</p>
+          <p><span className="text-slate-100 font-medium">Capital Requirement (Flexible Model)</span></p>
+          <p>• Minimum Capital to Start: ₹2,00,000 (with complete hedge coverage)</p>
+          <p>• Ideal Capital for Full Portfolio: ₹6,00,000 (with complete hedge coverage)</p>
+          <p>You can start with lower capital by deploying selected strategies and gradually scale to the full portfolio for improved risk distribution and smoother performance.</p>
+          <p className="text-slate-100 font-medium">Start small. Scale smart. Build consistency.</p>
         </div>
       </section>
+
     </div>
   );
 }
