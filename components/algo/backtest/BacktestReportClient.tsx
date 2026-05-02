@@ -156,11 +156,25 @@ export default function BacktestReportClient() {
   const [aggregateEOD, setAggregateEOD] = useState(true);
 
   const adjusted = useMemo(() => {
+    const startBoundary = `${startDate}-01`;
+    const endBoundary = `${endDate}-31`;
+    const allMonths = baseYearRows.flatMap((row) =>
+      row.months.map((value, monthIndex) => {
+        const month = String(monthIndex + 1).padStart(2, '0');
+        const monthKey = `${row.year}-${month}`;
+        const inRange = monthKey >= startBoundary.slice(0, 7) && monthKey <= endBoundary.slice(0, 7);
+        return { year: row.year, monthIndex, monthKey, value, inRange };
+      })
+    );
+    const activeMonthsCount = allMonths.filter((m) => m.inRange).length;
+    const totalMonthsCount = allMonths.length;
+    const tradeCount = Math.max(1, Math.round((baseTradesCount * activeMonthsCount) / totalMonthsCount));
+
     const vixFactor = Math.max(0, Math.min(1, (vixTo - vixFrom) / 150));
     const slipFactor = 1 - slippage / 100;
     const regimeFactor = includeRegime ? 1 : 0.9;
-    const totalLots = baseTradesCount * 65 * qtyMultiplier;
-    const totalOrders = baseTradesCount;
+    const totalLots = tradeCount * 65 * qtyMultiplier;
+    const totalOrders = tradeCount;
     const totalCost = includeBrokerage
       ? brokerageMode === 'per_lot'
         ? Math.round(totalLots * brokerageAmount)
@@ -168,7 +182,12 @@ export default function BacktestReportClient() {
       : 0;
 
     const yearRows = baseYearRows.map((row) => {
-      const months = row.months.map((m) => {
+      const months = row.months.map((m, monthIndex) => {
+        const month = String(monthIndex + 1).padStart(2, '0');
+        const monthKey = `${row.year}-${month}`;
+        if (monthKey < startBoundary.slice(0, 7) || monthKey > endBoundary.slice(0, 7)) {
+          return 0;
+        }
         if (m === 0) return 0;
         const scaled = m * qtyMultiplier * slipFactor * vixFactor * regimeFactor;
         return Math.round(scaled - totalCost);
@@ -203,14 +222,14 @@ export default function BacktestReportClient() {
     const totalProfit = monthSeries.reduce((a, b) => a + b, 0);
     const wins = monthSeries.filter((m) => m > 0);
     const losses = monthSeries.filter((m) => m < 0);
-    const avg = totalProfit / baseTradesCount;
-    const winPct = (wins.length / baseTradesCount) * 100;
+    const avg = totalProfit / tradeCount;
+    const winPct = (wins.length / tradeCount) * 100;
     const lossPct = 100 - winPct;
 
     const stats = baseStats.map((s) => {
       switch (s.label) {
         case 'Overall Profit': return { ...s, value: totalProfit };
-        case 'No. of Trades(Periods)': return { ...s, value: baseTradesCount };
+        case 'No. of Trades(Periods)': return { ...s, value: tradeCount };
         case 'Average Profit per Period': return { ...s, value: avg };
         case 'Win %(Periods)': return { ...s, value: winPct };
         case 'Loss %(Periods)': return { ...s, value: lossPct };
@@ -229,7 +248,7 @@ export default function BacktestReportClient() {
     });
 
     return { yearRows, chartData, stats, totalCost };
-  }, [qtyMultiplier, slippage, includeRegime, includeBrokerage, brokerageMode, brokerageAmount, vixFrom, vixTo]);
+  }, [qtyMultiplier, slippage, includeRegime, includeBrokerage, brokerageMode, brokerageAmount, vixFrom, vixTo, startDate, endDate]);
 
   const pnlClass = (v: number) => (v >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
@@ -363,8 +382,6 @@ export default function BacktestReportClient() {
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="bg-cyan-500 text-slate-950 rounded-md px-3 py-2 text-sm font-medium hover:bg-cyan-400 transition-colors">Request Live Performance Reports</a>
-          <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="border border-slate-700 bg-slate-900/80 rounded-md px-3 py-2 text-sm hover:bg-slate-800 transition-colors">Request Strategy Details</a>
-          <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="border border-slate-700 bg-slate-900/80 rounded-md px-3 py-2 text-sm hover:bg-slate-800 transition-colors">Get Portfolio Access</a>
         </div>
         <div className="mt-4 grid gap-3 text-sm text-slate-300 md:grid-cols-2">
           <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
