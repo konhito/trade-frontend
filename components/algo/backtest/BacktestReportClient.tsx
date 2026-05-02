@@ -116,7 +116,7 @@ const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 
 function money(v: number) {
   const abs = Math.abs(v).toLocaleString('en-IN', { maximumFractionDigits: 2 });
-  return `${v < 0 ? '-' : ''}₹ ${abs}`;
+  return `${v > 0 ? '+' : v < 0 ? '-' : ''}₹ ${abs}`;
 }
 
 function formatStatValue(row: StatRow, value: number | string) {
@@ -134,12 +134,6 @@ function computeDrawdown(series: number[]) {
     dd = Math.min(dd, v - peak);
   }
   return dd;
-}
-
-function monthlySeriesFromYears(yearRows: YearRow[]) {
-  const out: number[] = [];
-  yearRows.forEach((r) => r.months.forEach((m) => out.push(m)));
-  return out;
 }
 
 export default function BacktestReportClient() {
@@ -196,7 +190,15 @@ export default function BacktestReportClient() {
       return { ...row, months, total };
     });
 
-    const monthSeries = monthlySeriesFromYears(yearRows as YearRow[]);
+    const filteredMonthSeries = allMonths
+      .filter((m) => m.inRange)
+      .map((m) => {
+        if (m.value === 0) return 0;
+        const scaled = m.value * qtyMultiplier * slipFactor * vixFactor * regimeFactor;
+        return Math.round(scaled - totalCost);
+      });
+
+    const monthSeries = filteredMonthSeries;
     const cumulative: number[] = [];
     let run = 0;
     monthSeries.forEach((m) => {
@@ -204,9 +206,9 @@ export default function BacktestReportClient() {
       cumulative.push(run);
     });
 
-    const yearMonthLabels = yearRows.flatMap((row) =>
-      row.months.map((_, monthIndex) => `${monthsShort[monthIndex]} ${row.year}`)
-    );
+    const yearMonthLabels = allMonths
+      .filter((m) => m.inRange)
+      .map((m) => `${monthsShort[m.monthIndex]} ${m.year}`);
     const chartData = cumulative.map((cum, i) => ({
       date: yearMonthLabels[i] ?? `M${i + 1}`,
       cumPnl: cum,
