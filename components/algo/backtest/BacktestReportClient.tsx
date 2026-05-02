@@ -245,6 +245,7 @@ export default function BacktestReportClient() {
               <ReferenceLine y={0} stroke="#475569" />
               <Area dataKey="cumPnl" stroke="#22c55e" fill="#22c55e22" />
             </AreaChart>
+          </ResponsiveContainer>
         </div>
       </section>
 
