@@ -30,53 +30,85 @@ type StatRow = {
 const strategyName = 'NIFTY 0 DTE NON DIRECTIONAL STRATEGY';
 const baseQty = 1;
 const baseSlippagePct = 0;
-const baseTradesCount = 121;
+const baseTradesCount = 662;
 
 const baseYearRows: YearRow[] = [
   {
+    year: 2020,
+    months: [3149, 1342, 3159, 19831, 5921, 3214, 11804, 2863, 1576, 3857, 14768, 6581],
+    maxDD: -15912,
+    ddRange: '3/19/2020 to 3/19/2020',
+    daysForMDD: 1,
+    rMDD: 4.9,
+  },
+  {
+    year: 2021,
+    months: [4780, 7631, 9574, 8086, 4605, 5460, 12616, -136, 5174, 13338, 2226, 21992],
+    maxDD: -3396,
+    ddRange: '3/4/2021 to 3/4/2021',
+    daysForMDD: 1,
+    rMDD: 28.62,
+  },
+  {
+    year: 2022,
+    months: [8264, 13663, 18911, 4228, 15184, 19155, 7520, 4888, 10718, 13386, 9746, 3448],
+    maxDD: -6418,
+    ddRange: '4/28/2022 to 5/5/2022',
+    daysForMDD: 8,
+    rMDD: 20.5,
+  },
+  {
+    year: 2023,
+    months: [-6165, 8427, 11033, -1085, 3584, 555, 7767, -390, -331, 2778, 3318, 24521],
+    maxDD: -6165,
+    ddRange: '1/5/2023 to 1/25/2023',
+    daysForMDD: 21,
+    rMDD: 8.93,
+  },
+  {
     year: 2024,
-    months: [-900, 9425, 3396, -8541, 221, 15197, 1647, 7101, 2219, 9395, 8586, 2804],
-    maxDD: -15249,
-    ddRange: '3/28/2024 to 5/23/2024',
-    daysForMDD: 57,
-    rMDD: 3.38,
+    months: [1781, 10146, 7861, -2115, 1088, 19730, 14361, 23949, -2167, 40030, 16318, 14943],
+    maxDD: -18395,
+    ddRange: '11/28/2024 to 12/12/2024',
+    daysForMDD: 15,
+    rMDD: 8.08,
   },
   {
     year: 2025,
-    months: [13312, 12532, 5931, 12571, 2359, -1566, -1436, 4751, 367, 2057, 7777, 3523],
-    maxDD: -4303,
-    ddRange: '7/24/2025 to 7/31/2025',
-    daysForMDD: 8,
-    rMDD: 14.52,
+    months: [33748, 14755, 11206, 52555, 28489, 4400, 2863, 3503, 12233, 12402, 12272, 12688],
+    maxDD: -5941,
+    ddRange: '4/17/2025 to 4/30/2025',
+    daysForMDD: 14,
+    rMDD: 34.03,
   },
   {
     year: 2026,
-    months: [5531, 15245, -406, 7731, 0, 0, 0, 0, 0, 0, 0, 0],
-    maxDD: -9542,
-    ddRange: '3/17/2026 to 3/30/2026',
-    daysForMDD: 14,
-    rMDD: 10.14,
+    months: [18557, 48317, -16796, 38649, 0, 0, 0, 0, 0, 0, 0, 0],
+    maxDD: -24300,
+    ddRange: '3/10/2026 to 3/30/2026',
+    daysForMDD: 21,
+    rMDD: 11.79,
   },
 ];
 
 const baseStats: StatRow[] = [
-  { label: 'Overall Profit', value: 140835.5, type: 'currency' },
-  { label: 'No. of Trades(Periods)', value: 121, type: 'number' },
-  { label: 'Average Profit per Period', value: 1163.93, type: 'currency' },
-  { label: 'Win %(Periods)', value: 69.42, type: 'percent' },
-  { label: 'Loss %(Periods)', value: 30.58, type: 'percent' },
-  { label: 'Average Profit on Winning Periods', value: 2757.39, type: 'currency' },
-  { label: 'Average Loss on Losing Periods', value: -2453.66, type: 'currency' },
-  { label: 'Max Profit in Single Period', value: 14969.5, type: 'currency' },
-  { label: 'Max Loss in Single Period', value: -5144.75, type: 'currency' },
-  { label: 'Max Drawdown', value: -15249, type: 'currency' },
-  { label: 'Duration of Max Drawdown', value: '57 [3/28/2024 to 5/23/2024]', type: 'text' },
-  { label: 'Return/MaxDD', value: 4.02, type: 'ratio' },
-  { label: 'Reward to Risk Ratio', value: 1.12, type: 'ratio' },
-  { label: 'Expectancy Ratio', value: 0.47, type: 'ratio' },
-  { label: 'Max Win Streak (Periods)', value: 9, type: 'number' },
-  { label: 'Max Losing Streak (Periods)', value: 3, type: 'number' },
-  { label: 'Max days in any drawdown(Periods)', value: 11, type: 'number' },
+  { label: 'Overall Profit', value: 792320.75, type: 'currency' },
+  { label: 'No. of Trades(Periods)', value: 662, type: 'number' },
+  { label: 'Average Profit per Period', value: 2393.72, type: 'currency' },
+  { label: 'Win %(Periods)', value: 64.35, type: 'percent' },
+  { label: 'Loss %(Periods)', value: 35.65, type: 'percent' },
+  { label: 'Average Profit on Winning Periods', value: 4829.99, type: 'currency' },
+  { label: 'Average Loss on Losing Periods', value: -2003.96, type: 'currency' },
+  { label: 'Max Profit in Single Period', value: 46764.25, type: 'currency' },
+  { label: 'Max Loss in Single Period', value: -15912, type: 'currency' },
+  { label: 'Max Drawdown', value: -24300.25, type: 'currency' },
+  { label: 'Duration of Max Drawdown', value: '21 [3/10/2026 to 3/30/2026]', type: 'text' },
+  { label: 'Return/MaxDD', value: 5.15, type: 'ratio' },
+  { label: 'Reward to Risk Ratio', value: 1.41, type: 'ratio' },
+  { label: 'Expectancy Ratio', value: 1.19, type: 'ratio' },
+  { label: 'Max Win Streak (Periods)', value: 13, type: 'number' },
+  { label: 'Max Losing Streak (Periods)', value: 6, type: 'number' },
+  { label: 'Max days in any drawdown(Periods)', value: 9, type: 'number' },
 ];
 
 
@@ -114,8 +146,8 @@ export default function BacktestReportClient() {
   const [qtyMultiplier, setQtyMultiplier] = useState(baseQty);
   const [slippage, setSlippage] = useState(baseSlippagePct);
   const [includeRegime, setIncludeRegime] = useState(true);
-  const [startDate, setStartDate] = useState('2024-01');
-  const [endDate, setEndDate] = useState('2026-04');
+  const [startDate, setStartDate] = useState('2020-01');
+  const [endDate, setEndDate] = useState('2026-05');
   const [includeBrokerage, setIncludeBrokerage] = useState(false);
   const [brokerageMode, setBrokerageMode] = useState<'per_lot' | 'per_order'>('per_order');
   const [brokerageAmount, setBrokerageAmount] = useState(220);
@@ -153,10 +185,14 @@ export default function BacktestReportClient() {
       cumulative.push(run);
     });
 
-    const chartData = cumulative.flatMap((cum, i) => {
-      const label = `${monthsShort[i % 12]} ${i < 12 ? 2024 : i < 24 ? 2025 : 2026}`;
-      return [{ date: label, cumPnl: cum, drawdown: 0 }];
-    });
+    const yearMonthLabels = yearRows.flatMap((row) =>
+      row.months.map((_, monthIndex) => `${monthsShort[monthIndex]} ${row.year}`)
+    );
+    const chartData = cumulative.map((cum, i) => ({
+      date: yearMonthLabels[i] ?? `M${i + 1}`,
+      cumPnl: cum,
+      drawdown: 0,
+    }));
 
     let peak = 0;
     chartData.forEach((d) => {
@@ -329,7 +365,6 @@ export default function BacktestReportClient() {
           <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="bg-cyan-500 text-slate-950 rounded-md px-3 py-2 text-sm font-medium hover:bg-cyan-400 transition-colors">Request Live Performance Reports</a>
           <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="border border-slate-700 bg-slate-900/80 rounded-md px-3 py-2 text-sm hover:bg-slate-800 transition-colors">Request Strategy Details</a>
           <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="border border-slate-700 bg-slate-900/80 rounded-md px-3 py-2 text-sm hover:bg-slate-800 transition-colors">Get Portfolio Access</a>
-          <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="border border-slate-700 bg-slate-900/80 rounded-md px-3 py-2 text-sm hover:bg-slate-800 transition-colors">View Portfolio Composition</a>
         </div>
         <div className="mt-4 grid gap-3 text-sm text-slate-300 md:grid-cols-2">
           <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
