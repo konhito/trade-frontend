@@ -318,23 +318,33 @@ export default function BacktestReportClient() {
         </table>
       </section>
 
-      <section className="border border-slate-800 bg-slate-900/60 rounded p-5 space-y-4">
-        <h3 className="text-2xl font-light">For serious traders & investors:</h3>
-        <p className="text-slate-300">📩 Get detailed strategy breakdown<br />Customized portfolio based on your capital</p>
-        <div className="flex flex-wrap gap-2">
-          <button className="bg-blue-600 text-white rounded px-3 py-2 text-sm hover:bg-blue-500">Request Live Performance Reports</button>
-          <button className="border border-slate-700 bg-slate-900 rounded px-3 py-2 text-sm hover:bg-slate-800">Request Strategy Details</button>
-          <button className="border border-slate-700 bg-slate-900 rounded px-3 py-2 text-sm hover:bg-slate-800">Get Portfolio Access</button>
-          <button className="border border-slate-700 bg-slate-900 rounded px-3 py-2 text-sm hover:bg-slate-800">👉 Portfolio Composition</button>
+      <section className="rounded-xl border border-cyan-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 p-5 md:p-6 shadow-[0_0_40px_-20px_rgba(34,211,238,0.45)]">
+        <div className="space-y-2">
+          <h3 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">Built for serious traders and investors</h3>
+          <p className="text-slate-300 text-sm md:text-base">
+            Get verified live performance snapshots, full strategy logic, and a capital plan tailored to your risk profile.
+          </p>
         </div>
-        <div className="text-sm text-slate-300 space-y-2">
-          <p><span className="text-slate-100 font-medium">Directional Strategies (3)</span><br />Trend-based setups (Bullish / Bearish moves capture)</p>
-          <p><span className="text-slate-100 font-medium">Non-Directional Strategy (1)</span><br />Range-bound / premium decay based strategy</p>
-          <p><span className="text-slate-100 font-medium">Capital Requirement (Flexible Model)</span></p>
-          <p>• Minimum Capital to Start: ₹2,00,000 (with complete hedge coverage)</p>
-          <p>• Ideal Capital for Full Portfolio: ₹6,00,000 (with complete hedge coverage)</p>
-          <p>You can start with lower capital by deploying selected strategies and gradually scale to the full portfolio for improved risk distribution and smoother performance.</p>
-          <p className="text-slate-100 font-medium">Start small. Scale smart. Build consistency.</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="bg-cyan-500 text-slate-950 rounded-md px-3 py-2 text-sm font-medium hover:bg-cyan-400 transition-colors">Request Live Performance Reports</a>
+          <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="border border-slate-700 bg-slate-900/80 rounded-md px-3 py-2 text-sm hover:bg-slate-800 transition-colors">Request Strategy Details</a>
+          <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="border border-slate-700 bg-slate-900/80 rounded-md px-3 py-2 text-sm hover:bg-slate-800 transition-colors">Get Portfolio Access</a>
+          <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="border border-slate-700 bg-slate-900/80 rounded-md px-3 py-2 text-sm hover:bg-slate-800 transition-colors">View Portfolio Composition</a>
+        </div>
+        <div className="mt-4 grid gap-3 text-sm text-slate-300 md:grid-cols-2">
+          <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+            <p className="text-slate-100 font-medium">Directional Strategies (3)</p>
+            <p className="mt-1">Trend-following setups designed to capture bullish and bearish swings.</p>
+          </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+            <p className="text-slate-100 font-medium">Non-Directional Strategy (1)</p>
+            <p className="mt-1">Range-bound premium decay setup focused on controlled risk.</p>
+          </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3 md:col-span-2">
+            <p className="text-slate-100 font-medium">Capital Framework</p>
+            <p className="mt-1">Minimum to start: ₹2,00,000 with hedge coverage. Ideal for full portfolio: ₹6,00,000 with hedge coverage.</p>
+            <p className="mt-2">Start with selected strategies, then scale gradually for smoother risk distribution and consistency.</p>
+          </div>
         </div>
       </section>
 
