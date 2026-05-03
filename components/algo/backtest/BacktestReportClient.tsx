@@ -31,6 +31,17 @@ type StatRow = {
 const baseQty = 1;
 const baseSlippagePct = 0.5;
 const baseTradesCount = 662;
+const baseBrokerageCost = 0;
+const baseTaxAndChargesBreakdown = [
+  { label: 'Clearing Charges', value: 0 },
+  { label: 'IPFT', value: 108.3 },
+  { label: 'STT', value: 16838.83 },
+  { label: 'Stamp Duty', value: 313.01 },
+  { label: 'SEBI Charges', value: 21.66 },
+  { label: 'Exchange Charges', value: 7587.3 },
+  { label: 'GST (18%)', value: 1369.61 },
+];
+const baseTaxAndChargesTotal = baseTaxAndChargesBreakdown.reduce((sum, c) => sum + c.value, 0);
 
 const baseYearRows: YearRow[] = [
   {
@@ -182,7 +193,12 @@ export default function BacktestReportClient() {
     const vixFactor = Math.max(0, Math.min(1, (vixTo - vixFrom) / 150));
     const slipFactor = 1 - slippage / 100;
     const regimeFactor = includeRegime ? 1 : 0.9;
-    const totalCost = 0;
+    const rangeFactor = totalMonthsCount > 0 ? activeMonthsCount / totalMonthsCount : 0;
+    const brokerageCost = includeBrokerage ? baseBrokerageCost * qtyMultiplier * rangeFactor : 0;
+    const taxAndChargesCost = includeTaxAndCharges ? baseTaxAndChargesTotal * qtyMultiplier * rangeFactor : 0;
+    const totalCost = brokerageCost + taxAndChargesCost;
+    const activePnLMonths = allMonths.filter((m) => m.inRange && m.value !== 0).length;
+    const perMonthCost = activePnLMonths > 0 ? totalCost / activePnLMonths : 0;
 
     const yearRows = baseYearRows.map((row) => {
       const months = row.months.map((m, monthIndex) => {
@@ -193,10 +209,19 @@ export default function BacktestReportClient() {
         }
         if (m === 0) return 0;
         const scaled = m * qtyMultiplier * slipFactor * vixFactor * regimeFactor;
-        return Math.round(scaled - totalCost);
+        return Math.round(scaled - perMonthCost);
       });
       const total = months.reduce((a, b) => a + b, 0);
-      return { ...row, months, total };
+      const monthsInRange = months.filter((m) => m !== 0);
+      const yearCumulative: number[] = [];
+      let run = 0;
+      monthsInRange.forEach((m) => {
+        run += m;
+        yearCumulative.push(run);
+      });
+      const yearMaxDD = yearCumulative.length ? computeDrawdown(yearCumulative) : 0;
+      const yearRMDD = Math.abs(yearMaxDD) > 0 ? Number((total / Math.abs(yearMaxDD)).toFixed(2)) : 0;
+      return { ...row, months, total, maxDD: yearMaxDD, rMDD: yearRMDD };
     });
 
     const filteredMonthSeries = allMonths
@@ -204,7 +229,7 @@ export default function BacktestReportClient() {
       .map((m) => {
         if (m.value === 0) return 0;
         const scaled = m.value * qtyMultiplier * slipFactor * vixFactor * regimeFactor;
-        return Math.round(scaled - totalCost);
+        return Math.round(scaled - perMonthCost);
       });
 
     const monthSeries = filteredMonthSeries;
@@ -258,8 +283,8 @@ export default function BacktestReportClient() {
       }
     });
 
-    return { yearRows, chartData, stats, totalCost };
-  }, [qtyMultiplier, slippage, includeRegime, includeBrokerage, vixFrom, vixTo, startDate, endDate]);
+    return { yearRows, chartData, stats, totalCost, taxAndChargesCost, brokerageCost };
+  }, [qtyMultiplier, slippage, includeRegime, includeBrokerage, includeTaxAndCharges, vixFrom, vixTo, startDate, endDate]);
 
   const pnlClass = (v: number) => (v >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
@@ -347,7 +372,7 @@ export default function BacktestReportClient() {
           <div className="space-y-2">
             <label><input type="checkbox" checked={includeBrokerage} onChange={(e) => setIncludeBrokerage(e.target.checked)} /> Include Brokerage</label>
           </div>
-          <div>₹ {includeBrokerage ? adjusted.totalCost.toLocaleString('en-IN') : '0'}</div>
+          <div>₹ {adjusted.totalCost.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -357,6 +382,16 @@ export default function BacktestReportClient() {
             Tax and charges
           </label>
         </div>
+        {includeTaxAndCharges && (
+          <div className="mt-3 text-xs text-slate-400 space-y-1">
+            {baseTaxAndChargesBreakdown.map((item) => (
+              <div key={item.label} className="flex items-center justify-between">
+                <span>{item.label}</span>
+                <span>₹ {item.value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="border border-slate-800 bg-slate-900/60 rounded overflow-x-auto">
@@ -383,6 +418,19 @@ export default function BacktestReportClient() {
           <a href="/dashboard/contact" className="border border-cyan-400/70 text-cyan-200 rounded-md px-4 py-2.5 text-sm font-medium hover:bg-cyan-500/10 transition-colors">Contact Us</a>
         </div>
         <div className="mt-6 md:mt-8 grid gap-4 md:gap-5 text-sm text-slate-300 md:grid-cols-2">
+          <div className="rounded-xl border border-cyan-400/30 bg-cyan-950/20 p-4 md:p-5 md:col-span-2">
+            <p className="text-cyan-100 font-medium">Portfolio Composition</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div>
+                <p className="text-slate-100 font-medium">Directional Strategies (3)</p>
+                <p className="mt-1 leading-relaxed">Trend-based setups (Bullish / Bearish moves capture)</p>
+              </div>
+              <div>
+                <p className="text-slate-100 font-medium">Non-Directional Strategy (1)</p>
+                <p className="mt-1 leading-relaxed">Range-bound / premium decay based strategy</p>
+              </div>
+            </div>
+          </div>
           <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4 md:p-5">
             <p className="text-slate-100 font-medium">Directional Strategies (3)</p>
             <p className="mt-2 leading-relaxed">Trend-following setups designed to capture bullish and bearish swings.</p>
