@@ -143,8 +143,7 @@ export default function BacktestReportClient() {
   const [startDate, setStartDate] = useState('2020-01');
   const [endDate, setEndDate] = useState('2026-05');
   const [includeBrokerage, setIncludeBrokerage] = useState(false);
-  const [brokerageMode, setBrokerageMode] = useState<'per_lot' | 'per_order'>('per_order');
-  const [brokerageAmount, setBrokerageAmount] = useState(220);
+  const [includeTaxAndCharges, setIncludeTaxAndCharges] = useState(false);
   const [vixFrom, setVixFrom] = useState(0);
   const [vixTo, setVixTo] = useState(150);
   const [aggregateEOD, setAggregateEOD] = useState(true);
@@ -260,7 +259,7 @@ export default function BacktestReportClient() {
     });
 
     return { yearRows, chartData, stats, totalCost };
-  }, [qtyMultiplier, slippage, includeRegime, includeBrokerage, brokerageMode, brokerageAmount, vixFrom, vixTo, startDate, endDate]);
+  }, [qtyMultiplier, slippage, includeRegime, includeBrokerage, vixFrom, vixTo, startDate, endDate]);
 
   const pnlClass = (v: number) => (v >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
@@ -347,29 +346,16 @@ export default function BacktestReportClient() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end text-sm">
           <div className="space-y-2">
             <label><input type="checkbox" checked={includeBrokerage} onChange={(e) => setIncludeBrokerage(e.target.checked)} /> Include Brokerage</label>
-            {includeBrokerage && (
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  className="border border-slate-700 bg-slate-900 rounded px-2 py-1"
-                  value={brokerageMode}
-                  onChange={(e) => setBrokerageMode(e.target.value as 'per_lot' | 'per_order')}
-                >
-                  <option value="per_lot">Per lot</option>
-                  <option value="per_order">Per order</option>
-                </select>
-                <input
-                  type="number"
-                  min={0}
-                  step="1"
-                  className="w-24 border border-slate-700 bg-slate-900 rounded px-2 py-1"
-                  value={brokerageAmount}
-                  onChange={(e) => setBrokerageAmount(Number(e.target.value) || 0)}
-                />
-              </div>
-            )}
           </div>
           <div>₹ {includeBrokerage ? adjusted.totalCost.toLocaleString('en-IN') : '0'}</div>
-          <div className="flex items-center gap-2">From <input type="number" className="w-16 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={vixFrom} onChange={(e) => setVixFrom(Number(e.target.value))} /> To <input type="number" className="w-16 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={vixTo} onChange={(e) => setVixTo(Number(e.target.value))} /></div>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={includeTaxAndCharges}
+              onChange={(e) => setIncludeTaxAndCharges(e.target.checked)}
+            />
+            Tax and charges
+          </label>
         </div>
       </section>
 
@@ -394,6 +380,7 @@ export default function BacktestReportClient() {
         </div>
         <div className="mt-6 md:mt-8 flex flex-wrap gap-3">
           <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="bg-cyan-500 text-slate-950 rounded-md px-4 py-2.5 text-sm font-medium hover:bg-cyan-400 transition-colors">Request Live Performance Reports</a>
+          <a href="/dashboard/contact" className="border border-cyan-400/70 text-cyan-200 rounded-md px-4 py-2.5 text-sm font-medium hover:bg-cyan-500/10 transition-colors">Contact Us</a>
         </div>
         <div className="mt-6 md:mt-8 grid gap-4 md:gap-5 text-sm text-slate-300 md:grid-cols-2">
           <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4 md:p-5">
