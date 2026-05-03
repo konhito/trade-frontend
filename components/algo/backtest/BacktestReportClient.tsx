@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import html2canvas from 'html2canvas';
 import {
   Area,
   AreaChart,
@@ -27,9 +28,8 @@ type StatRow = {
   type: 'currency' | 'number' | 'percent' | 'ratio' | 'text';
 };
 
-const strategyName = 'NIFTY 0 DTE NON DIRECTIONAL STRATEGY';
 const baseQty = 1;
-const baseSlippagePct = 0;
+const baseSlippagePct = 0.5;
 const baseTradesCount = 662;
 
 const baseYearRows: YearRow[] = [
@@ -149,6 +149,22 @@ export default function BacktestReportClient() {
   const [vixTo, setVixTo] = useState(150);
   const [aggregateEOD, setAggregateEOD] = useState(true);
 
+  const handleSnapshot = async () => {
+    const node = document.getElementById('backtest-report-root');
+    if (!node) return;
+
+    const canvas = await html2canvas(node, {
+      backgroundColor: '#020617',
+      useCORS: true,
+      scale: 2,
+    });
+
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = `backtest-report-${new Date().toISOString().slice(0, 10)}.png`;
+    link.click();
+  };
+
   const adjusted = useMemo(() => {
     const startBoundary = `${startDate}-01`;
     const endBoundary = `${endDate}-31`;
@@ -167,13 +183,7 @@ export default function BacktestReportClient() {
     const vixFactor = Math.max(0, Math.min(1, (vixTo - vixFrom) / 150));
     const slipFactor = 1 - slippage / 100;
     const regimeFactor = includeRegime ? 1 : 0.9;
-    const totalLots = tradeCount * 65 * qtyMultiplier;
-    const totalOrders = tradeCount;
-    const totalCost = includeBrokerage
-      ? brokerageMode === 'per_lot'
-        ? Math.round(totalLots * brokerageAmount)
-        : Math.round(totalOrders * brokerageAmount)
-      : 0;
+    const totalCost = 0;
 
     const yearRows = baseYearRows.map((row) => {
       const months = row.months.map((m, monthIndex) => {
@@ -255,7 +265,7 @@ export default function BacktestReportClient() {
   const pnlClass = (v: number) => (v >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6 space-y-6">
+    <div id="backtest-report-root" className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6 space-y-6">
       <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 space-y-3">
         <h3 className="text-lg">Overall Portfolio Setting</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
@@ -266,11 +276,11 @@ export default function BacktestReportClient() {
             <select className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1"><option>0 DTE</option></select>
           </label>
           <label>Slippage
-            <select className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))}>{[0,0.5,1,2,5].map((v) => <option key={v} value={v}>{v}%</option>)}</select>
+            <select className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))}>{[0.5].map((v) => <option key={v} value={v}>{v.toFixed(2)}%</option>)}</select>
           </label>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-          <div className="font-medium">{strategyName}</div>
+          <div className="font-medium">Strategy hidden</div>
           <label>Start Month <input type="month" className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
           <label>End Month <input type="month" className="ml-2 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
         </div>
@@ -279,7 +289,7 @@ export default function BacktestReportClient() {
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h1 className="text-4xl font-light">BACKTEST RESULT</h1>
-          <button className="border border-slate-700 bg-slate-900 rounded px-3 py-2 text-sm hover:bg-slate-800">Snap a Screenshot</button>
+          <button onClick={handleSnapshot} className="border border-slate-700 bg-slate-900 rounded px-3 py-2 text-sm hover:bg-slate-800">Snap a Screenshot</button>
         </div>
         <label className="text-sm flex items-center gap-2">
           <input type="checkbox" checked={includeRegime} onChange={(e) => setIncludeRegime(e.target.checked)} /> Include data from previous regime
@@ -359,45 +369,46 @@ export default function BacktestReportClient() {
             )}
           </div>
           <div>₹ {includeBrokerage ? adjusted.totalCost.toLocaleString('en-IN') : '0'}</div>
-          <div className="flex items-center gap-2">From <input type="number" className="w-16 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={vixFrom} onChange={(e) => setVixFrom(Number(e.target.value))} /> To <input type="number" className="w-16 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={vixTo} onChange={(e) => setVixTo(Number(e.target.value))} /> <button className="bg-blue-600 text-white rounded px-3 py-1 hover:bg-blue-500">Re-calculate</button></div>
+          <div className="flex items-center gap-2">From <input type="number" className="w-16 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={vixFrom} onChange={(e) => setVixFrom(Number(e.target.value))} /> To <input type="number" className="w-16 border border-slate-700 bg-slate-900 rounded px-2 py-1" value={vixTo} onChange={(e) => setVixTo(Number(e.target.value))} /></div>
         </div>
       </section>
 
       <section className="border border-slate-800 bg-slate-900/60 rounded overflow-x-auto">
         <div className="p-4 flex justify-between"><h3 className="text-4xl font-light">Strategy-wise Report</h3><label><input type="checkbox" checked={aggregateEOD} onChange={(e) => setAggregateEOD(e.target.checked)} /> Aggregate At End of Trading Day</label></div>
         <table className="w-full min-w-[900px] text-sm">
-          <thead><tr className="bg-slate-800/70"><th className="p-3 text-left">Statistic</th><th className="p-3 text-right">Aggregate</th><th className="p-3 text-right">NIFTY 0 DTE NON D...</th></tr></thead>
+          <thead><tr className="bg-slate-800/70"><th className="p-3 text-left">Statistic</th><th className="p-3 text-right">Aggregate</th></tr></thead>
           <tbody>{adjusted.stats.map((s) => {
             const n = typeof s.value === 'number' ? s.value : 0;
             const cls = s.type === 'currency' ? pnlClass(n) : 'text-slate-200';
-            return <tr key={s.label} className="border-b border-slate-800"><td className="p-3">{s.label}</td><td className={`p-3 text-right ${cls}`}>{formatStatValue(s, s.value)}</td><td className={`p-3 text-right ${cls}`}>{formatStatValue(s, s.value)}</td></tr>;
+            return <tr key={s.label} className="border-b border-slate-800"><td className="p-3">{s.label}</td><td className={`p-3 text-right ${cls}`}>{formatStatValue(s, s.value)}</td></tr>;
           })}</tbody>
         </table>
       </section>
 
-      <section className="rounded-xl border border-cyan-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 p-5 md:p-6 shadow-[0_0_40px_-20px_rgba(34,211,238,0.45)]">
-        <div className="space-y-2">
+      <section className="mt-6 md:mt-10 rounded-2xl border border-cyan-400/40 bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/50 p-6 md:p-10 shadow-[0_0_55px_-18px_rgba(34,211,238,0.5)]">
+        <div className="space-y-3 md:space-y-4">
           <h3 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">Built for serious traders and investors</h3>
           <p className="text-slate-300 text-sm md:text-base">
             Get verified live performance snapshots, full strategy logic, and a capital plan tailored to your risk profile.
           </p>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="bg-cyan-500 text-slate-950 rounded-md px-3 py-2 text-sm font-medium hover:bg-cyan-400 transition-colors">Request Live Performance Reports</a>
+        <div className="mt-6 md:mt-8 flex flex-wrap gap-3">
+          <a href="https://t.me/DECAYHUNTERS" target="_blank" rel="noopener noreferrer" className="bg-cyan-500 text-slate-950 rounded-md px-4 py-2.5 text-sm font-medium hover:bg-cyan-400 transition-colors">Request Live Performance Reports</a>
         </div>
-        <div className="mt-4 grid gap-3 text-sm text-slate-300 md:grid-cols-2">
-          <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+        <div className="mt-6 md:mt-8 grid gap-4 md:gap-5 text-sm text-slate-300 md:grid-cols-2">
+          <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4 md:p-5">
             <p className="text-slate-100 font-medium">Directional Strategies (3)</p>
-            <p className="mt-1">Trend-following setups designed to capture bullish and bearish swings.</p>
+            <p className="mt-2 leading-relaxed">Trend-following setups designed to capture bullish and bearish swings.</p>
           </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
-            <p className="text-slate-100 font-medium">Non-Directional Strategy (1)</p>
-            <p className="mt-1">Range-bound premium decay setup focused on controlled risk.</p>
+          <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4 md:p-5">
+            <p className="text-slate-100 font-medium">Risk Management Framework</p>
+            <p className="mt-2 leading-relaxed">Maximum loss per day is capped at ~1% of deployed capital.</p>
           </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3 md:col-span-2">
-            <p className="text-slate-100 font-medium">Capital Framework</p>
-            <p className="mt-1">Minimum to start: ₹2,00,000 with hedge coverage. Ideal for full portfolio: ₹6,00,000 with hedge coverage.</p>
-            <p className="mt-2">Start with selected strategies, then scale gradually for smoother risk distribution and consistency.</p>
+          <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4 md:p-6 md:col-span-2">
+            <p className="text-slate-100 font-medium">Capital Requirement</p>
+            <p className="mt-3 leading-relaxed">• Minimum Capital to Start: ₹2,00,000 (with complete hedge coverage)</p>
+            <p className="mt-2 leading-relaxed">• Ideal Capital for Full Portfolio: ₹6,00,000 (with complete hedge coverage)</p>
+            <p className="mt-4 leading-relaxed">You can start with lower capital by deploying selected strategies and gradually scale to the full portfolio for improved risk distribution and smoother performance.</p>
           </div>
         </div>
       </section>
