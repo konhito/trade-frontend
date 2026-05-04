@@ -147,6 +147,53 @@ function computeDrawdown(series: number[]) {
   return dd;
 }
 
+function computeDrawdownDetails(series: number[]) {
+  let peak = 0;
+  let peakIdx = -1;
+  let maxDD = 0;
+  let troughIdx = -1;
+
+  series.forEach((v, i) => {
+    if (v > peak) {
+      peak = v;
+      peakIdx = i;
+    }
+    const dd = v - peak;
+    if (dd < maxDD) {
+      maxDD = dd;
+      troughIdx = i;
+    }
+  });
+
+  const startIdx = peakIdx >= 0 ? peakIdx : troughIdx;
+  const days = maxDD < 0 && troughIdx >= 0 && startIdx >= 0 ? troughIdx - startIdx + 1 : 0;
+  return { maxDD, startIdx, troughIdx, days };
+}
+
+function computeStreaks(series: number[]) {
+  let maxWin = 0;
+  let maxLoss = 0;
+  let curWin = 0;
+  let curLoss = 0;
+
+  series.forEach((v) => {
+    if (v > 0) {
+      curWin += 1;
+      curLoss = 0;
+    } else if (v < 0) {
+      curLoss += 1;
+      curWin = 0;
+    } else {
+      curWin = 0;
+      curLoss = 0;
+    }
+    if (curWin > maxWin) maxWin = curWin;
+    if (curLoss > maxLoss) maxLoss = curLoss;
+  });
+
+  return { maxWin, maxLoss };
+}
+
 export default function BacktestReportClient() {
   const [qtyMultiplier, setQtyMultiplier] = useState(baseQty);
   const [slippage, setSlippage] = useState(baseSlippagePct);
@@ -187,13 +234,22 @@ export default function BacktestReportClient() {
       })
     );
     const activeMonthsCount = allMonths.filter((m) => m.inRange).length;
+    // Exclude placeholder/future zero months from scaling math.
+    const nonZeroMonths = allMonths.filter((m) => m.value !== 0);
+    const activeNonZeroMonthsCount = nonZeroMonths.filter((m) => m.inRange).length;
+    const totalNonZeroMonthsCount = nonZeroMonths.length;
     const totalMonthsCount = allMonths.length;
     const tradeCount = Math.max(1, Math.round((baseTradesCount * activeMonthsCount) / totalMonthsCount));
 
     const vixFactor = Math.max(0, Math.min(1, (vixTo - vixFrom) / 150));
     const slipFactor = 1 - slippage / 100;
     const regimeFactor = includeRegime ? 1 : 0.9;
-    const rangeFactor = totalMonthsCount > 0 ? activeMonthsCount / totalMonthsCount : 0;
+    const rangeFactor =
+      totalNonZeroMonthsCount > 0
+        ? activeNonZeroMonthsCount / totalNonZeroMonthsCount
+        : totalMonthsCount > 0
+          ? activeMonthsCount / totalMonthsCount
+          : 0;
     const brokerageCost = includeBrokerage ? baseBrokerageCost * qtyMultiplier * rangeFactor : 0;
     const taxAndChargesCost = includeTaxAndCharges ? baseTaxAndChargesTotal * qtyMultiplier * rangeFactor : 0;
     const totalCost = brokerageCost + taxAndChargesCost;
@@ -212,16 +268,27 @@ export default function BacktestReportClient() {
         return Math.round(scaled - perMonthCost);
       });
       const total = months.reduce((a, b) => a + b, 0);
-      const monthsInRange = months.filter((m) => m !== 0);
+      const monthsInRange = months
+        .map((v, i) => ({ v, i }))
+        .filter((x) => x.v !== 0);
       const yearCumulative: number[] = [];
       let run = 0;
       monthsInRange.forEach((m) => {
-        run += m;
+        run += m.v;
         yearCumulative.push(run);
       });
-      const yearMaxDD = yearCumulative.length ? computeDrawdown(yearCumulative) : 0;
+      const yearDD = yearCumulative.length ? computeDrawdownDetails(yearCumulative) : { maxDD: 0, startIdx: -1, troughIdx: -1, days: 0 };
+      const yearMaxDD = yearDD.maxDD;
       const yearRMDD = Math.abs(yearMaxDD) > 0 ? Number((total / Math.abs(yearMaxDD)).toFixed(2)) : 0;
-      return { ...row, months, total, maxDD: yearMaxDD, rMDD: yearRMDD };
+      let ddRange = row.ddRange;
+      if (yearDD.maxDD < 0 && yearDD.startIdx >= 0 && yearDD.troughIdx >= 0) {
+        const startMonthIdx = monthsInRange[yearDD.startIdx]?.i;
+        const endMonthIdx = monthsInRange[yearDD.troughIdx]?.i;
+        if (startMonthIdx !== undefined && endMonthIdx !== undefined) {
+          ddRange = `1/${startMonthIdx + 1}/${row.year} to 28/${endMonthIdx + 1}/${row.year}`;
+        }
+      }
+      return { ...row, months, total, maxDD: yearMaxDD, rMDD: yearRMDD, daysForMDD: yearDD.days, ddRange };
     });
 
     const filteredMonthSeries = allMonths
@@ -262,6 +329,17 @@ export default function BacktestReportClient() {
     const winPct = (wins.length / tradeCount) * 100;
     const lossPct = 100 - winPct;
 
+    const winsSum = wins.reduce((a, b) => a + b, 0);
+    const lossesSum = losses.reduce((a, b) => a + b, 0);
+    const avgWin = wins.length ? winsSum / wins.length : 0;
+    const avgLoss = losses.length ? lossesSum / losses.length : 0;
+    const absAvgLoss = Math.abs(avgLoss) || 1;
+    const rewardRisk = avgWin / absAvgLoss;
+    const expectancy = (winPct / 100) * (avgWin / absAvgLoss) - (lossPct / 100);
+    const ddDetails = computeDrawdownDetails(cumulative);
+    const retMaxDD = Math.abs(ddDetails.maxDD) > 0 ? totalProfit / Math.abs(ddDetails.maxDD) : 0;
+    const streaks = computeStreaks(monthSeries);
+
     const stats = baseStats.map((s) => {
       switch (s.label) {
         case 'Overall Profit': return { ...s, value: totalProfit };
@@ -269,15 +347,23 @@ export default function BacktestReportClient() {
         case 'Average Profit per Period': return { ...s, value: avg };
         case 'Win %(Periods)': return { ...s, value: winPct };
         case 'Loss %(Periods)': return { ...s, value: lossPct };
-        case 'Average Profit on Winning Periods': return { ...s, value: wins.length ? wins.reduce((a, b) => a + b, 0) / wins.length : 0 };
-        case 'Average Loss on Losing Periods': return { ...s, value: losses.length ? losses.reduce((a, b) => a + b, 0) / losses.length : 0 };
+        case 'Average Profit on Winning Periods': return { ...s, value: avgWin };
+        case 'Average Loss on Losing Periods': return { ...s, value: avgLoss };
         case 'Max Profit in Single Period': return { ...s, value: Math.max(...monthSeries) };
         case 'Max Loss in Single Period': return { ...s, value: Math.min(...monthSeries) };
-        case 'Max Drawdown': return { ...s, value: computeDrawdown(cumulative) };
-        case 'Return/MaxDD': {
-          const dd = Math.abs(computeDrawdown(cumulative)) || 1;
-          return { ...s, value: totalProfit / dd };
+        case 'Max Drawdown': return { ...s, value: ddDetails.maxDD };
+        case 'Duration of Max Drawdown': {
+          if (ddDetails.maxDD >= 0 || ddDetails.startIdx < 0 || ddDetails.troughIdx < 0) return { ...s, value: '0' };
+          const startLabel = yearMonthLabels[ddDetails.startIdx] ?? '';
+          const endLabel = yearMonthLabels[ddDetails.troughIdx] ?? '';
+          return { ...s, value: `${ddDetails.days} [${startLabel} to ${endLabel}]` };
         }
+        case 'Return/MaxDD': return { ...s, value: retMaxDD };
+        case 'Reward to Risk Ratio': return { ...s, value: rewardRisk };
+        case 'Expectancy Ratio': return { ...s, value: expectancy };
+        case 'Max Win Streak (Periods)': return { ...s, value: streaks.maxWin };
+        case 'Max Losing Streak (Periods)': return { ...s, value: streaks.maxLoss };
+        case 'Max days in any drawdown(Periods)': return { ...s, value: ddDetails.days };
         default:
           return s;
       }
@@ -362,8 +448,8 @@ export default function BacktestReportClient() {
       <section className="border border-slate-800 bg-slate-900/60 rounded p-4 overflow-x-auto">
         <h2 className="text-2xl font-light mb-3">Year-wise Returns</h2>
         <table className="w-full min-w-[1100px] text-sm">
-          <thead><tr className="bg-slate-800/70"><th className="p-2 text-left">Year</th>{monthsShort.map((m) => <th key={m} className="p-2 text-right">{m}</th>)}<th className="p-2 text-right">Total</th><th className="p-2 text-right">Max Drawdown</th><th className="p-2 text-right">Days for MDD</th><th className="p-2 text-right">*R/MDD (Yearly)</th></tr></thead>
-          <tbody>{adjusted.yearRows.map((r: any) => <tr key={r.year} className="border-b border-slate-800"><td className="p-2">{r.year}</td>{r.months.map((m: number, i: number) => <td key={i} className={`p-2 text-right ${pnlClass(m)}`}>{m === 0 ? '0' : m.toLocaleString('en-IN')}</td>)}<td className={`p-2 text-right font-semibold ${pnlClass(r.total)}`}>{r.total.toLocaleString('en-IN')}</td><td className="p-2 text-right text-rose-400">{r.maxDD.toLocaleString('en-IN')}</td><td className="p-2 text-right">{r.daysForMDD}<div className="text-xs text-slate-400">[{r.ddRange}]</div></td><td className="p-2 text-right">{r.rMDD}</td></tr>)}</tbody>
+          <thead><tr className="bg-slate-800/70"><th className="p-2 text-left">Year</th>{monthsShort.map((m) => <th key={m} className="p-2 text-right">{m}</th>)}<th className="p-2 text-right">Total</th><th className="p-2 text-right">Max Drawdown</th></tr></thead>
+          <tbody>{adjusted.yearRows.map((r: any) => <tr key={r.year} className="border-b border-slate-800"><td className="p-2">{r.year}</td>{r.months.map((m: number, i: number) => <td key={i} className={`p-2 text-right ${pnlClass(m)}`}>{m === 0 ? '0' : m.toLocaleString('en-IN')}</td>)}<td className={`p-2 text-right font-semibold ${pnlClass(r.total)}`}>{r.total.toLocaleString('en-IN')}</td><td className="p-2 text-right text-rose-400">{r.maxDD.toLocaleString('en-IN')}</td></tr>)}</tbody>
         </table>
       </section>
 

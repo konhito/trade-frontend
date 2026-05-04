@@ -6,5 +6,9 @@ export const metadata = {
 };
 
 export default function BacktestReportPage() {
-  return <BacktestReportClient />;
+  return (
+    <div className="h-[calc(100vh-4rem)] overflow-y-auto">
+      <BacktestReportClient />
+    </div>
+  );
 }
