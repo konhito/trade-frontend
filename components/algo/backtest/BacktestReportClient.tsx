@@ -6,16 +6,16 @@ import { Download, ExternalLink, FileText } from 'lucide-react';
 
 const backtestPdfs = [
   {
-    title: 'NIFTY + SENSEX 0DTE',
-    fileName: 'backtest_portfolio_NIFTY_&_SENSEX_INTRADAY_EXPIRY_STRATEGIES_0DTE.pdf',
-  },
-  {
     title: 'NIFTY 0DTE (May 2026)',
     fileName: 'backtest_portfolio_NIFTY_INTRADAY_EXPIRY_STRATEGIES_0DTE_2026_05 (1) (1).pdf',
   },
   {
     title: 'SENSEX 0DTE (May 2026)',
     fileName: 'backtest_portfolio_SENSEX_INTRADAY_EXPIRY_STRATEGIES_0DTE_2026_05 (1).pdf',
+  },
+  {
+    title: 'NIFTY + SENSEX 0DTE',
+    fileName: 'backtest_portfolio_NIFTY_&_SENSEX_INTRADAY_EXPIRY_STRATEGIES_0DTE.pdf',
   },
 ] as const;
 
