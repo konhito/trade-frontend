@@ -6,15 +6,15 @@ import { Download, ExternalLink, FileText } from 'lucide-react';
 
 const backtestPdfs = [
   {
-    title: 'NIFTY 0DTE (May 2026)',
+    title: 'NIFTY 0DTE',
     fileName: 'backtest_portfolio_NIFTY_INTRADAY_EXPIRY_STRATEGIES_0DTE_2026_05 (1) (1).pdf',
   },
   {
-    title: 'SENSEX 0DTE (May 2026)',
+    title: 'SENSEX 0DTE',
     fileName: 'backtest_portfolio_SENSEX_INTRADAY_EXPIRY_STRATEGIES_0DTE_2026_05 (1).pdf',
   },
   {
-    title: 'NIFTY + SENSEX 0DTE',
+    title: 'Combined NIFTY & SENSEX 0DTE',
     fileName: 'backtest_portfolio_NIFTY_&_SENSEX_INTRADAY_EXPIRY_STRATEGIES_0DTE.pdf',
   },
 ] as const;
@@ -37,15 +37,15 @@ export default function BacktestReportClient() {
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3">
             <p className="text-xs uppercase tracking-wide text-cyan-300">Focus</p>
-            <p className="mt-1 text-sm text-slate-200">NIFTY and SENSEX intraday expiry setups.</p>
+            <p className="mt-1 text-sm text-slate-200">NIFTY &amp; SENSEX intraday expiry strategies.</p>
           </div>
           <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3">
             <p className="text-xs uppercase tracking-wide text-cyan-300">Use Case</p>
-            <p className="mt-1 text-sm text-slate-200">Review risk, consistency, and capital behavior.</p>
+            <p className="mt-1 text-sm text-slate-200">Analyze risk, consistency, and capital performance.</p>
           </div>
           <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3">
             <p className="text-xs uppercase tracking-wide text-cyan-300">Format</p>
-            <p className="mt-1 text-sm text-slate-200">Simple PDF docs for quick sharing and updates.</p>
+            <p className="mt-1 text-sm text-slate-200">Concise PDF reports for easy sharing and review.</p>
           </div>
         </div>
 
@@ -66,13 +66,13 @@ export default function BacktestReportClient() {
                   <a href={href} target="_blank" rel="noopener noreferrer" className="block">
                     <Button variant="outline" className="w-full border-slate-600 bg-slate-800/60 text-slate-100 hover:bg-slate-700">
                       <ExternalLink className="mr-2 h-4 w-4" />
-                      View PDF
+                      View Report
                     </Button>
                   </a>
                   <a href={href} download className="block">
                     <Button className="w-full bg-cyan-500 text-slate-950 hover:bg-cyan-400">
                       <Download className="mr-2 h-4 w-4" />
-                      Download PDF
+                      Download Report
                     </Button>
                   </a>
                 </CardContent>
@@ -106,10 +106,6 @@ export default function BacktestReportClient() {
                 <p className="mt-1 leading-relaxed">Range-bound / premium decay based strategy</p>
               </div>
             </div>
-          </div>
-          <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4 md:p-5">
-            <p className="text-slate-100 font-medium">Directional Strategies (3)</p>
-            <p className="mt-2 leading-relaxed">Trend-following setups designed to capture bullish and bearish swings.</p>
           </div>
           <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4 md:p-5">
             <p className="text-slate-100 font-medium">Risk Management Framework</p>
