@@ -6,15 +6,15 @@ import { Download, ExternalLink, FileText } from 'lucide-react';
 
 const backtestPdfs = [
   {
-    title: 'NIFTY & SENSEX Intraday Expiry Strategies (0DTE)',
+    title: 'NIFTY + SENSEX 0DTE',
     fileName: 'backtest_portfolio_NIFTY_&_SENSEX_INTRADAY_EXPIRY_STRATEGIES_0DTE.pdf',
   },
   {
-    title: 'NIFTY Intraday Expiry Strategies (0DTE) - May 2026',
+    title: 'NIFTY 0DTE (May 2026)',
     fileName: 'backtest_portfolio_NIFTY_INTRADAY_EXPIRY_STRATEGIES_0DTE_2026_05 (1) (1).pdf',
   },
   {
-    title: 'SENSEX Intraday Expiry Strategies (0DTE) - May 2026',
+    title: 'SENSEX 0DTE (May 2026)',
     fileName: 'backtest_portfolio_SENSEX_INTRADAY_EXPIRY_STRATEGIES_0DTE_2026_05 (1).pdf',
   },
 ] as const;
@@ -30,12 +30,23 @@ export default function BacktestReportClient() {
 
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 md:p-8">
         <div className="space-y-2">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Backtest Reports</h1>
-          <p className="text-sm md:text-base text-slate-300">
-            Download the latest portfolio backtest PDFs directly. Files are served from
-            <code className="ml-1 rounded bg-slate-800 px-1.5 py-0.5 text-slate-200">public/backtest</code>
-            for easy maintenance.
-          </p>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Backtest PDFs</h1>
+          <p className="text-sm md:text-base text-slate-300">Verified strategy reports for 0DTE index options.</p>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3">
+            <p className="text-xs uppercase tracking-wide text-cyan-300">Focus</p>
+            <p className="mt-1 text-sm text-slate-200">NIFTY and SENSEX intraday expiry setups.</p>
+          </div>
+          <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3">
+            <p className="text-xs uppercase tracking-wide text-cyan-300">Use Case</p>
+            <p className="mt-1 text-sm text-slate-200">Review risk, consistency, and capital behavior.</p>
+          </div>
+          <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3">
+            <p className="text-xs uppercase tracking-wide text-cyan-300">Format</p>
+            <p className="mt-1 text-sm text-slate-200">Simple PDF docs for quick sharing and updates.</p>
+          </div>
         </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -49,7 +60,7 @@ export default function BacktestReportClient() {
                     <FileText className="h-5 w-5" />
                   </div>
                   <CardTitle className="text-base leading-snug text-slate-100">{pdf.title}</CardTitle>
-                  <CardDescription className="text-slate-400 break-all">{pdf.fileName}</CardDescription>
+                  <CardDescription className="text-slate-400">PDF Report</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <a href={href} target="_blank" rel="noopener noreferrer" className="block">
