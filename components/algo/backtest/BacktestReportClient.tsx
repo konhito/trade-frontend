@@ -278,7 +278,9 @@ export default function BacktestReportClient() {
         yearCumulative.push(run);
       });
       const yearDD = yearCumulative.length ? computeDrawdownDetails(yearCumulative) : { maxDD: 0, startIdx: -1, troughIdx: -1, days: 0 };
-      const yearMaxDD = yearDD.maxDD;
+      const scaledBaseYearMaxDD = Math.round(row.maxDD * qtyMultiplier * slipFactor * vixFactor * regimeFactor);
+      const hasAnyActiveMonth = monthsInRange.length > 0;
+      const yearMaxDD = hasAnyActiveMonth ? scaledBaseYearMaxDD : 0;
       const yearRMDD = Math.abs(yearMaxDD) > 0 ? Number((total / Math.abs(yearMaxDD)).toFixed(2)) : 0;
       let ddRange = row.ddRange;
       if (yearDD.maxDD < 0 && yearDD.startIdx >= 0 && yearDD.troughIdx >= 0) {
@@ -369,7 +371,12 @@ export default function BacktestReportClient() {
       }
     });
 
-    return { yearRows, chartData, stats, totalCost, taxAndChargesCost, brokerageCost };
+    const scaledTaxBreakdown = baseTaxAndChargesBreakdown.map((item) => ({
+      ...item,
+      value: item.value * qtyMultiplier * rangeFactor,
+    }));
+
+    return { yearRows, chartData, stats, totalCost, taxAndChargesCost, brokerageCost, scaledTaxBreakdown };
   }, [qtyMultiplier, slippage, includeRegime, includeBrokerage, includeTaxAndCharges, vixFrom, vixTo, startDate, endDate]);
 
   const pnlClass = (v: number) => (v >= 0 ? 'text-emerald-400' : 'text-rose-400');
@@ -470,7 +477,7 @@ export default function BacktestReportClient() {
         </div>
         {includeTaxAndCharges && (
           <div className="mt-3 text-xs text-slate-400 space-y-1">
-            {baseTaxAndChargesBreakdown.map((item) => (
+            {adjusted.scaledTaxBreakdown.map((item) => (
               <div key={item.label} className="flex items-center justify-between">
                 <span>{item.label}</span>
                 <span>₹ {item.value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
@@ -537,3 +544,4 @@ export default function BacktestReportClient() {
     </div>
   );
 }
+
