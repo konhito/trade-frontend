@@ -15,7 +15,7 @@ const backtestPdfs = [
   },
   {
     title: 'Combined NIFTY & SENSEX 0DTE',
-    fileName: 'backtest_portfolio_NIFTY_&_SENSEX_INTRADAY_EXPIRY_STRATEGIES_0DTE.pdf',
+    fileName: 'backtest_portfolio_NIFTY_&_SENSEX_INTRADAY_EXPIRY_STRATEGIES_0DTE (1).pdf',
   },
 ] as const;
 
