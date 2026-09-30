@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import Link from 'next/link'
 import {
   ArrowUpRight,
   CalendarDays,
@@ -252,7 +251,7 @@ export default function PublicTracker() {
 
         <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-[#dfe7dd] py-5 text-xs text-[#75827a]">
           <span className="inline-flex items-center gap-1.5"><CircleHelp size={14} /> P&amp;L values are reported in Indian rupees.</span>
-          <div className="flex items-center gap-4"><span>Updated from daily strategy entries</span><Link href="/admin" className="font-semibold text-[#587064] hover:text-[#1c7c55]">Manage tracker</Link></div>
+          <span>Updated from daily strategy entries</span>
         </footer>
       </main>
     </div>
