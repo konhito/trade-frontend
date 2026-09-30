@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Check, Pencil, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react'
-import { trackerApi, type TrackerData, type TrackerEntry, type TrackerSettings, type TrackerStrategy } from '@/lib/public-tracker'
+import { formatMoney, trackerApi, type TrackerData, type TrackerEntry, type TrackerSettings, type TrackerStrategy } from '@/lib/public-tracker'
 
 type StrategyForm = Omit<TrackerStrategy, 'id'>
 type EntryForm = Omit<TrackerEntry, 'id'>
@@ -219,7 +219,7 @@ export default function PublicTrackerAdmin() {
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[680px] text-left text-sm">
               <thead className="text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="pb-3 font-semibold">Date</th><th className="pb-3 font-semibold">Strategy</th><th className="pb-3 text-right font-semibold">P&amp;L</th><th className="pb-3 font-semibold">Note</th><th className="pb-3 text-right font-semibold">Actions</th></tr></thead>
-              <tbody>{entries.map((item) => <tr key={item.id} className="border-t border-[#edf1eb]"><td className="py-3">{item.tradeDate}</td><td className="py-3 font-semibold">{strategyNames.get(item.strategyId) ?? 'Removed strategy'}</td><td className={`py-3 text-right font-bold tabular-nums ${item.pnl < 0 ? 'text-[#c74f42]' : 'text-[#18805a]'}`}>₹{item.pnl.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td><td className="max-w-[300px] truncate py-3 text-[#75827a]">{item.note || '—'}</td><td className="py-3"><div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => editEntry(item)} aria-label={`Edit ${item.tradeDate} entry`} className="rounded-lg border border-[#d9e3d9] p-2 text-[#52645a] hover:bg-[#edf4ed] disabled:opacity-50"><Pencil size={14} /></button><button type="button" disabled={saving} onClick={() => void removeEntry(item)} aria-label={`Delete ${item.tradeDate} entry`} className="rounded-lg border border-[#f0d2ce] p-2 text-[#b04439] hover:bg-[#fff2ef] disabled:opacity-50"><Trash2 size={14} /></button></div></td></tr>)}</tbody>
+              <tbody>{entries.map((item) => <tr key={item.id} className="border-t border-[#edf1eb]"><td className="py-3">{item.tradeDate}</td><td className="py-3 font-semibold">{strategyNames.get(item.strategyId) ?? 'Removed strategy'}</td><td className={`py-3 text-right font-bold tabular-nums ${item.pnl < 0 ? 'text-[#c74f42]' : 'text-[#18805a]'}`}>{formatMoney(item.pnl)}</td><td className="max-w-[300px] truncate py-3 text-[#75827a]">{item.note || '—'}</td><td className="py-3"><div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => editEntry(item)} aria-label={`Edit ${item.tradeDate} entry`} className="rounded-lg border border-[#d9e3d9] p-2 text-[#52645a] hover:bg-[#edf4ed] disabled:opacity-50"><Pencil size={14} /></button><button type="button" disabled={saving} onClick={() => void removeEntry(item)} aria-label={`Delete ${item.tradeDate} entry`} className="rounded-lg border border-[#f0d2ce] p-2 text-[#b04439] hover:bg-[#fff2ef] disabled:opacity-50"><Trash2 size={14} /></button></div></td></tr>)}</tbody>
             </table>
             {!loading && !entries.length && <p className="rounded-xl bg-[#f4f6f1] p-4 text-sm text-[#75827a]">No daily results yet.</p>}
           </div>
