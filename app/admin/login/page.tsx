@@ -29,7 +29,7 @@ export default function AdminLoginPage() {
     // Check if already logged in
     const token = localStorage.getItem('adminToken')
     if (token && token.startsWith('admin-token-')) {
-      router.push('/admin')
+      router.push('/admin/platform')
     }
   }, [router])
 
@@ -56,7 +56,7 @@ export default function AdminLoginPage() {
 
       if (data.token) {
         localStorage.setItem('adminToken', data.token)
-        router.push('/admin')
+        router.push('/admin/platform')
       } else {
         throw new Error('No token received')
       }

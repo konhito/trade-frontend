@@ -22,8 +22,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
-  // Block admin routes on non-admin domains
-  if (pathname.startsWith('/admin') && !hostname.includes('admin.mytradejournal.co.in') && !hostname.includes('www.admin.mytradejournal.co.in') && !hostname.includes('localhost') && !hostname.includes('127.0.0.1')) {
+  // Keep the legacy platform administration area on the admin subdomain.
+  // The public tracker editor at /admin is intentionally reachable without login.
+  const isRestrictedAdminPath = pathname.startsWith('/admin/platform') || pathname.startsWith('/admin/login')
+  if (isRestrictedAdminPath && !hostname.includes('admin.mytradejournal.co.in') && !hostname.includes('www.admin.mytradejournal.co.in') && !hostname.includes('localhost') && !hostname.includes('127.0.0.1')) {
     return NextResponse.redirect(new URL('/', request.url))
   }
   
