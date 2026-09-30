@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 import {
   ArrowUpRight,
   CalendarDays,
@@ -261,10 +262,10 @@ export default function PublicTracker() {
 function Brand({ name, logoUrl, compact = false }: { name: string; logoUrl?: string; compact?: boolean }) {
   const shortName = name.split(/[—–-]/)[0].trim() || 'DECAY HUNTERS'
   const initials = shortName.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
-  return <div className={`flex items-center gap-3 ${compact ? 'max-w-[220px]' : ''}`}>
+  return <Link href="/" aria-label="Decay Hunters home" className={`flex items-center gap-3 ${compact ? 'max-w-[220px]' : ''}`}>
     {logoUrl ? <img src={logoUrl} alt={`${shortName} logo`} className="h-10 w-10 shrink-0 rounded-xl object-contain" /> : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#d3e5d8] text-sm font-black tracking-tight text-[#1c704d]">{initials}</div>}
     <div className="min-w-0"><p className="truncate text-sm font-black tracking-wide">{shortName}</p><p className="truncate text-[10px] font-bold uppercase tracking-[0.16em] text-[#6f987d]">P&amp;L Tracker</p></div>
-  </div>
+  </Link>
 }
 
 function Metric({ label, value, valueClass = '' }: { label: string; value: string; valueClass?: string }) {
