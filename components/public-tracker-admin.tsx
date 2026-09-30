@@ -6,7 +6,7 @@ import { ArrowLeft, Check, Pencil, Plus, RefreshCw, Save, Trash2, X } from 'luci
 import { formatMoney, trackerApi, type TrackerData, type TrackerEntry, type TrackerSettings, type TrackerStrategy } from '@/lib/public-tracker'
 
 type StrategyForm = Omit<TrackerStrategy, 'id'>
-type EntryForm = Omit<TrackerEntry, 'id'>
+type EntryForm = Omit<TrackerEntry, 'id' | 'pnl'> & { pnl: string }
 
 const blankStrategy: StrategyForm = { name: '', segment: '', description: '', capital: 0, subscribeUrl: '', externalId: '', active: true }
 const panel = 'rounded-2xl border border-[#e1e8df] bg-white p-5 shadow-[0_8px_24px_rgba(16,40,30,0.045)]'
@@ -17,7 +17,7 @@ export default function PublicTrackerAdmin() {
   const [data, setData] = useState<TrackerData | null>(null)
   const [strategy, setStrategy] = useState<StrategyForm>(blankStrategy)
   const [strategyId, setStrategyId] = useState<number | null>(null)
-  const [entry, setEntry] = useState<EntryForm>({ strategyId: 0, tradeDate: localDate(), pnl: 0, note: '' })
+  const [entry, setEntry] = useState<EntryForm>({ strategyId: 0, tradeDate: localDate(), pnl: '', note: '' })
   const [entryId, setEntryId] = useState<number | null>(null)
   const [settings, setSettings] = useState<TrackerSettings>({ title: 'DECAY HUNTERS — P&L Tracker', contactUrl: '', logoUrl: '' })
   const [loading, setLoading] = useState(true)
@@ -73,9 +73,10 @@ export default function PublicTrackerAdmin() {
     setSaving(true)
     setMessage('')
     try {
-      if (entryId === null) await trackerApi.createEntry(entry)
-      else await trackerApi.updateEntry(entryId, entry)
-      setEntry((current) => ({ ...current, pnl: 0, note: '', tradeDate: localDate() }))
+      const payload = { ...entry, pnl: Number(entry.pnl) }
+      if (entryId === null) await trackerApi.createEntry(payload)
+      else await trackerApi.updateEntry(entryId, payload)
+      setEntry((current) => ({ ...current, pnl: '', note: '', tradeDate: localDate() }))
       setEntryId(null)
       setFailed(false)
       setMessage(entryId === null ? 'Daily result added.' : 'Daily result updated.')
@@ -113,7 +114,7 @@ export default function PublicTrackerAdmin() {
 
   function editEntry(item: TrackerEntry) {
     setEntryId(item.id)
-    setEntry({ strategyId: item.strategyId, tradeDate: item.tradeDate, pnl: item.pnl, note: item.note })
+    setEntry({ strategyId: item.strategyId, tradeDate: item.tradeDate, pnl: String(item.pnl), note: item.note })
     document.getElementById('daily-entry-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
@@ -186,7 +187,7 @@ export default function PublicTrackerAdmin() {
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1.5 text-xs font-semibold text-[#52645a] sm:col-span-2">Strategy<select required className={field} value={entry.strategyId || ''} onChange={(event) => setEntry({ ...entry, strategyId: Number(event.target.value) })} disabled={loading || !strategies.length}><option value="">{loading ? 'Loading…' : 'Choose a strategy'}</option>{strategies.map((item) => <option key={item.id} value={item.id}>{item.name}{item.active ? '' : ' (hidden)'}</option>)}</select></label>
               <label className="grid gap-1.5 text-xs font-semibold text-[#52645a]">Trading date<input required type="date" className={field} value={entry.tradeDate} onChange={(event) => setEntry({ ...entry, tradeDate: event.target.value })} /></label>
-              <label className="grid gap-1.5 text-xs font-semibold text-[#52645a]">Daily P&amp;L (₹)<input required type="number" step="0.01" className={field} value={entry.pnl} onChange={(event) => setEntry({ ...entry, pnl: Number(event.target.value) })} /></label>
+              <label className="grid gap-1.5 text-xs font-semibold text-[#52645a]">Daily P&amp;L (₹)<input required type="number" step="0.01" className={field} value={entry.pnl} onChange={(event) => setEntry({ ...entry, pnl: event.target.value })} /></label>
               <label className="grid gap-1.5 text-xs font-semibold text-[#52645a] sm:col-span-2">Note<input maxLength={2000} className={field} value={entry.note} onChange={(event) => setEntry({ ...entry, note: event.target.value })} /></label>
             </div>
             <button className={`${button} mt-4`} disabled={saving || loading || !strategies.length}>{saving ? 'Saving…' : entryId === null ? <><Plus size={16} /> Add result</> : <><Save size={16} /> Save changes</>}</button>
