@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { format as formatDate } from 'date-fns'
+import type { DateRange } from 'react-day-picker'
 import {
   ArrowUpRight,
   CalendarDays,
@@ -22,6 +24,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { formatMoney, formatPercent, trackerApi, type TrackerData, type TrackerEntry } from '@/lib/public-tracker'
 
 type Point = { date: string; pnl: number; drawdown?: number }
@@ -68,7 +72,8 @@ function LoadingState() {
 
 export default function PublicTracker() {
   const [data, setData] = useState<TrackerData | null>(null)
-  const [selectedDate, setSelectedDate] = useState('')
+  const [selectedRange, setSelectedRange] = useState<DateRange>()
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedStrategy, setSelectedStrategy] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -78,8 +83,6 @@ export default function PublicTracker() {
     trackerApi.load()
       .then((result) => {
         setData(result)
-        const latest = result.entries.map((entry) => entry.tradeDate).sort().at(-1)
-        if (latest) setSelectedDate(latest)
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Could not load tracker data'))
       .finally(() => setLoading(false))
@@ -91,12 +94,17 @@ export default function PublicTracker() {
   const visibleStrategies = selectedStrategy === null ? strategies : strategies.filter((strategy) => strategy.id === selectedStrategy)
   const visibleIds = useMemo(() => new Set(visibleStrategies.map((strategy) => strategy.id)), [visibleStrategies])
   const entries = useMemo(() => activeEntries.filter((entry) => visibleIds.has(entry.strategyId)), [activeEntries, visibleIds])
+  const rangeStart = selectedRange?.from ? formatDate(selectedRange.from, 'yyyy-MM-dd') : ''
+  const rangeEnd = selectedRange?.to ? formatDate(selectedRange.to, 'yyyy-MM-dd') : ''
+  const reportEntries = useMemo(() => entries.filter((entry) =>
+    (!rangeStart || entry.tradeDate >= rangeStart) && (!rangeEnd || entry.tradeDate <= rangeEnd)
+  ), [entries, rangeStart, rangeEnd])
 
   const daily = useMemo(() => {
     const totals = new Map<string, number>()
-    entries.forEach((entry) => totals.set(entry.tradeDate, (totals.get(entry.tradeDate) ?? 0) + entry.pnl))
+    reportEntries.forEach((entry) => totals.set(entry.tradeDate, (totals.get(entry.tradeDate) ?? 0) + entry.pnl))
     return [...totals].map(([date, pnl]) => ({ date, pnl })).sort((a, b) => a.date.localeCompare(b.date))
-  }, [entries])
+  }, [reportEntries])
   const history = useMemo(() => {
     let balance = 0
     let peak = 0
@@ -107,11 +115,21 @@ export default function PublicTracker() {
     }).reverse()
   }, [daily])
   const totalCapital = visibleStrategies.reduce((total, strategy) => total + strategy.capital, 0)
-  const totalPnl = entries.reduce((total, entry) => total + entry.pnl, 0)
-  const currentDate = selectedDate || history[0]?.date || ''
+  const totalPnl = reportEntries.reduce((total, entry) => total + entry.pnl, 0)
+  const currentDate = rangeEnd || rangeStart || history[0]?.date || ''
   const selectedMonth = currentDate.slice(0, 7)
-  const monthly = useMemo(() => rollup(entries, (entry) => entry.tradeDate.slice(0, 7)), [entries])
-  const yearly = useMemo(() => rollup(entries, (entry) => entry.tradeDate.slice(0, 4)), [entries])
+  const monthly = useMemo(() => rollup(reportEntries, (entry) => entry.tradeDate.slice(0, 7)), [reportEntries])
+  const yearly = useMemo(() => rollup(reportEntries, (entry) => entry.tradeDate.slice(0, 4)), [reportEntries])
+  const winningDays = daily.filter((point) => point.pnl > 0)
+  const losingDays = daily.filter((point) => point.pnl < 0)
+  const winPercent = daily.length ? winningDays.length / daily.length * 100 : 0
+  const lossPercent = daily.length ? losingDays.length / daily.length * 100 : 0
+  const averageWin = winningDays.length ? winningDays.reduce((sum, point) => sum + point.pnl, 0) / winningDays.length : 0
+  const averageLoss = losingDays.length ? Math.abs(losingDays.reduce((sum, point) => sum + point.pnl, 0)) / losingDays.length : 0
+  const expectancy = winPercent / 100 * averageWin - lossPercent / 100 * averageLoss
+  const rangeLabel = selectedRange?.from
+    ? `${formatDate(selectedRange.from, 'MMM d, yyyy')}${selectedRange.to ? ` – ${formatDate(selectedRange.to, 'MMM d, yyyy')}` : ' – Select end date'}`
+    : 'All dates'
   const brand = data?.settings.title || 'DECAY HUNTERS — P&L Tracker'
   const logoUrl = data?.settings.logoUrl
 
@@ -151,11 +169,31 @@ export default function PublicTracker() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 rounded-xl border border-[#d9e3d9] bg-white px-3 py-2 text-sm text-[#52645a]">
-              <CalendarDays size={16} />
-              <span className="sr-only">Selected trading date</span>
-              <input aria-label="Selected trading date" type="date" value={currentDate} onChange={(event) => setSelectedDate(event.target.value)} className="max-w-[145px] bg-transparent text-sm outline-none" />
-            </label>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <button type="button" aria-label="Select date range" className="flex items-center gap-2 rounded-xl border border-[#d9e3d9] bg-white px-3 py-2 text-sm text-[#52645a]">
+                  <CalendarDays size={16} />
+                  <span>{rangeLabel}</span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-auto p-0">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={selectedRange?.from ?? (currentDate ? new Date(`${currentDate}T00:00:00`) : undefined)}
+                  selected={selectedRange}
+                  onSelect={(range) => {
+                    setSelectedRange(range)
+                    if (range?.from && range.to) setCalendarOpen(false)
+                  }}
+                  numberOfMonths={2}
+                />
+                <div className="flex items-center justify-between border-t border-[#e1e8df] px-4 py-2 text-xs text-[#75827a]">
+                  <span>Choose a start and end date</span>
+                  <button type="button" className="font-semibold text-[#1c7c55] hover:underline" onClick={() => { setSelectedRange(undefined); setCalendarOpen(false) }}>Clear</button>
+                </div>
+              </PopoverContent>
+            </Popover>
             {data?.settings.contactUrl && <a className="hidden items-center gap-1.5 rounded-xl bg-[#1c7c55] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#176b49] sm:flex" href={data.settings.contactUrl} target="_blank" rel="noreferrer">Contact <ArrowUpRight size={15} /></a>}
           </div>
         </header>
@@ -177,7 +215,7 @@ export default function PublicTracker() {
           <>
             <section className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {visibleStrategies.map((strategy) => {
-                const rows = activeEntries.filter((entry) => entry.strategyId === strategy.id)
+                const rows = reportEntries.filter((entry) => entry.strategyId === strategy.id)
                 const pnl = rows.reduce((total, entry) => total + entry.pnl, 0)
                 const winRate = rows.length ? rows.filter((entry) => entry.pnl > 0).length / rows.length * 100 : 0
                 return <article key={strategy.id} className="rounded-2xl border border-[#e1e8df] bg-white p-5 shadow-[0_8px_24px_rgba(16,40,30,0.045)]">
@@ -206,11 +244,11 @@ export default function PublicTracker() {
                 <table className="w-full min-w-[540px] text-left text-sm">
                   <thead className="text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="pb-3 font-semibold">Strategy</th><th className="pb-3 text-right font-semibold">Capital</th><th className="pb-3 text-right font-semibold">Daily P&amp;L</th><th className="pb-3 text-right font-semibold">Monthly P&amp;L</th></tr></thead>
                   <tbody>{visibleStrategies.map((strategy) => {
-                    const day = entries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0)
-                    const month = entries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0)
+                    const day = reportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0)
+                    const month = reportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0)
                     return <tr key={strategy.id} className="border-t border-[#edf1eb]"><td className="py-3 font-semibold">{strategy.name}</td><td className="py-3 text-right tabular-nums">{formatMoney(strategy.capital)}</td><td className={`py-3 text-right font-bold tabular-nums ${positive(day)}`}>{formatMoney(day)}</td><td className={`py-3 text-right font-semibold tabular-nums ${positive(month)}`}>{formatMoney(month)}</td></tr>
                   })}</tbody>
-                  <tfoot><tr className="border-t-2 border-[#dfe8dd]"><td className="pt-3 font-black">Total</td><td className="pt-3 text-right font-bold tabular-nums">{formatMoney(totalCapital)}</td><td className={`pt-3 text-right font-black tabular-nums ${positive(entries.filter((entry) => entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0))}`}>{formatMoney(entries.filter((entry) => entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0))}</td><td className={`pt-3 text-right font-black tabular-nums ${positive(entries.filter((entry) => entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0))}`}>{formatMoney(entries.filter((entry) => entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0))}</td></tr></tfoot>
+                  <tfoot><tr className="border-t-2 border-[#dfe8dd]"><td className="pt-3 font-black">Total</td><td className="pt-3 text-right font-bold tabular-nums">{formatMoney(totalCapital)}</td><td className={`pt-3 text-right font-black tabular-nums ${positive(reportEntries.filter((entry) => entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0))}`}>{formatMoney(reportEntries.filter((entry) => entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0))}</td><td className={`pt-3 text-right font-black tabular-nums ${positive(reportEntries.filter((entry) => entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0))}`}>{formatMoney(reportEntries.filter((entry) => entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0))}</td></tr></tfoot>
                 </table>
               </div>
             </section>
@@ -230,11 +268,14 @@ export default function PublicTracker() {
                 </div>
               </article>
               <article className={panel}>
-                <ChartTitle title="Performance statistics" detail="Across the selected strategies" />
+                <ChartTitle title="Performance statistics" detail="Across the selected strategies and date range" />
                 <div className="mt-3 divide-y divide-[#edf1eb]">
                   <Stat label="Trading days" value={String(daily.length)} />
-                  <Stat label="Winning days" value={String(daily.filter((point) => point.pnl > 0).length)} icon={<TrendingUp size={15} className="text-[#18805a]" />} />
-                  <Stat label="Losing days" value={String(daily.filter((point) => point.pnl < 0).length)} icon={<TrendingDown size={15} className="text-[#c74f42]" />} />
+                  <Stat label="Winning days" value={String(winningDays.length)} icon={<TrendingUp size={15} className="text-[#18805a]" />} />
+                  <Stat label="Win %" value={formatPercent(winPercent)} />
+                  <Stat label="Losing days" value={String(losingDays.length)} icon={<TrendingDown size={15} className="text-[#c74f42]" />} />
+                  <Stat label="Loss %" value={formatPercent(lossPercent)} />
+                  <Stat label="Expectancy ratio" value={formatMoney(expectancy)} valueClass={positive(expectancy)} />
                   <Stat label="Net P&L" value={formatMoney(totalPnl)} valueClass={positive(totalPnl)} />
                   <Stat label="Total ROI" value={formatPercent(totalCapital ? totalPnl / totalCapital * 100 : 0)} />
                   <Stat label="Best day" value={formatMoney(Math.max(0, ...daily.map((point) => point.pnl)))} valueClass="text-[#18805a]" />
