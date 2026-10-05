@@ -384,6 +384,12 @@ export default function LandingPage() {
                                         className="flex justify-center items-center px-8 py-3 h-12 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
                                         <span className="font-semibold text-sm text-white">Get Started</span>
                                     </Link>
+                                    <Link
+                                        href="/tracker"
+                                        className="flex justify-center items-center px-8 py-3 h-12 rounded-xl border border-[#2E9987] text-[#267a6d] dark:text-[hsl(var(--chart-1))] font-semibold text-sm hover:bg-[#2E9987]/10 transition-colors"
+                                    >
+                                        View Performance Tracker
+                                    </Link>
                                 </div>
                             </div>
                             

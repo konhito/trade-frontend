@@ -21,6 +21,7 @@ import {
   BookOpen,
   FileSpreadsheet,
   LineChart,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
@@ -110,6 +111,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navigationItems = [
     { name: "Dashboard", icon: Clock, id: "dashboard", path: "/dashboard" },
+    { name: "Public Tracker", icon: TrendingUp, id: "tracker", path: "/tracker" },
     {
       name: "Trades",
       icon: ArrowLeftRight,
