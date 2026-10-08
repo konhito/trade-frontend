@@ -130,6 +130,9 @@ export default function PublicTracker() {
   const rangeLabel = selectedRange?.from
     ? `${formatDate(selectedRange.from, 'MMM d, yyyy')}${selectedRange.to ? ` – ${formatDate(selectedRange.to, 'MMM d, yyyy')}` : ' – Select end date'}`
     : 'All dates'
+  const reportDateLabel = currentDate
+    ? formatDate(new Date(`${currentDate}T00:00:00`), 'dd MMM yyyy')
+    : 'No report date'
   const brand = data?.settings.title || 'DECAY HUNTERS — P&L Tracker'
   const logoUrl = data?.settings.logoUrl
 
@@ -168,12 +171,15 @@ export default function PublicTracker() {
               <p className="mt-1 text-sm text-[#75827a]">{dateRange(history)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
-                <button type="button" aria-label="Select date range" className="flex items-center gap-2 rounded-xl border border-[#d9e3d9] bg-white px-3 py-2 text-sm text-[#52645a]">
-                  <CalendarDays size={16} />
-                  <span>{rangeLabel}</span>
+                <button type="button" aria-label={`Select date range: ${rangeLabel}. Report date: ${reportDateLabel}`} className="flex items-center gap-3 rounded-xl border border-[#3c4f76] bg-[#203258] px-3 py-2 text-left shadow-sm transition hover:bg-[#1b2d50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#63a17e] focus-visible:ring-offset-2">
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[#9de0b6]"><CalendarDays size={16} /></span>
+                  <span className="min-w-0">
+                    <span className="block whitespace-nowrap font-mono text-sm font-bold tracking-[0.04em] text-[#9de0b6]">{reportDateLabel}</span>
+                    <span className="block max-w-[190px] truncate text-[10px] font-medium text-[#d4dff3]">{rangeLabel}</span>
+                  </span>
                 </button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-auto p-0">
@@ -194,6 +200,10 @@ export default function PublicTracker() {
                 </div>
               </PopoverContent>
             </Popover>
+            <span role="status" aria-label="EOD Report" className="inline-flex items-center gap-2 rounded-full border border-[#cce7d5] bg-[#e9f5ed] px-3 py-2 text-xs font-bold text-[#176b49]">
+              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#21875d]" />
+              EOD Report
+            </span>
             {data?.settings.contactUrl && <a className="hidden items-center gap-1.5 rounded-xl bg-[#1c7c55] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#176b49] sm:flex" href={data.settings.contactUrl} target="_blank" rel="noreferrer">Contact <ArrowUpRight size={15} /></a>}
           </div>
         </header>
