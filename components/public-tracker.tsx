@@ -33,6 +33,12 @@ type Point = { date: string; pnl: number; drawdown?: number }
 const panel = 'rounded-2xl border border-[#e1e8df] bg-white p-5 shadow-[0_8px_24px_rgba(16,40,30,0.045)]'
 const positive = (value: number) => value < 0 ? 'text-[#c74f42]' : 'text-[#18805a]'
 
+function getCurrentTradingDate() {
+  const date = new Date()
+  date.setDate(date.getDate() - (date.getDay() === 0 ? 2 : date.getDay() === 6 ? 1 : 0))
+  return formatDate(date, 'yyyy-MM-dd')
+}
+
 function Chart({ points, drawdown = false }: { points: Point[]; drawdown?: boolean }) {
   const data = useMemo(() => {
     let balance = 0
@@ -116,10 +122,9 @@ export default function PublicTracker() {
   }, [daily])
   const totalCapital = visibleStrategies.reduce((total, strategy) => total + strategy.capital, 0)
   const totalPnl = reportEntries.reduce((total, entry) => total + entry.pnl, 0)
-  const currentDate = rangeEnd || rangeStart || history[0]?.date || ''
+  const currentDate = rangeEnd || rangeStart || getCurrentTradingDate()
   const selectedMonth = currentDate.slice(0, 7)
   const monthly = useMemo(() => rollup(reportEntries, (entry) => entry.tradeDate.slice(0, 7)), [reportEntries])
-  const yearly = useMemo(() => rollup(reportEntries, (entry) => entry.tradeDate.slice(0, 4)), [reportEntries])
   const winningDays = daily.filter((point) => point.pnl > 0)
   const losingDays = daily.filter((point) => point.pnl < 0)
   const winPercent = daily.length ? winningDays.length / daily.length * 100 : 0
@@ -233,7 +238,13 @@ export default function PublicTracker() {
                     <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#75827a]">{strategy.segment}</p><h2 className="mt-1 text-lg font-black">{strategy.name}</h2></div>
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${pnl < 0 ? 'bg-[#fff0ed] text-[#bf4d40]' : 'bg-[#e9f5ed] text-[#19734f]'}`}>{formatPercent(strategy.capital ? pnl / strategy.capital * 100 : 0)} ROI</span>
                   </div>
-                  {strategy.description && <p className="mt-2 text-xs leading-5 text-[#75827a]">{strategy.description}</p>}
+                  {strategy.description && <>
+                    <details className="mt-2 md:hidden">
+                      <summary className="cursor-pointer text-xs font-semibold text-[#1c7c55]">Strategy description</summary>
+                      <p className="mt-2 text-xs leading-5 text-[#75827a]">{strategy.description}</p>
+                    </details>
+                    <p className="mt-2 hidden text-xs leading-5 text-[#75827a] md:block">{strategy.description}</p>
+                  </>}
                   <div className="mt-5 grid grid-cols-2 gap-4 border-t border-[#edf1eb] pt-4 text-sm">
                     <Metric label="Capital" value={formatMoney(strategy.capital)} />
                     <Metric label="Total P&L" value={formatMoney(pnl)} valueClass={positive(pnl)} />
@@ -294,9 +305,8 @@ export default function PublicTracker() {
               </article>
             </section>
 
-            <section className="mb-4 grid gap-4 xl:grid-cols-2">
+            <section className="mb-4">
               <Rollup title="Monthly summary" rows={monthly} capital={totalCapital} />
-              <Rollup title="Yearly summary" rows={yearly} capital={totalCapital} />
             </section>
           </>
         )}
