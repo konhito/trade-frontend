@@ -29,6 +29,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { formatMoney, formatPercent, trackerApi, type TrackerData, type TrackerEntry } from '@/lib/public-tracker'
 
 type Point = { date: string; pnl: number; drawdown?: number }
+const lotOptions = [1, 2, 3, 5, 10]
 
 const panel = 'rounded-2xl border border-[#e1e8df] bg-white p-5 shadow-[0_8px_24px_rgba(16,40,30,0.045)]'
 const positive = (value: number) => value < 0 ? 'text-[#c74f42]' : 'text-[#18805a]'
@@ -69,7 +70,7 @@ function LoadingState() {
       <div className="hidden rounded-3xl bg-[#14271f] md:block" />
       <main className="space-y-4">
         <div className="h-12 w-80 rounded-xl bg-[#e1e8df]" />
-        <div className="grid gap-4 xl:grid-cols-3">{[1, 2, 3].map((item) => <div key={item} className="h-36 rounded-2xl bg-white" />)}</div>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">{[1, 2, 3].map((item) => <div key={item} className="h-36 rounded-2xl bg-white" />)}</div>
         <div className="h-72 rounded-2xl bg-white" />
       </main>
     </div>
@@ -81,6 +82,7 @@ export default function PublicTracker() {
   const [selectedRange, setSelectedRange] = useState<DateRange>()
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedStrategy, setSelectedStrategy] = useState<number | null>(null)
+  const [lotMultipliers, setLotMultipliers] = useState<Record<number, number>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -99,7 +101,10 @@ export default function PublicTracker() {
   const activeEntries = useMemo(() => (data?.entries ?? []).filter((entry) => strategyIds.has(entry.strategyId)), [data, strategyIds])
   const visibleStrategies = selectedStrategy === null ? strategies : strategies.filter((strategy) => strategy.id === selectedStrategy)
   const visibleIds = useMemo(() => new Set(visibleStrategies.map((strategy) => strategy.id)), [visibleStrategies])
-  const entries = useMemo(() => activeEntries.filter((entry) => visibleIds.has(entry.strategyId)), [activeEntries, visibleIds])
+  const entries = useMemo(() => activeEntries
+    .filter((entry) => visibleIds.has(entry.strategyId))
+    .map((entry) => ({ ...entry, pnl: entry.pnl * (lotMultipliers[entry.strategyId] ?? 1) })),
+  [activeEntries, visibleIds, lotMultipliers])
   const rangeStart = selectedRange?.from ? formatDate(selectedRange.from, 'yyyy-MM-dd') : ''
   const rangeEnd = selectedRange?.to ? formatDate(selectedRange.to, 'yyyy-MM-dd') : ''
   const reportEntries = useMemo(() => entries.filter((entry) =>
@@ -120,7 +125,7 @@ export default function PublicTracker() {
       return { ...point, drawdown: balance - peak }
     }).reverse()
   }, [daily])
-  const totalCapital = visibleStrategies.reduce((total, strategy) => total + strategy.capital, 0)
+  const totalCapital = visibleStrategies.reduce((total, strategy) => total + strategy.capital * (lotMultipliers[strategy.id] ?? 1), 0)
   const totalPnl = reportEntries.reduce((total, entry) => total + entry.pnl, 0)
   const currentDate = rangeEnd || rangeStart || getCurrentTradingDate()
   const selectedMonth = currentDate.slice(0, 7)
@@ -163,13 +168,13 @@ export default function PublicTracker() {
         <div className="mt-auto border-t border-white/10 pt-4 text-xs leading-5 text-[#91a99a]">Daily results, updated by the tracker team.</div>
       </aside>
 
-      <main className="min-w-0 p-4 sm:p-6 lg:p-8">
+      <main className="min-w-0 p-[clamp(1rem,3vw,2rem)]">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
-            <button className="rounded-xl border border-[#d9e3d9] bg-white p-2 md:hidden" aria-label="Open strategies" onClick={() => setMenuOpen(!menuOpen)}>
+            <button className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-[#d9e3d9] bg-white md:hidden" aria-label={menuOpen ? 'Close strategies' : 'Open strategies'} aria-expanded={menuOpen} aria-controls="mobile-strategy-menu" onClick={() => setMenuOpen(!menuOpen)}>
               {menuOpen ? <X size={19} /> : <Menu size={19} />}
             </button>
-            <div className="md:hidden"><Brand name={brand} logoUrl={logoUrl} compact /></div>
+            <div className="md:hidden"><Brand name={brand} logoUrl={logoUrl} /></div>
             <div className="hidden md:block">
               <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#75827a]">Public performance report</p>
               <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{brand}</h1>
@@ -183,11 +188,11 @@ export default function PublicTracker() {
                   <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[#9de0b6]"><CalendarDays size={16} /></span>
                   <span className="min-w-0">
                     <span className="block whitespace-nowrap font-mono text-sm font-bold tracking-[0.04em] text-[#9de0b6]">{reportDateLabel}</span>
-                    <span className="block max-w-[190px] truncate text-[10px] font-medium text-[#d4dff3]">{rangeLabel}</span>
+                    <span className="block max-w-[50vw] truncate text-[10px] font-medium text-[#d4dff3]">{rangeLabel}</span>
                   </span>
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-auto p-0">
+              <PopoverContent align="end" className="max-h-[calc(100dvh-1rem)] w-auto overflow-y-auto p-0">
                 <Calendar
                   initialFocus
                   mode="range"
@@ -209,14 +214,14 @@ export default function PublicTracker() {
               <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#21875d]" />
               EOD Report
             </span>
-            {data?.settings.contactUrl && <a className="hidden items-center gap-1.5 rounded-xl bg-[#1c7c55] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#176b49] sm:flex" href={data.settings.contactUrl} target="_blank" rel="noreferrer">Contact <ArrowUpRight size={15} /></a>}
+            {data?.settings.contactUrl && <a className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-[#1c7c55] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#176b49]" href={data.settings.contactUrl} target="_blank" rel="noreferrer">Contact <ArrowUpRight size={15} /></a>}
           </div>
         </header>
 
-        {menuOpen && <div className="mb-4 grid gap-2 rounded-2xl border border-[#d9e3d9] bg-white p-3 md:hidden">
-          <button onClick={() => { setSelectedStrategy(null); setMenuOpen(false) }} className="rounded-lg bg-[#edf4ed] px-3 py-2 text-left text-sm font-bold">All strategies</button>
-          {strategies.map((strategy) => <button key={strategy.id} onClick={() => { setSelectedStrategy(strategy.id); setMenuOpen(false) }} className="rounded-lg px-3 py-2 text-left text-sm">{strategy.name}</button>)}
-        </div>}
+        <div id="mobile-strategy-menu" hidden={!menuOpen} className="mb-4 grid gap-2 rounded-2xl border border-[#d9e3d9] bg-white p-3 md:hidden">
+          <button onClick={() => { setSelectedStrategy(null); setMenuOpen(false) }} className="min-h-11 rounded-lg bg-[#edf4ed] px-3 py-2 text-left text-sm font-bold">All strategies</button>
+          {strategies.map((strategy) => <button key={strategy.id} onClick={() => { setSelectedStrategy(strategy.id); setMenuOpen(false) }} className="min-h-11 rounded-lg px-3 py-2 text-left text-sm">{strategy.name}</button>)}
+        </div>
 
         {error && <div role="alert" className="mb-5 rounded-xl border border-[#efc0b8] bg-[#fff2ef] p-4 text-sm text-[#a33c31]">Tracker data could not be loaded: {error}</div>}
 
@@ -228,15 +233,17 @@ export default function PublicTracker() {
           </section>
         ) : (
           <>
-            <section className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <section className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-3">
               {visibleStrategies.map((strategy) => {
                 const rows = reportEntries.filter((entry) => entry.strategyId === strategy.id)
+                const lot = lotMultipliers[strategy.id] ?? 1
+                const capital = strategy.capital * lot
                 const pnl = rows.reduce((total, entry) => total + entry.pnl, 0)
                 const winRate = rows.length ? rows.filter((entry) => entry.pnl > 0).length / rows.length * 100 : 0
                 return <article key={strategy.id} className="rounded-2xl border border-[#e1e8df] bg-white p-5 shadow-[0_8px_24px_rgba(16,40,30,0.045)]">
                   <div className="flex items-start justify-between gap-3">
                     <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#75827a]">{strategy.segment}</p><h2 className="mt-1 text-lg font-black">{strategy.name}</h2></div>
-                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${pnl < 0 ? 'bg-[#fff0ed] text-[#bf4d40]' : 'bg-[#e9f5ed] text-[#19734f]'}`}>{formatPercent(strategy.capital ? pnl / strategy.capital * 100 : 0)} ROI</span>
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${pnl < 0 ? 'bg-[#fff0ed] text-[#bf4d40]' : 'bg-[#e9f5ed] text-[#19734f]'}`}>{formatPercent(capital ? pnl / capital * 100 : 0)} ROI</span>
                   </div>
                   {strategy.description && <>
                     <details className="mt-2 md:hidden">
@@ -246,10 +253,16 @@ export default function PublicTracker() {
                     <p className="mt-2 hidden text-xs leading-5 text-[#75827a] md:block">{strategy.description}</p>
                   </>}
                   <div className="mt-5 grid grid-cols-2 gap-4 border-t border-[#edf1eb] pt-4 text-sm">
-                    <Metric label="Capital" value={formatMoney(strategy.capital)} />
+                    <Metric label="Capital" value={formatMoney(capital)} />
                     <Metric label="Total P&L" value={formatMoney(pnl)} valueClass={positive(pnl)} />
                     <Metric label="Trading days" value={String(rows.length)} />
                     <Metric label="Win rate" value={formatPercent(winRate)} />
+                    <label className="grid content-start gap-1.5 text-[11px] text-[#75827a]">
+                      <span>Lot</span>
+                      <select aria-label={`${strategy.name} lot size`} value={String(lot)} onChange={(event) => setLotMultipliers((current) => ({ ...current, [strategy.id]: Number(event.target.value) }))} className="min-h-11 rounded-lg border border-[#d9e3d9] bg-white px-3 text-sm font-semibold text-[#173126]">
+                        {lotOptions.map((option) => <option key={option} value={option}>{option}x</option>)}
+                      </select>
+                    </label>
                   </div>
                   {strategy.subscribeUrl && <a href={strategy.subscribeUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#1c7c55] hover:underline">Strategy details <ArrowUpRight size={13} /></a>}
                 </article>
@@ -261,13 +274,13 @@ export default function PublicTracker() {
                 <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#75827a]">Daily breakdown</p><h2 className="mt-1 text-lg font-black">Trading date P&amp;L summary <span className="font-medium text-[#75827a]">· {currentDate || '—'}</span></h2></div>
                 <p className="text-xs text-[#75827a]">Monthly figures include the selected month</p>
               </div>
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[540px] text-left text-sm">
+              <div className="mt-4 overflow-x-auto overscroll-x-contain">
+                <table className="w-full min-w-max text-left text-sm">
                   <thead className="text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="pb-3 font-semibold">Strategy</th><th className="pb-3 text-right font-semibold">Capital</th><th className="pb-3 text-right font-semibold">Daily P&amp;L</th><th className="pb-3 text-right font-semibold">Monthly P&amp;L</th></tr></thead>
                   <tbody>{visibleStrategies.map((strategy) => {
                     const day = reportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0)
                     const month = reportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0)
-                    return <tr key={strategy.id} className="border-t border-[#edf1eb]"><td className="py-3 font-semibold">{strategy.name}</td><td className="py-3 text-right tabular-nums">{formatMoney(strategy.capital)}</td><td className={`py-3 text-right font-bold tabular-nums ${positive(day)}`}>{formatMoney(day)}</td><td className={`py-3 text-right font-semibold tabular-nums ${positive(month)}`}>{formatMoney(month)}</td></tr>
+                    return <tr key={strategy.id} className="border-t border-[#edf1eb]"><td className="py-3 font-semibold">{strategy.name}</td><td className="py-3 text-right tabular-nums">{formatMoney(strategy.capital * (lotMultipliers[strategy.id] ?? 1))}</td><td className={`py-3 text-right font-bold tabular-nums ${positive(day)}`}>{formatMoney(day)}</td><td className={`py-3 text-right font-semibold tabular-nums ${positive(month)}`}>{formatMoney(month)}</td></tr>
                   })}</tbody>
                   <tfoot><tr className="border-t-2 border-[#dfe8dd]"><td className="pt-3 font-black">Total</td><td className="pt-3 text-right font-bold tabular-nums">{formatMoney(totalCapital)}</td><td className={`pt-3 text-right font-black tabular-nums ${positive(reportEntries.filter((entry) => entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0))}`}>{formatMoney(reportEntries.filter((entry) => entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0))}</td><td className={`pt-3 text-right font-black tabular-nums ${positive(reportEntries.filter((entry) => entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0))}`}>{formatMoney(reportEntries.filter((entry) => entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0))}</td></tr></tfoot>
                 </table>
@@ -276,16 +289,16 @@ export default function PublicTracker() {
 
             <section className={`${panel} mb-4`}><ChartTitle title="Cumulative P&L" detail="Combined realized daily results" /><Chart points={daily} /></section>
 
-            <section className="mb-4 grid gap-4 xl:grid-cols-2">
+            <section className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(min(100%,28rem),1fr))] gap-4">
               <article className={panel}><ChartTitle title="Last 30 trading days" detail="Daily P&L" /><Chart points={daily.slice(-30)} /></article>
               <article className={panel}><ChartTitle title="Drawdown" detail="Distance from the cumulative peak" /><Chart points={history.slice().reverse()} drawdown /></article>
             </section>
 
-            <section className="mb-4 grid gap-4 xl:grid-cols-2">
+            <section className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(min(100%,28rem),1fr))] gap-4">
               <article className={panel}>
                 <ChartTitle title="Daily P&L history" detail="Results by trading date" />
-                <div className="mt-4 max-h-[390px] overflow-auto">
-                  <table className="w-full min-w-[440px] text-sm"><thead className="sticky top-0 bg-white text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="pb-2 text-left font-semibold">Date</th><th className="pb-2 text-right font-semibold">Daily P&amp;L</th><th className="pb-2 text-right font-semibold">Daily ROI</th><th className="pb-2 text-right font-semibold">Drawdown</th></tr></thead><tbody>{history.map((point) => <tr key={point.date} className="border-t border-[#edf1eb]"><td className="py-2.5">{point.date}</td><td className={`py-2.5 text-right font-semibold tabular-nums ${positive(point.pnl)}`}>{formatMoney(point.pnl)}</td><td className="py-2.5 text-right tabular-nums">{formatPercent(totalCapital ? point.pnl / totalCapital * 100 : 0)}</td><td className={`py-2.5 text-right tabular-nums ${positive(point.drawdown ?? 0)}`}>{formatMoney(point.drawdown ?? 0)}</td></tr>)}</tbody></table>
+                <div className="mt-4 max-h-[390px] overflow-auto overscroll-x-contain">
+                  <table className="w-full min-w-max text-sm"><thead className="sticky top-0 bg-white text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="pb-2 text-left font-semibold">Date</th><th className="pb-2 text-right font-semibold">Daily P&amp;L</th><th className="pb-2 text-right font-semibold">Daily ROI</th><th className="pb-2 text-right font-semibold">Drawdown</th></tr></thead><tbody>{history.map((point) => <tr key={point.date} className="border-t border-[#edf1eb]"><td className="py-2.5">{point.date}</td><td className={`py-2.5 text-right font-semibold tabular-nums ${positive(point.pnl)}`}>{formatMoney(point.pnl)}</td><td className="py-2.5 text-right tabular-nums">{formatPercent(totalCapital ? point.pnl / totalCapital * 100 : 0)}</td><td className={`py-2.5 text-right tabular-nums ${positive(point.drawdown ?? 0)}`}>{formatMoney(point.drawdown ?? 0)}</td></tr>)}</tbody></table>
                 </div>
               </article>
               <article className={panel}>
@@ -320,10 +333,10 @@ export default function PublicTracker() {
   )
 }
 
-function Brand({ name, logoUrl, compact = false }: { name: string; logoUrl?: string; compact?: boolean }) {
+function Brand({ name, logoUrl }: { name: string; logoUrl?: string }) {
   const shortName = name.split(/[—–-]/)[0].trim() || 'DECAY HUNTERS'
   const initials = shortName.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
-  return <Link href="/" aria-label="Decay Hunters home" className={`flex items-center gap-3 ${compact ? 'max-w-[220px]' : ''}`}>
+  return <Link href="/" aria-label="Decay Hunters home" className="flex min-w-0 items-center gap-3">
     {logoUrl ? <img src={logoUrl} alt={`${shortName} logo`} className="h-10 w-10 shrink-0 rounded-xl object-contain" /> : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#d3e5d8] text-sm font-black tracking-tight text-[#1c704d]">{initials}</div>}
     <div className="min-w-0"><p className="truncate text-sm font-black tracking-wide">{shortName}</p><p className="truncate text-[10px] font-bold uppercase tracking-[0.16em] text-[#6f987d]">P&amp;L Tracker</p></div>
   </Link>
@@ -344,7 +357,7 @@ function Stat({ label, value, valueClass = '', icon }: { label: string; value: s
 function Rollup({ title, rows, capital }: { title: string; rows: [string, number][]; capital: number }) {
   return <article className={panel}>
     <ChartTitle title={title} detail="Aggregated daily results" />
-    <div className="mt-4 max-h-[330px] overflow-auto"><table className="w-full text-sm"><tbody>{rows.map(([period, pnl]) => <tr key={period} className="border-t border-[#edf1eb]"><td className="py-2.5 font-medium">{period}</td><td className={`py-2.5 text-right font-semibold tabular-nums ${positive(pnl)}`}>{formatMoney(pnl)}</td><td className="py-2.5 text-right text-xs text-[#75827a]">{formatPercent(capital ? pnl / capital * 100 : 0)}</td></tr>)}</tbody></table></div>
+    <div className="mt-4 max-h-[330px] overflow-auto overscroll-x-contain"><table className="w-full min-w-max text-sm"><tbody>{rows.map(([period, pnl]) => <tr key={period} className="border-t border-[#edf1eb]"><td className="py-2.5 font-medium">{period}</td><td className={`py-2.5 text-right font-semibold tabular-nums ${positive(pnl)}`}>{formatMoney(pnl)}</td><td className="py-2.5 text-right text-xs text-[#75827a]">{formatPercent(capital ? pnl / capital * 100 : 0)}</td></tr>)}</tbody></table></div>
     {!rows.length && <p className="mt-4 text-sm text-[#75827a]">No P&amp;L data yet.</p>}
   </article>
 }
