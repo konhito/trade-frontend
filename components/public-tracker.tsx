@@ -8,7 +8,9 @@ import type { DateRange } from 'react-day-picker'
 import {
   ArrowUpRight,
   CalendarDays,
+  ChevronDown,
   CircleHelp,
+  Filter,
   Layers3,
   Menu,
   TrendingDown,
@@ -30,6 +32,7 @@ import { formatMoney, formatPercent, trackerApi, trackerWeekdays, type TrackerDa
 
 type Point = { date: string; pnl: number; drawdown?: number }
 const lotOptions = [1, 2, 3, 5, 10]
+const weekdayPreset = trackerWeekdays.slice(0, 5).map(({ value }) => value)
 
 const panel = 'rounded-2xl border border-[#e1e8df] bg-white p-5 shadow-[0_8px_24px_rgba(16,40,30,0.045)]'
 const positive = (value: number) => value < 0 ? 'text-[#c74f42]' : 'text-[#18805a]'
@@ -82,6 +85,8 @@ export default function PublicTracker() {
   const [selectedRange, setSelectedRange] = useState<DateRange>()
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedStrategy, setSelectedStrategy] = useState<number | 'all' | null>(null)
+  const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([])
+  const [weekdayFilterOpen, setWeekdayFilterOpen] = useState(false)
   const [lotMultipliers, setLotMultipliers] = useState<Record<number, number>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -97,6 +102,13 @@ export default function PublicTracker() {
   }, [])
 
   const strategies = useMemo(() => (data?.strategies ?? []).filter((strategy) => strategy.active), [data])
+  const breakdownStrategies = useMemo(() => strategies.filter((strategy) =>
+    selectedWeekdays.length === 0 || (strategy.weekdays ?? []).some((weekday) => selectedWeekdays.includes(weekday))
+  ), [strategies, selectedWeekdays])
+  const weekdayFilterSummary = selectedWeekdays.length === 0 ? 'All days'
+    : selectedWeekdays.length === weekdayPreset.length && weekdayPreset.every((weekday) => selectedWeekdays.includes(weekday)) ? 'Weekdays'
+      : selectedWeekdays.length === trackerWeekdays.length ? 'Every day'
+        : trackerWeekdays.filter((weekday) => selectedWeekdays.includes(weekday.value)).map((weekday) => weekday.short).join(' · ')
   const strategyIds = useMemo(() => new Set(strategies.map((strategy) => strategy.id)), [strategies])
   const activeEntries = useMemo(() => (data?.entries ?? []).filter((entry) => strategyIds.has(entry.strategyId)), [data, strategyIds])
   const selectedStrategies = typeof selectedStrategy === 'number'
@@ -129,11 +141,15 @@ export default function PublicTracker() {
     }).reverse()
   }, [daily])
   const totalCapital = selectedStrategies.reduce((total, strategy) => total + strategy.capital * (lotMultipliers[strategy.id] ?? 1), 0)
-  const allCapital = strategies.reduce((total, strategy) => total + strategy.capital * (lotMultipliers[strategy.id] ?? 1), 0)
   const totalPnl = reportEntries.reduce((total, entry) => total + entry.pnl, 0)
   const currentDate = rangeEnd || rangeStart || getCurrentTradingDate()
   const reportWeekday = new Date(`${currentDate}T00:00:00Z`).getUTCDay()
   const selectedMonth = currentDate.slice(0, 7)
+  const breakdownIds = useMemo(() => new Set(breakdownStrategies.map((strategy) => strategy.id)), [breakdownStrategies])
+  const breakdownEntries = useMemo(() => allReportEntries.filter((entry) => breakdownIds.has(entry.strategyId)), [allReportEntries, breakdownIds])
+  const breakdownCapital = breakdownStrategies.reduce((total, strategy) => total + strategy.capital * (lotMultipliers[strategy.id] ?? 1), 0)
+  const breakdownDailyPnl = breakdownEntries.filter((entry) => entry.tradeDate === currentDate).reduce((total, entry) => total + entry.pnl, 0)
+  const breakdownMonthlyPnl = breakdownEntries.filter((entry) => entry.tradeDate.startsWith(selectedMonth)).reduce((total, entry) => total + entry.pnl, 0)
   const monthly = useMemo(() => rollup(reportEntries, (entry) => entry.tradeDate.slice(0, 7)), [reportEntries])
   const winningDays = daily.filter((point) => point.pnl > 0)
   const losingDays = daily.filter((point) => point.pnl < 0)
@@ -287,21 +303,44 @@ export default function PublicTracker() {
             <section className={`${panel} mb-4`}>
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#75827a]">Daily breakdown</p><h2 className="mt-1 text-lg font-black">Trading date P&amp;L summary <span className="font-medium text-[#75827a]">· {currentDate || '—'}</span></h2></div>
-                <p className="text-xs text-[#75827a]">Monthly figures include the selected month</p>
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  <p className="text-xs text-[#75827a]">Monthly figures include the selected month</p>
+                  <button type="button" aria-label={`Weekday filter: ${weekdayFilterSummary}. ${weekdayFilterOpen ? 'Hide' : 'Show'} options`} aria-expanded={weekdayFilterOpen} aria-controls="weekday-filter-options" onClick={() => setWeekdayFilterOpen((open) => !open)} className={`inline-flex min-h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b6f9e] focus-visible:ring-offset-2 ${selectedWeekdays.length ? 'border-[#8fc4e5] bg-[#eff7fd] text-[#176b9b]' : 'border-[#d9e3d9] bg-white text-[#52635a] hover:bg-[#f7f9f6]'}`}>
+                    <Filter size={14} />
+                    <span>Weekdays</span>
+                    <span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-medium">{weekdayFilterSummary}</span>
+                    <ChevronDown size={14} className={`transition-transform duration-200 ease-out motion-reduce:transition-none ${weekdayFilterOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+              </div>
+              <div id="weekday-filter-options" aria-hidden={!weekdayFilterOpen} inert={!weekdayFilterOpen} className={`grid transition-[grid-template-rows,opacity,margin] ease-out motion-reduce:transition-none ${weekdayFilterOpen ? 'duration-200 mt-3 grid-rows-[1fr] opacity-100' : 'duration-300 mt-0 grid-rows-[0fr] opacity-0'}`}>
+                <div className="min-h-0 overflow-hidden">
+                  <div className="border-y border-dashed border-[#e1e8df] py-4">
+                    <p className="w-full text-left text-xs font-medium text-[#75827a]">Filter by</p>
+                    <div role="group" aria-label="Filter daily breakdown by weekday" className="mt-2 flex w-full flex-wrap items-center justify-start gap-2">
+                      <button type="button" aria-label="Clear weekday filters" disabled={!selectedWeekdays.length} onClick={() => setSelectedWeekdays([])} style={{ transitionDelay: weekdayFilterOpen ? '0ms' : `${(trackerWeekdays.length + 1) * 18}ms` }} className={`group inline-flex size-8 items-center justify-center rounded-full border border-[#d8e0e5] text-[#75827a] transition-[opacity,transform,background-color,border-color,color,box-shadow] duration-150 ease-out hover:bg-[#f4f6f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b6f9e] disabled:cursor-default disabled:hover:bg-transparent motion-reduce:transition-none motion-reduce:transform-none ${weekdayFilterOpen ? `tracker-weekday-enter translate-y-0 scale-100 ${selectedWeekdays.length ? 'opacity-100' : 'opacity-50'}` : '-translate-y-1 scale-90 opacity-0'}`}><X size={15} className="transition-transform duration-200 ease-out motion-safe:group-hover:rotate-90 motion-safe:group-active:-rotate-90 motion-reduce:transition-none" /></button>
+                      <button type="button" aria-pressed={selectedWeekdays.length === weekdayPreset.length && weekdayPreset.every((weekday) => selectedWeekdays.includes(weekday))} onClick={() => setSelectedWeekdays((current) => weekdayPreset.every((weekday) => current.includes(weekday)) && current.length === weekdayPreset.length ? [] : weekdayPreset)} style={{ animationDelay: weekdayFilterOpen ? '18ms' : '0ms', transitionDelay: weekdayFilterOpen ? '0ms' : `${trackerWeekdays.length * 18}ms` }} className={`min-h-8 rounded-full border px-3 text-xs font-medium transition-[opacity,transform,background-color,border-color,color,box-shadow] duration-150 ease-out motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 motion-safe:active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b6f9e] motion-reduce:transition-none motion-reduce:transform-none ${weekdayFilterOpen ? 'tracker-weekday-enter translate-y-0 scale-100 opacity-100' : '-translate-y-1 scale-95 opacity-0'} ${selectedWeekdays.length === weekdayPreset.length && weekdayPreset.every((weekday) => selectedWeekdays.includes(weekday)) ? 'border-[#1b6f9e] bg-[#1b6f9e] text-white' : 'border-[#8fc4e5] bg-[#eff7fd] text-[#176b9b] hover:bg-[#e2f1fb]'}`}>Weekdays</button>
+                      {trackerWeekdays.map((weekday, index) => {
+                        const selected = selectedWeekdays.includes(weekday.value)
+                        return <button key={weekday.value} type="button" aria-label={weekday.name} aria-pressed={selected} onClick={() => setSelectedWeekdays((current) => current.includes(weekday.value) ? current.filter((value) => value !== weekday.value) : [...current, weekday.value].sort((a, b) => a - b))} style={{ animationDelay: weekdayFilterOpen ? `${36 + index * 18}ms` : '0ms', transitionDelay: weekdayFilterOpen ? '0ms' : `${(trackerWeekdays.length - 1 - index) * 18}ms` }} className={`inline-flex size-8 items-center justify-center rounded-full border text-xs font-medium transition-[opacity,transform,background-color,border-color,color,box-shadow] duration-150 ease-out motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 motion-safe:active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b6f9e] motion-reduce:transition-none motion-reduce:transform-none ${weekdayFilterOpen ? 'tracker-weekday-enter translate-y-0 scale-100 opacity-100' : '-translate-y-1 scale-90 opacity-0'} ${selected ? 'border-[#1b6f9e] bg-[#1b6f9e] text-white' : 'border-[#8fc4e5] bg-[#eff7fd] text-[#176b9b] hover:bg-[#e2f1fb]'}`}>{weekday.short}</button>
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="mt-4 overflow-x-auto overscroll-x-contain">
                 <table className="w-full min-w-max table-fixed text-left text-sm">
                   <colgroup><col className="w-[40%]" /><col className="w-[15%]" /><col className="w-[15%]" /><col className="w-[15%]" /><col className="w-[15%]" /></colgroup>
                   <thead className="text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="px-3 pb-3 font-semibold">Strategy / days</th><th className="px-3 pb-3 font-semibold">Capital</th><th className="px-3 pb-3 font-semibold">Lot</th><th className="px-3 pb-3 font-semibold">Daily P&amp;L</th><th className="px-3 pb-3 font-semibold">Monthly P&amp;L</th></tr></thead>
-                  <tbody>{strategies.map((strategy) => {
+                  <tbody>{breakdownStrategies.length ? breakdownStrategies.map((strategy) => {
                     const day = allReportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0)
                     const month = allReportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0)
                     const scheduledDays = trackerWeekdays.filter((weekday) => (strategy.weekdays ?? []).includes(weekday.value))
                     return <tr key={strategy.id} className="border-t border-[#edf1eb]"><td className="px-3 py-3"><p className="font-semibold">{strategy.name}</p>{scheduledDays.length ? <div className="mt-1.5 flex flex-wrap gap-1" aria-label={`Trading days for ${strategy.name}`}>
                       {scheduledDays.map((weekday) => <abbr key={weekday.value} title={weekday.value === reportWeekday ? `${weekday.name} · report date` : weekday.name} className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[10px] font-bold no-underline ${weekday.value === reportWeekday ? 'bg-[#1c7c55] text-white' : 'bg-[#e9f5ed] text-[#176b49]'}`}>{weekday.short}</abbr>)}
                     </div> : <p className="mt-1 text-[11px] font-normal text-[#75827a]">Schedule not set</p>}</td><td className="px-3 py-4 tabular-nums">{formatMoney(strategy.capital * (lotMultipliers[strategy.id] ?? 1))}</td><td className="px-3 py-3"><select aria-label={`${strategy.name} lot size in daily breakdown`} value={String(lotMultipliers[strategy.id] ?? 1)} onChange={(event) => setLotMultipliers((current) => ({ ...current, [strategy.id]: Number(event.target.value) }))} className="min-h-11 rounded-lg border border-[#d9e3d9] bg-white px-3 text-sm font-semibold text-[#173126]">{lotOptions.map((option) => <option key={option} value={option}>{option}x</option>)}</select></td><td className={`px-3 py-4 font-bold tabular-nums ${positive(day)}`}>{formatMoney(day)}</td><td className={`px-3 py-4 font-semibold tabular-nums ${positive(month)}`}>{formatMoney(month)}</td></tr>
-                  })}</tbody>
-                  <tfoot><tr className="border-t-2 border-[#dfe8dd]"><td className="px-3 pt-4 font-black">Total</td><td className="px-3 pt-4 font-bold tabular-nums">{formatMoney(allCapital)}</td><td className="px-3 pt-4" aria-hidden="true"></td><td className={`px-3 pt-4 font-black tabular-nums ${positive(allReportEntries.filter((entry) => entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0))}`}>{formatMoney(allReportEntries.filter((entry) => entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0))}</td><td className={`px-3 pt-4 font-black tabular-nums ${positive(allReportEntries.filter((entry) => entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0))}`}>{formatMoney(allReportEntries.filter((entry) => entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0))}</td></tr></tfoot>
+                  }) : <tr><td colSpan={5} className="border-t border-[#edf1eb] px-3 py-8 text-center text-sm text-[#75827a]">No strategies scheduled for the selected day{selectedWeekdays.length > 1 ? 's' : ''}.</td></tr>}</tbody>
+                  <tfoot><tr className="border-t-2 border-[#dfe8dd]"><td className="px-3 pt-4 font-black">Total</td><td className="px-3 pt-4 font-bold tabular-nums">{formatMoney(breakdownCapital)}</td><td className="px-3 pt-4" aria-hidden="true"></td><td className={`px-3 pt-4 font-black tabular-nums ${positive(breakdownDailyPnl)}`}>{formatMoney(breakdownDailyPnl)}</td><td className={`px-3 pt-4 font-black tabular-nums ${positive(breakdownMonthlyPnl)}`}>{formatMoney(breakdownMonthlyPnl)}</td></tr></tfoot>
                 </table>
               </div>
             </section>
