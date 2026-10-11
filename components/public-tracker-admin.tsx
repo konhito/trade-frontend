@@ -3,12 +3,16 @@
 import { FormEvent, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Check, Pencil, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react'
-import { formatMoney, trackerApi, type TrackerData, type TrackerEntry, type TrackerSettings, type TrackerStrategy } from '@/lib/public-tracker'
+import { formatMoney, trackerApi, trackerWeekdays, type TrackerData, type TrackerEntry, type TrackerSettings, type TrackerStrategy } from '@/lib/public-tracker'
 
 type StrategyForm = Omit<TrackerStrategy, 'id'>
 type EntryForm = Omit<TrackerEntry, 'id' | 'pnl'> & { pnl: string }
 
-const blankStrategy: StrategyForm = { name: '', segment: '', description: '', capital: 0, subscribeUrl: '', externalId: '', active: true }
+const weekdaysPreset = [1, 2, 3, 4, 5]
+const weekdayChip = 'inline-flex min-h-9 min-w-9 items-center justify-center rounded-full border px-2.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#69b5e3] disabled:cursor-wait disabled:opacity-50'
+const selectedWeekdayChip = 'border-[#69b5e3] bg-[#e7f3fb] text-[#2175a9]'
+const unselectedWeekdayChip = 'border-[#d9e3d9] bg-white text-[#52645a] hover:bg-[#f4f6f1]'
+const blankStrategy: StrategyForm = { name: '', segment: '', description: '', capital: 0, subscribeUrl: '', externalId: '', active: true, weekdays: [] }
 const panel = 'rounded-2xl border border-[#e1e8df] bg-white p-5 shadow-[0_8px_24px_rgba(16,40,30,0.045)]'
 const field = 'w-full rounded-xl border border-[#d9e3d9] bg-white px-3 py-2.5 text-sm text-[#173126] outline-none focus:border-[#27865f] focus:ring-2 focus:ring-[#27865f]/15'
 const button = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[#1c7c55] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#176b49] disabled:cursor-wait disabled:opacity-50'
@@ -108,8 +112,17 @@ export default function PublicTrackerAdmin() {
 
   function editStrategy(item: TrackerStrategy) {
     setStrategyId(item.id)
-    setStrategy({ name: item.name, segment: item.segment, description: item.description, capital: item.capital, subscribeUrl: item.subscribeUrl, externalId: item.externalId, active: item.active })
+    setStrategy({ name: item.name, segment: item.segment, description: item.description, capital: item.capital, subscribeUrl: item.subscribeUrl, externalId: item.externalId, active: item.active, weekdays: item.weekdays ?? [] })
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function toggleWeekday(value: number) {
+    setStrategy((current) => {
+      const selected = new Set(current.weekdays)
+      if (selected.has(value)) selected.delete(value)
+      else selected.add(value)
+      return { ...current, weekdays: trackerWeekdays.filter((day) => selected.has(day.value)).map((day) => day.value) }
+    })
   }
 
   function editEntry(item: TrackerEntry) {
@@ -155,6 +168,7 @@ export default function PublicTrackerAdmin() {
   const strategies = data?.strategies ?? []
   const entries = data?.entries ?? []
   const strategyNames = new Map(strategies.map((item) => [item.id, item.name]))
+  const weekdaysPresetSelected = strategy.weekdays.length === weekdaysPreset.length && weekdaysPreset.every((day) => strategy.weekdays.includes(day))
 
   return (
     <main className="min-h-screen bg-[#f4f6f1] px-4 py-6 text-[#173126] sm:px-6 lg:px-8">
@@ -177,13 +191,25 @@ export default function PublicTrackerAdmin() {
               <label className="grid gap-1.5 text-xs font-semibold text-[#52645a]">Strategy ID<input maxLength={191} className={field} value={strategy.externalId} onChange={(event) => setStrategy({ ...strategy, externalId: event.target.value })} /></label>
               <label className="grid gap-1.5 text-xs font-semibold text-[#52645a] sm:col-span-2">Subscription / details link<input type="url" className={field} value={strategy.subscribeUrl} onChange={(event) => setStrategy({ ...strategy, subscribeUrl: event.target.value })} placeholder="https://…" /></label>
               <label className="grid gap-1.5 text-xs font-semibold text-[#52645a] sm:col-span-2">Description<textarea rows={3} maxLength={5000} className={field} value={strategy.description} onChange={(event) => setStrategy({ ...strategy, description: event.target.value })} /></label>
+              <fieldset className="sm:col-span-2" aria-describedby="strategy-weekdays-help">
+                <legend className="text-xs font-semibold text-[#52645a]">Trading days</legend>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button type="button" aria-label="Clear selected trading days" disabled={saving || !strategy.weekdays.length} onClick={() => setStrategy({ ...strategy, weekdays: [] })} className={`${weekdayChip} ${unselectedWeekdayChip}`}><X size={15} /></button>
+                  <button type="button" aria-pressed={weekdaysPresetSelected} disabled={saving} onClick={() => setStrategy({ ...strategy, weekdays: weekdaysPreset })} className={`${weekdayChip} px-3 ${weekdaysPresetSelected ? selectedWeekdayChip : unselectedWeekdayChip}`}>Weekdays</button>
+                  {trackerWeekdays.map((day) => {
+                    const selected = strategy.weekdays.includes(day.value)
+                    return <button key={day.value} type="button" aria-label={day.name} aria-pressed={selected} disabled={saving} onClick={() => toggleWeekday(day.value)} className={`${weekdayChip} ${selected ? selectedWeekdayChip : unselectedWeekdayChip}`} title={day.name}>{day.short}</button>
+                  })}
+                </div>
+                <p id="strategy-weekdays-help" className="mt-2 text-xs leading-5 text-[#75827a]">Choose one or more days. Weekdays selects Monday–Friday; leave all clear when no weekly schedule is set.</p>
+              </fieldset>
               <label className="flex items-center gap-2 text-sm font-semibold text-[#52645a] sm:col-span-2"><input type="checkbox" checked={strategy.active} onChange={(event) => setStrategy({ ...strategy, active: event.target.checked })} className="h-4 w-4 accent-[#1c7c55]" /> Show this strategy on the public page</label>
             </div>
             <button className={`${button} mt-4`} disabled={saving}>{strategyId === null ? <Plus size={16} /> : <Save size={16} />}{saving ? 'Saving…' : strategyId === null ? 'Add strategy' : 'Save changes'}</button>
           </form>
 
           <form id="daily-entry-form" className={panel} onSubmit={submitEntry}>
-            <div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#75827a]">Daily results</p><h2 className="mt-1 text-xl font-black">{entryId === null ? 'Add daily P&L' : 'Edit daily P&L'}</h2></div>{entryId !== null && <button type="button" aria-label="Cancel daily result edit" onClick={() => { setEntryId(null); setEntry((current) => ({ ...current, pnl: 0, note: '' })) }} className="rounded-lg p-2 text-[#75827a] hover:bg-[#f1f5ef]"><X size={18} /></button>}</div>
+            <div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#75827a]">Daily results</p><h2 className="mt-1 text-xl font-black">{entryId === null ? 'Add daily P&L' : 'Edit daily P&L'}</h2></div>{entryId !== null && <button type="button" aria-label="Cancel daily result edit" onClick={() => { setEntryId(null); setEntry((current) => ({ ...current, pnl: '', note: '' })) }} className="rounded-lg p-2 text-[#75827a] hover:bg-[#f1f5ef]"><X size={18} /></button>}</div>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1.5 text-xs font-semibold text-[#52645a] sm:col-span-2">Strategy<select required className={field} value={entry.strategyId || ''} onChange={(event) => setEntry({ ...entry, strategyId: Number(event.target.value) })} disabled={loading || !strategies.length}><option value="">{loading ? 'Loading…' : 'Choose a strategy'}</option>{strategies.map((item) => <option key={item.id} value={item.id}>{item.name}{item.active ? '' : ' (hidden)'}</option>)}</select></label>
               <label className="grid gap-1.5 text-xs font-semibold text-[#52645a]">Trading date<input required type="date" className={field} value={entry.tradeDate} onChange={(event) => setEntry({ ...entry, tradeDate: event.target.value })} /></label>
@@ -209,7 +235,7 @@ export default function PublicTrackerAdmin() {
           <div className="mt-4 grid gap-2">
             {!loading && !strategies.length && <p className="rounded-xl bg-[#f4f6f1] p-4 text-sm text-[#75827a]">No strategies yet. Add one above to start the report.</p>}
             {strategies.map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e6ece4] bg-[#fbfcfa] p-3.5">
-              <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><b className="truncate">{item.name}</b><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${item.active ? 'bg-[#e9f5ed] text-[#19734f]' : 'bg-[#eef0ed] text-[#75827a]'}`}>{item.active ? 'Visible' : 'Hidden'}</span></div><p className="mt-1 text-xs text-[#75827a]">{item.segment} · Capital ₹{item.capital.toLocaleString('en-IN')}</p></div>
+              <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><b className="truncate">{item.name}</b><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${item.active ? 'bg-[#e9f5ed] text-[#19734f]' : 'bg-[#eef0ed] text-[#75827a]'}`}>{item.active ? 'Visible' : 'Hidden'}</span></div><p className="mt-1 text-xs text-[#75827a]">{item.segment} · Capital ₹{item.capital.toLocaleString('en-IN')}</p><p className="mt-1 text-xs text-[#75827a]">Trading days · {item.weekdays?.length ? trackerWeekdays.filter((day) => item.weekdays.includes(day.value)).map((day) => day.name.slice(0, 3)).join(', ') : 'Schedule not set'}</p></div>
               <div className="flex items-center gap-2"><button type="button" disabled={saving} onClick={() => editStrategy(item)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#d9e3d9] px-3 py-2 text-xs font-bold text-[#52645a] hover:bg-[#edf4ed] disabled:opacity-50"><Pencil size={14} /> Edit</button><button type="button" disabled={saving} onClick={() => void removeStrategy(item)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#f0d2ce] px-3 py-2 text-xs font-bold text-[#b04439] hover:bg-[#fff2ef] disabled:opacity-50"><Trash2 size={14} /> Delete</button></div>
             </div>)}
           </div>

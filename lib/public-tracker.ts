@@ -7,7 +7,18 @@ export type TrackerStrategy = {
   subscribeUrl: string
   externalId: string
   active: boolean
+  weekdays: number[]
 }
+
+export const trackerWeekdays = [
+  { value: 1, short: 'M', name: 'Monday' },
+  { value: 2, short: 'T', name: 'Tuesday' },
+  { value: 3, short: 'W', name: 'Wednesday' },
+  { value: 4, short: 'Th', name: 'Thursday' },
+  { value: 5, short: 'F', name: 'Friday' },
+  { value: 6, short: 'Sa', name: 'Saturday' },
+  { value: 0, short: 'Su', name: 'Sunday' },
+] as const
 
 export type TrackerEntry = {
   id: number
