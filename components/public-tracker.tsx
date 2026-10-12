@@ -101,16 +101,19 @@ export default function PublicTracker() {
       .finally(() => setLoading(false))
   }, [])
 
-  const strategies = useMemo(() => (data?.strategies ?? []).filter((strategy) => strategy.active), [data])
-  const breakdownStrategies = useMemo(() => strategies.filter((strategy) =>
+  const activeStrategies = useMemo(() => (data?.strategies ?? []).filter((strategy) => strategy.active), [data])
+  const strategies = useMemo(() => activeStrategies.filter((strategy) =>
     selectedWeekdays.length === 0 || (strategy.weekdays ?? []).some((weekday) => selectedWeekdays.includes(weekday))
-  ), [strategies, selectedWeekdays])
+  ), [activeStrategies, selectedWeekdays])
   const weekdayFilterSummary = selectedWeekdays.length === 0 ? 'All days'
     : selectedWeekdays.length === weekdayPreset.length && weekdayPreset.every((weekday) => selectedWeekdays.includes(weekday)) ? 'Weekdays'
       : selectedWeekdays.length === trackerWeekdays.length ? 'Every day'
         : trackerWeekdays.filter((weekday) => selectedWeekdays.includes(weekday.value)).map((weekday) => weekday.short).join(' · ')
   const strategyIds = useMemo(() => new Set(strategies.map((strategy) => strategy.id)), [strategies])
   const activeEntries = useMemo(() => (data?.entries ?? []).filter((entry) => strategyIds.has(entry.strategyId)), [data, strategyIds])
+  useEffect(() => {
+    if (typeof selectedStrategy === 'number' && !strategies.some((strategy) => strategy.id === selectedStrategy)) setSelectedStrategy('all')
+  }, [selectedStrategy, strategies])
   const selectedStrategies = typeof selectedStrategy === 'number'
     ? strategies.filter((strategy) => strategy.id === selectedStrategy)
     : strategies
@@ -145,11 +148,16 @@ export default function PublicTracker() {
   const currentDate = rangeEnd || rangeStart || getCurrentTradingDate()
   const reportWeekday = new Date(`${currentDate}T00:00:00Z`).getUTCDay()
   const selectedMonth = currentDate.slice(0, 7)
-  const breakdownIds = useMemo(() => new Set(breakdownStrategies.map((strategy) => strategy.id)), [breakdownStrategies])
-  const breakdownEntries = useMemo(() => allReportEntries.filter((entry) => breakdownIds.has(entry.strategyId)), [allReportEntries, breakdownIds])
-  const breakdownCapital = breakdownStrategies.reduce((total, strategy) => total + strategy.capital * (lotMultipliers[strategy.id] ?? 1), 0)
-  const breakdownDailyPnl = breakdownEntries.filter((entry) => entry.tradeDate === currentDate).reduce((total, entry) => total + entry.pnl, 0)
-  const breakdownMonthlyPnl = breakdownEntries.filter((entry) => entry.tradeDate.startsWith(selectedMonth)).reduce((total, entry) => total + entry.pnl, 0)
+  const sortedBreakdownStrategies = useMemo(() => {
+    const dailyPnlByStrategy = new Map<number, number>()
+    allReportEntries.forEach((entry) => {
+      if (entry.tradeDate === currentDate) dailyPnlByStrategy.set(entry.strategyId, (dailyPnlByStrategy.get(entry.strategyId) ?? 0) + entry.pnl)
+    })
+    return [...strategies].sort((a, b) => (dailyPnlByStrategy.get(b.id) ?? 0) - (dailyPnlByStrategy.get(a.id) ?? 0))
+  }, [allReportEntries, strategies, currentDate])
+  const breakdownCapital = strategies.reduce((total, strategy) => total + strategy.capital * (lotMultipliers[strategy.id] ?? 1), 0)
+  const breakdownDailyPnl = allReportEntries.filter((entry) => entry.tradeDate === currentDate).reduce((total, entry) => total + entry.pnl, 0)
+  const breakdownMonthlyPnl = allReportEntries.filter((entry) => entry.tradeDate.startsWith(selectedMonth)).reduce((total, entry) => total + entry.pnl, 0)
   const monthly = useMemo(() => rollup(reportEntries, (entry) => entry.tradeDate.slice(0, 7)), [reportEntries])
   const winningDays = daily.filter((point) => point.pnl > 0)
   const losingDays = daily.filter((point) => point.pnl < 0)
@@ -191,7 +199,7 @@ export default function PublicTracker() {
                 <span className="min-w-0 flex-1 break-words">{strategy.name}</span>
               </button>
             })}
-            {!strategies.length && <p className="px-3 py-2 text-sm text-[#91a99a]">No active strategies yet</p>}
+            {!strategies.length && <p className="px-3 py-2 text-sm text-[#91a99a]">{activeStrategies.length ? 'No strategies scheduled for the selected weekdays' : 'No active strategies yet'}</p>}
           </div>
         </nav>
         <div className="mt-3 shrink-0 border-t border-white/10 pt-4">
@@ -259,7 +267,7 @@ export default function PublicTracker() {
 
         {error && <div role="alert" className="mb-5 rounded-xl border border-[#efc0b8] bg-[#fff2ef] p-4 text-sm text-[#a33c31]">Tracker data could not be loaded: {error}</div>}
 
-        {!strategies.length ? (
+        {!activeStrategies.length ? (
           <section className={`${panel} mt-12 py-16 text-center`}>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#1c7c55]">Performance report</p>
             <h2 className="mt-3 text-2xl font-black">The tracker is being set up</h2>
@@ -317,7 +325,7 @@ export default function PublicTracker() {
                 <div className="min-h-0 overflow-hidden">
                   <div className="border-y border-dashed border-[#e1e8df] py-4">
                     <p className="w-full text-left text-xs font-medium text-[#75827a]">Filter by</p>
-                    <div role="group" aria-label="Filter daily breakdown by weekday" className="mt-2 flex w-full flex-wrap items-center justify-start gap-2">
+                    <div role="group" aria-label="Filter all tracker data by weekday" className="mt-2 flex w-full flex-wrap items-center justify-start gap-2">
                       <button type="button" aria-label="Clear weekday filters" disabled={!selectedWeekdays.length} onClick={() => setSelectedWeekdays([])} style={{ transitionDelay: weekdayFilterOpen ? '0ms' : `${(trackerWeekdays.length + 1) * 18}ms` }} className={`group inline-flex size-8 items-center justify-center rounded-full border border-[#d8e0e5] text-[#75827a] transition-[opacity,transform,background-color,border-color,color,box-shadow] duration-150 ease-out hover:bg-[#f4f6f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b6f9e] disabled:cursor-default disabled:hover:bg-transparent motion-reduce:transition-none motion-reduce:transform-none ${weekdayFilterOpen ? `tracker-weekday-enter translate-y-0 scale-100 ${selectedWeekdays.length ? 'opacity-100' : 'opacity-50'}` : '-translate-y-1 scale-90 opacity-0'}`}><X size={15} className="transition-transform duration-200 ease-out motion-safe:group-hover:rotate-90 motion-safe:group-active:-rotate-90 motion-reduce:transition-none" /></button>
                       <button type="button" aria-pressed={selectedWeekdays.length === weekdayPreset.length && weekdayPreset.every((weekday) => selectedWeekdays.includes(weekday))} onClick={() => setSelectedWeekdays((current) => weekdayPreset.every((weekday) => current.includes(weekday)) && current.length === weekdayPreset.length ? [] : weekdayPreset)} style={{ animationDelay: weekdayFilterOpen ? '18ms' : '0ms', transitionDelay: weekdayFilterOpen ? '0ms' : `${trackerWeekdays.length * 18}ms` }} className={`min-h-8 rounded-full border px-3 text-xs font-medium transition-[opacity,transform,background-color,border-color,color,box-shadow] duration-150 ease-out motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 motion-safe:active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b6f9e] motion-reduce:transition-none motion-reduce:transform-none ${weekdayFilterOpen ? 'tracker-weekday-enter translate-y-0 scale-100 opacity-100' : '-translate-y-1 scale-95 opacity-0'} ${selectedWeekdays.length === weekdayPreset.length && weekdayPreset.every((weekday) => selectedWeekdays.includes(weekday)) ? 'border-[#1b6f9e] bg-[#1b6f9e] text-white' : 'border-[#8fc4e5] bg-[#eff7fd] text-[#176b9b] hover:bg-[#e2f1fb]'}`}>Weekdays</button>
                       {trackerWeekdays.map((weekday, index) => {
@@ -331,8 +339,8 @@ export default function PublicTracker() {
               <div className="mt-4 overflow-x-auto overscroll-x-contain">
                 <table className="w-full min-w-max table-fixed text-left text-sm">
                   <colgroup><col className="w-[40%]" /><col className="w-[15%]" /><col className="w-[15%]" /><col className="w-[15%]" /><col className="w-[15%]" /></colgroup>
-                  <thead className="text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="px-3 pb-3 font-semibold">Strategy / days</th><th className="px-3 pb-3 font-semibold">Capital</th><th className="px-3 pb-3 font-semibold">Lot</th><th className="px-3 pb-3 font-semibold">Daily P&amp;L</th><th className="px-3 pb-3 font-semibold">Monthly P&amp;L</th></tr></thead>
-                  <tbody>{breakdownStrategies.length ? breakdownStrategies.map((strategy) => {
+                  <thead className="text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="px-3 pb-3 font-semibold">Strategy / days</th><th className="px-3 pb-3 font-semibold">Capital</th><th className="px-3 pb-3 font-semibold">Lot</th><th className="px-3 pb-3 font-semibold" title="Strategies sorted by daily profit, highest first">Daily P&amp;L ↓</th><th className="px-3 pb-3 font-semibold">Monthly P&amp;L</th></tr></thead>
+                  <tbody>{sortedBreakdownStrategies.length ? sortedBreakdownStrategies.map((strategy) => {
                     const day = allReportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0)
                     const month = allReportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0)
                     const scheduledDays = trackerWeekdays.filter((weekday) => (strategy.weekdays ?? []).includes(weekday.value))
@@ -384,7 +392,7 @@ export default function PublicTracker() {
                 <p className="text-sm font-bold">Interested in portfolio management?</p>
                 <p className="mt-0.5 text-xs text-[#52645a]">Contact our team to discuss your needs.</p>
               </div>
-              <a className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-[#1c7c55] px-3 py-2 text-sm font-bold text-white transition hover:bg-[#176b49]" href={data.settings.contactUrl} target="_blank" rel="noreferrer">Contact <ArrowUpRight size={14} aria-hidden="true" /></a>
+              <a className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-[#1c7c55] px-3 py-2 text-sm font-bold text-white transition hover:bg-[#176b49]" href={data.settings.contactUrl} target="_blank" rel="noreferrer">Customize portfolio <ArrowUpRight size={14} aria-hidden="true" /></a>
             </section>}
           </>
         )}
