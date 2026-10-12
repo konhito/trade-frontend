@@ -330,3 +330,141 @@ body[data-mobile-navbar="open"] .max-w-screen-xl > * {
 [data-accordion-trigger] [data-accordion-icon] {
   display: none;
 }
+
+@layer components {
+  .tracker-page {
+    --tracker-ground: #f1f3f0;
+    --tracker-ink: #19272d;
+    --tracker-muted: #617176;
+    --tracker-rule: #dce3e1;
+    --tracker-accent: #137b80;
+    min-height: 100vh;
+    background: var(--tracker-ground) !important;
+    color: var(--tracker-ink) !important;
+    font-feature-settings: "ss01" on;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .tracker-page h1,
+  .tracker-page h2,
+  .tracker-page h3 {
+    font-family: var(--tracker-heading), sans-serif;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  .tracker-page .tabular-nums {
+    font-family: var(--tracker-data), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  .tracker-page ::selection {
+    background: #cde9df;
+    color: #10282c;
+  }
+
+  .tracker-sidebar {
+    background: #14212a !important;
+  }
+
+  .tracker-sidebar nav button[aria-pressed="true"] {
+    background: #203d43 !important;
+    box-shadow: inset 2px 0 #8de0c3;
+  }
+
+  .tracker-sidebar nav button:focus-visible,
+  .tracker-page button:focus-visible,
+  .tracker-page select:focus-visible,
+  .tracker-page a:focus-visible {
+    outline: 2px solid #137b80;
+    outline-offset: 2px;
+  }
+
+  .tracker-sidebar nav {
+    scrollbar-color: #52676c transparent;
+    scrollbar-width: thin;
+  }
+
+  .tracker-page main > header {
+    border-color: #d5ddda;
+  }
+
+  .tracker-page main > section[class*="rounded-2xl"],
+  .tracker-page main > section[class*="rounded-xl"] {
+    border-color: var(--tracker-rule);
+    border-radius: 20px;
+    box-shadow: none;
+  }
+
+  .tracker-page main > section article {
+    border-color: #dce3e1;
+    box-shadow: none;
+  }
+
+  .tracker-page main > section article:hover {
+    border-color: #a9c3bd;
+  }
+
+  .tracker-page button[aria-label^="Select date range:"] {
+    border-color: #d2dcda !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .tracker-page button[aria-label^="Select date range:"] > span:first-child {
+    background: #f7efd9 !important;
+    color: #91651b !important;
+  }
+
+  .tracker-page button[aria-controls="weekday-filter-options"] {
+    border-color: #d2dcda;
+    color: #394e53;
+  }
+
+  .tracker-page #weekday-filter-options button[aria-pressed="true"] {
+    border-color: #137b80 !important;
+    background: #137b80 !important;
+    color: #fff !important;
+  }
+
+  .tracker-page #weekday-filter-options button[aria-pressed="false"] {
+    border-color: #a9d1c9 !important;
+    background: #ecf6f3 !important;
+    color: #176b70 !important;
+  }
+
+  .tracker-page select {
+    max-width: 100%;
+    color: #24383d;
+  }
+
+  .tracker-page table thead {
+    color: #68797d;
+  }
+
+  .tracker-page table tbody tr {
+    border-color: #e5ebe8;
+  }
+
+  .tracker-page table tbody tr:hover {
+    background: #f7f9f7;
+  }
+
+  .tracker-page footer {
+    border-color: #d5ddda;
+  }
+
+  .tracker-breakdown-row {
+    background: #fbfcfb;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tracker-page *,
+    .tracker-page *::before,
+    .tracker-page *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

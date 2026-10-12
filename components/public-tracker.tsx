@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { Archivo, IBM_Plex_Mono } from 'next/font/google'
 import Link from 'next/link'
 import { format as formatDate } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
@@ -18,9 +19,13 @@ import {
   X,
 } from 'lucide-react'
 import {
+  Bar,
+  BarChart,
   CartesianGrid,
+  Cell,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -34,8 +39,10 @@ type Point = { date: string; pnl: number; drawdown?: number }
 const lotOptions = [1, 2, 3, 5, 10]
 const weekdayPreset = trackerWeekdays.slice(0, 5).map(({ value }) => value)
 
-const panel = 'rounded-2xl border border-[#e1e8df] bg-white p-5 shadow-[0_8px_24px_rgba(16,40,30,0.045)]'
-const positive = (value: number) => value < 0 ? 'text-[#c74f42]' : 'text-[#18805a]'
+const headingFont = Archivo({ subsets: ['latin'], weight: ['500', '600', '700', '800'], variable: '--tracker-heading' })
+const dataFont = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--tracker-data' })
+const panel = 'rounded-[20px] border border-[#dce3e1] bg-white p-[clamp(1rem,2vw,1.5rem)]'
+const positive = (value: number) => value < 0 ? 'text-[#b64b48]' : 'text-[#16795d]'
 
 function getCurrentTradingDate() {
   const date = new Date()
@@ -56,25 +63,63 @@ function Chart({ points, drawdown = false }: { points: Point[]; drawdown?: boole
     <div className="h-64 w-full" role="img" aria-label={drawdown ? 'Drawdown over time' : 'Cumulative profit and loss over time'}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 16, right: 20, bottom: 8, left: 16 }}>
-          <CartesianGrid stroke="#e8eee7" vertical={false} />
-          <XAxis dataKey="date" tickFormatter={(date: string) => date.slice(0, 7)} minTickGap={38} tick={{ fill: '#75827a', fontSize: 11 }} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={(value: number) => formatMoney(value)} width={82} tick={{ fill: '#75827a', fontSize: 11 }} axisLine={false} tickLine={false} />
-          <Tooltip formatter={(value) => formatMoney(Number(value))} labelFormatter={(date) => `Date: ${date}`} />
-          <Line type="monotone" dataKey="value" name={drawdown ? 'Drawdown' : 'Cumulative P&L'} stroke={drawdown ? '#d85745' : '#27865f'} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} isAnimationActive />
+          <CartesianGrid stroke="#e7ece9" vertical={false} />
+          <XAxis dataKey="date" tickFormatter={(date: string) => date.slice(0, 7)} minTickGap={38} tick={{ fill: '#6f7d81', fontSize: 11 }} axisLine={false} tickLine={false} />
+          <YAxis tickFormatter={(value: number) => formatMoney(value)} width={82} tick={{ fill: '#6f7d81', fontSize: 11 }} axisLine={false} tickLine={false} />
+          <Tooltip formatter={(value) => formatMoney(Number(value))} labelFormatter={(date) => `Date: ${date}`} contentStyle={{ border: '1px solid #dce3e1', borderRadius: 12, boxShadow: '0 8px 24px rgba(21, 38, 43, .12)' }} />
+          <Line type="monotone" dataKey="value" name={drawdown ? 'Drawdown' : 'Cumulative P&L'} stroke={drawdown ? '#b64b48' : '#137b80'} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} isAnimationActive />
         </LineChart>
       </ResponsiveContainer>
     </div>
   )
 }
 
+function WeekdayChart({ points }: { points: Point[] }) {
+  const data = useMemo(() => {
+    const totals = new Map<number, { pnl: number; days: number }>()
+    points.forEach(({ date, pnl }) => {
+      const weekday = new Date(`${date}T00:00:00Z`).getUTCDay()
+      const result = totals.get(weekday) ?? { pnl: 0, days: 0 }
+      result.pnl += pnl
+      result.days += 1
+      totals.set(weekday, result)
+    })
+    return weekdayPreset.map((weekday) => {
+      const result = totals.get(weekday)
+      return {
+        day: trackerWeekdays.find((item) => item.value === weekday)!.name.slice(0, 3),
+        average: result ? result.pnl / result.days : null,
+        days: result?.days ?? 0,
+      }
+    })
+  }, [points])
+
+  if (data.every((item) => item.average === null)) return <div className="flex h-64 items-center justify-center text-sm text-[#75827a]">No weekday results in this range.</div>
+
+  return <div className="h-64 w-full" role="img" aria-label="Average daily profit and loss by weekday">
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data} margin={{ top: 16, right: 20, bottom: 8, left: 16 }}>
+        <CartesianGrid stroke="#e7ece9" vertical={false} />
+        <XAxis dataKey="day" tick={{ fill: '#6f7d81', fontSize: 11 }} axisLine={false} tickLine={false} />
+        <YAxis tickFormatter={(value: number) => formatMoney(value)} width={82} tick={{ fill: '#6f7d81', fontSize: 11 }} axisLine={false} tickLine={false} />
+        <Tooltip formatter={(value, _name, item) => [formatMoney(Number(value)), `Average P&L (${item.payload.days} sessions)`]} labelFormatter={(day) => `Average on ${day}`} contentStyle={{ border: '1px solid #dce3e1', borderRadius: 12, boxShadow: '0 8px 24px rgba(21, 38, 43, .12)' }} />
+        <ReferenceLine y={0} stroke="#8b9697" />
+        <Bar dataKey="average" name="Average P&L" radius={[4, 4, 0, 0]} isAnimationActive>
+          {data.map((item) => <Cell key={item.day} fill={(item.average ?? 0) < 0 ? '#b64b48' : '#137b80'} />)}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  </div>
+}
+
 function LoadingState() {
   return (
-    <div className="min-h-screen animate-pulse bg-[#f4f6f1] p-5 md:grid md:grid-cols-[clamp(17rem,22vw,19rem)_1fr] md:gap-5">
-      <div className="hidden rounded-3xl bg-[#14271f] md:block" />
+    <div className="min-h-screen animate-pulse bg-[#f1f3f0] p-5 lg:grid lg:grid-cols-[clamp(17rem,20vw,20rem)_1fr] lg:gap-5">
+      <div className="hidden rounded-3xl bg-[#14212a] lg:block" />
       <main className="space-y-4">
-        <div className="h-12 w-80 rounded-xl bg-[#e1e8df]" />
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">{[1, 2, 3].map((item) => <div key={item} className="h-36 rounded-2xl bg-white" />)}</div>
-        <div className="h-72 rounded-2xl bg-white" />
+        <div className="h-14 w-80 rounded-xl bg-[#e0e6e3]" />
+        <div className="h-14 rounded-xl bg-white" />
+        <div className="h-96 rounded-2xl bg-white" />
       </main>
     </div>
   )
@@ -178,8 +223,8 @@ export default function PublicTracker() {
   if (loading) return <LoadingState />
 
   return (
-    <div className="min-h-screen bg-[#f4f6f1] text-[#173126] md:grid md:grid-cols-[clamp(17rem,22vw,19rem)_minmax(0,1fr)]">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden h-dvh min-h-0 w-[clamp(17rem,22vw,19rem)] overflow-hidden bg-[#14271f] px-5 pb-4 pt-5 text-white md:flex md:flex-col">
+    <div className={`${headingFont.variable} ${dataFont.variable} tracker-page min-h-screen bg-[#f1f3f0] text-[#19272d] selection:bg-[#cde9df] selection:text-[#10282c] lg:grid lg:grid-cols-[clamp(17rem,20vw,20rem)_minmax(0,1fr)]`}>
+      <aside className="tracker-sidebar fixed inset-y-0 left-0 z-30 hidden h-dvh min-h-0 w-[clamp(17rem,20vw,20rem)] overflow-hidden bg-[#14212a] px-5 pb-5 pt-6 text-white lg:flex lg:flex-col">
         <div className="shrink-0 border-b border-white/10 pb-5">
           <Brand name={brand} logoUrl={logoUrl} />
         </div>
@@ -210,15 +255,14 @@ export default function PublicTracker() {
         </div>
       </aside>
 
-      <main className="min-w-0 p-[clamp(1rem,3vw,2rem)] md:col-start-2">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <main className="mx-auto min-w-0 w-full max-w-[1720px] px-[clamp(1rem,3vw,2.5rem)] pb-6 pt-[clamp(1rem,2.5vw,2rem)] lg:col-start-2">
+        <header className="tracker-header mb-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
-            <button className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-[#d9e3d9] bg-white md:hidden" aria-label={menuOpen ? 'Close strategies' : 'Open strategies'} aria-expanded={menuOpen} aria-controls="mobile-strategy-menu" onClick={() => setMenuOpen(!menuOpen)}>
+            <button className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-[#d2dcda] bg-white text-[#203238] lg:hidden" aria-label={menuOpen ? 'Close strategies' : 'Open strategies'} aria-expanded={menuOpen} aria-controls="mobile-strategy-menu" onClick={() => setMenuOpen(!menuOpen)}>
               {menuOpen ? <X size={19} /> : <Menu size={19} />}
             </button>
-            <div className="md:hidden"><Brand name={brand} logoUrl={logoUrl} /></div>
-            <div className="hidden md:block">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#75827a]">Public performance report</p>
+            <div className="lg:hidden"><Brand name={brand} logoUrl={logoUrl} /></div>
+            <div className="hidden lg:block">
               <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{brand}</h1>
               <p className="mt-1 text-sm text-[#75827a]">{dateRange(history)}</p>
             </div>
@@ -229,8 +273,8 @@ export default function PublicTracker() {
                 <button type="button" aria-label={`Select date range: ${rangeLabel}. Report date: ${reportDateLabel}`} className="flex items-center gap-3 rounded-xl border border-[#3c4f76] bg-[#203258] px-3 py-2 text-left shadow-sm transition hover:bg-[#1b2d50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#63a17e] focus-visible:ring-offset-2">
                   <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[#9de0b6]"><CalendarDays size={16} /></span>
                   <span className="min-w-0">
-                    <span className="block whitespace-nowrap font-mono text-sm font-bold tracking-[0.04em] text-[#9de0b6]">{reportDateLabel}</span>
-                    <span className="block max-w-[50vw] truncate text-[10px] font-medium text-[#d4dff3]">{rangeLabel}</span>
+                    <span className="block whitespace-nowrap font-mono text-sm font-bold tracking-[0.04em] text-[#24383d]">{reportDateLabel}</span>
+                    <span className="block max-w-[50vw] truncate text-[10px] font-medium text-[#617176]">{rangeLabel}</span>
                   </span>
                 </button>
               </PopoverTrigger>
@@ -260,7 +304,7 @@ export default function PublicTracker() {
           </div>
         </header>
 
-        <div id="mobile-strategy-menu" className={`${menuOpen ? 'grid' : 'hidden'} mb-4 gap-2 rounded-2xl border border-[#d9e3d9] bg-white p-3 md:hidden`}>
+        <div id="mobile-strategy-menu" className={`${menuOpen ? 'grid' : 'hidden'} mb-4 gap-2 rounded-2xl border border-[#d2dcda] bg-white p-3 shadow-[0_12px_30px_rgba(20,33,42,0.09)] lg:hidden`}>
           <button onClick={() => { setSelectedStrategy('all'); setMenuOpen(false) }} className={`min-h-11 rounded-lg px-3 py-2 text-left text-sm font-bold ${selectedStrategy === 'all' ? 'bg-[#edf4ed]' : 'hover:bg-[#f4f6f1]'}`}>All strategies</button>
           {strategies.map((strategy) => <button key={strategy.id} onClick={() => { setSelectedStrategy(strategy.id); setMenuOpen(false) }} className={`min-h-11 rounded-lg px-3 py-2 text-left text-sm ${selectedStrategy === strategy.id ? 'bg-[#edf4ed] font-bold' : 'hover:bg-[#f4f6f1]'}`}>{strategy.name}</button>)}
         </div>
@@ -308,9 +352,9 @@ export default function PublicTracker() {
               })}
             </section>}
 
-            <section className={`${panel} mb-4`}>
+            <section className={`${panel} tracker-breakdown mb-5`}>
               <div className="flex flex-wrap items-end justify-between gap-3">
-                <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#75827a]">Daily breakdown</p><h2 className="mt-1 text-lg font-black">Trading date P&amp;L summary <span className="font-medium text-[#75827a]">· {currentDate || '—'}</span></h2></div>
+                <div><h2 className="font-[var(--tracker-heading)] text-[1.45rem] font-bold tracking-[-0.02em] text-[#182c32]">Daily breakdown <span className="font-medium text-[#75827a]">· {currentDate || '—'}</span></h2></div>
                 <div className="flex flex-wrap items-center justify-end gap-3">
                   <p className="text-xs text-[#75827a]">Monthly figures include the selected month</p>
                   <button type="button" aria-label={`Weekday filter: ${weekdayFilterSummary}. ${weekdayFilterOpen ? 'Hide' : 'Show'} options`} aria-expanded={weekdayFilterOpen} aria-controls="weekday-filter-options" onClick={() => setWeekdayFilterOpen((open) => !open)} className={`inline-flex min-h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b6f9e] focus-visible:ring-offset-2 ${selectedWeekdays.length ? 'border-[#8fc4e5] bg-[#eff7fd] text-[#176b9b]' : 'border-[#d9e3d9] bg-white text-[#52635a] hover:bg-[#f7f9f6]'}`}>
@@ -336,31 +380,57 @@ export default function PublicTracker() {
                   </div>
                 </div>
               </div>
-              <div className="mt-4 overflow-x-auto overscroll-x-contain">
+              <div className="tracker-breakdown-table mt-4 hidden overflow-x-auto overscroll-x-contain xl:block">
                 <table className="w-full min-w-max table-fixed text-left text-sm">
                   <colgroup><col className="w-[40%]" /><col className="w-[15%]" /><col className="w-[15%]" /><col className="w-[15%]" /><col className="w-[15%]" /></colgroup>
-                  <thead className="text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="px-3 pb-3 font-semibold">Strategy / days</th><th className="px-3 pb-3 font-semibold">Capital</th><th className="px-3 pb-3 font-semibold">Lot</th><th className="px-3 pb-3 font-semibold" title="Strategies sorted by daily profit, highest first">Daily P&amp;L ↓</th><th className="px-3 pb-3 font-semibold">Monthly P&amp;L</th></tr></thead>
+                  <thead className="text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="px-3 pb-3 font-semibold">Strategy / days</th><th className="px-3 pb-3 text-right font-semibold">Capital</th><th className="px-3 pb-3 text-center font-semibold">Lot</th><th className="px-3 pb-3 text-right font-semibold" title="Strategies sorted by daily profit, highest first">Daily P&amp;L ↓</th><th className="px-3 pb-3 text-right font-semibold">Monthly P&amp;L</th></tr></thead>
                   <tbody>{sortedBreakdownStrategies.length ? sortedBreakdownStrategies.map((strategy) => {
                     const day = allReportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0)
                     const month = allReportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0)
                     const scheduledDays = trackerWeekdays.filter((weekday) => (strategy.weekdays ?? []).includes(weekday.value))
                     return <tr key={strategy.id} className="border-t border-[#edf1eb]"><td className="px-3 py-3"><p className="font-semibold">{strategy.name}</p>{scheduledDays.length ? <div className="mt-1.5 flex flex-wrap gap-1" aria-label={`Trading days for ${strategy.name}`}>
                       {scheduledDays.map((weekday) => <abbr key={weekday.value} title={weekday.value === reportWeekday ? `${weekday.name} · report date` : weekday.name} className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[10px] font-bold no-underline ${weekday.value === reportWeekday ? 'bg-[#1c7c55] text-white' : 'bg-[#e9f5ed] text-[#176b49]'}`}>{weekday.short}</abbr>)}
-                    </div> : <p className="mt-1 text-[11px] font-normal text-[#75827a]">Schedule not set</p>}</td><td className="px-3 py-4 tabular-nums">{formatMoney(strategy.capital * (lotMultipliers[strategy.id] ?? 1))}</td><td className="px-3 py-3"><select aria-label={`${strategy.name} lot size in daily breakdown`} value={String(lotMultipliers[strategy.id] ?? 1)} onChange={(event) => setLotMultipliers((current) => ({ ...current, [strategy.id]: Number(event.target.value) }))} className="min-h-11 rounded-lg border border-[#d9e3d9] bg-white px-3 text-sm font-semibold text-[#173126]">{lotOptions.map((option) => <option key={option} value={option}>{option}x</option>)}</select></td><td className={`px-3 py-4 font-bold tabular-nums ${positive(day)}`}>{formatMoney(day)}</td><td className={`px-3 py-4 font-semibold tabular-nums ${positive(month)}`}>{formatMoney(month)}</td></tr>
+                    </div> : <p className="mt-1 text-[11px] font-normal text-[#75827a]">Schedule not set</p>}</td><td className="px-3 py-4 text-right tabular-nums">{formatMoney(strategy.capital * (lotMultipliers[strategy.id] ?? 1))}</td><td className="px-3 py-3 text-center"><select aria-label={`${strategy.name} lot size in daily breakdown`} value={String(lotMultipliers[strategy.id] ?? 1)} onChange={(event) => setLotMultipliers((current) => ({ ...current, [strategy.id]: Number(event.target.value) }))} className="min-h-11 rounded-lg border border-[#d9e3d9] bg-white px-3 text-sm font-semibold text-[#173126]">{lotOptions.map((option) => <option key={option} value={option}>{option}x</option>)}</select></td><td className={`px-3 py-4 text-right font-bold tabular-nums ${positive(day)}`}>{formatMoney(day)}</td><td className={`px-3 py-4 text-right font-semibold tabular-nums ${positive(month)}`}>{formatMoney(month)}</td></tr>
                   }) : <tr><td colSpan={5} className="border-t border-[#edf1eb] px-3 py-8 text-center text-sm text-[#75827a]">No strategies scheduled for the selected day{selectedWeekdays.length > 1 ? 's' : ''}.</td></tr>}</tbody>
-                  <tfoot><tr className="border-t-2 border-[#dfe8dd]"><td className="px-3 pt-4 font-black">Total</td><td className="px-3 pt-4 font-bold tabular-nums">{formatMoney(breakdownCapital)}</td><td className="px-3 pt-4" aria-hidden="true"></td><td className={`px-3 pt-4 font-black tabular-nums ${positive(breakdownDailyPnl)}`}>{formatMoney(breakdownDailyPnl)}</td><td className={`px-3 pt-4 font-black tabular-nums ${positive(breakdownMonthlyPnl)}`}>{formatMoney(breakdownMonthlyPnl)}</td></tr></tfoot>
+                  <tfoot><tr className="border-t-2 border-[#dfe8dd]"><td className="px-3 pt-4 font-black">Total</td><td className="px-3 pt-4 text-right font-bold tabular-nums">{formatMoney(breakdownCapital)}</td><td className="px-3 pt-4" aria-hidden="true"></td><td className={`px-3 pt-4 text-right font-bold tabular-nums ${positive(breakdownDailyPnl)}`}>{formatMoney(breakdownDailyPnl)}</td><td className={`px-3 pt-4 text-right font-bold tabular-nums ${positive(breakdownMonthlyPnl)}`}>{formatMoney(breakdownMonthlyPnl)}</td></tr></tfoot>
                 </table>
+              </div>
+              <div className="mt-4 grid gap-3 xl:hidden">
+                {sortedBreakdownStrategies.length ? sortedBreakdownStrategies.map((strategy) => {
+                  const day = allReportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0)
+                  const month = allReportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0)
+                  const scheduledDays = trackerWeekdays.filter((weekday) => (strategy.weekdays ?? []).includes(weekday.value))
+                  return <article key={strategy.id} className="tracker-breakdown-row rounded-2xl border border-[#e1e8e5] bg-[#fbfcfb] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0"><h3 className="font-semibold leading-snug">{strategy.name}</h3>{scheduledDays.length ? <div className="mt-2 flex flex-wrap gap-1" aria-label={`Trading days for ${strategy.name}`}>
+                        {scheduledDays.map((weekday) => <abbr key={weekday.value} title={weekday.value === reportWeekday ? `${weekday.name} (report date)` : weekday.name} className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold no-underline ${weekday.value === reportWeekday ? 'bg-[#137b80] text-white' : 'bg-[#e9f2ef] text-[#386c68]'}`}>{weekday.short}</abbr>)}
+                      </div> : <p className="mt-1 text-[11px] text-[#6f7d81]">Schedule not set</p>}</div>
+                      <label className="grid shrink-0 gap-1 text-[10px] font-medium text-[#68797d]">Lot<select aria-label={`${strategy.name} lot size in daily breakdown`} value={String(lotMultipliers[strategy.id] ?? 1)} onChange={(event) => setLotMultipliers((current) => ({ ...current, [strategy.id]: Number(event.target.value) }))} className="min-h-9 rounded-lg border border-[#ccd7d5] bg-white px-2.5 text-xs font-semibold text-[#19272d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#137b80]">{lotOptions.map((option) => <option key={option} value={option}>{option}x</option>)}</select></label>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 border-t border-[#e5ebe8] pt-3">
+                      <Metric label="Capital" value={formatMoney(strategy.capital * (lotMultipliers[strategy.id] ?? 1))} />
+                      <Metric label="Daily P&L" value={formatMoney(day)} valueClass={positive(day)} />
+                      <Metric label="Monthly P&L" value={formatMoney(month)} valueClass={positive(month)} />
+                    </div>
+                  </article>
+                }) : <div className="rounded-xl border border-dashed border-[#d2dcda] px-4 py-9 text-center text-sm text-[#617176]">No strategies scheduled for the selected day{selectedWeekdays.length > 1 ? 's' : ''}.</div>}
+                <div className="grid grid-cols-2 gap-x-3 gap-y-3 rounded-xl bg-[#eef3f0] px-4 py-3">
+                  <Metric label="Total capital" value={formatMoney(breakdownCapital)} />
+                  <Metric label="Daily total" value={formatMoney(breakdownDailyPnl)} valueClass={positive(breakdownDailyPnl)} />
+                  <Metric label="Monthly total" value={formatMoney(breakdownMonthlyPnl)} valueClass={positive(breakdownMonthlyPnl)} />
+                </div>
               </div>
             </section>
 
-            <section className={`${panel} mb-4`}><ChartTitle title="Cumulative P&L" detail="Combined realized daily results" /><Chart points={daily} /></section>
+            <section className={`${panel} mb-5`}><ChartTitle title="Cumulative P&L" detail="Combined realized daily results" /><Chart points={daily} /></section>
 
-            <section className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(min(100%,28rem),1fr))] gap-4">
+            <section className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(min(100%,27rem),1fr))] gap-4">
               <article className={panel}><ChartTitle title="Last 30 trading days" detail="Daily P&L" /><Chart points={daily.slice(-30)} /></article>
               <article className={panel}><ChartTitle title="Drawdown" detail="Distance from the cumulative peak" /><Chart points={history.slice().reverse()} drawdown /></article>
+              <article className={panel}><ChartTitle title="Average P&L by weekday" detail="Compare the average recorded daily result" /><WeekdayChart points={daily} /></article>
             </section>
 
-            <section className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(min(100%,28rem),1fr))] gap-4">
+            <section className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(min(100%,27rem),1fr))] gap-4">
               <article className={panel}>
                 <ChartTitle title="Daily P&L history" detail="Results by trading date" />
                 <div className="mt-4 max-h-[390px] overflow-auto overscroll-x-contain">
@@ -369,7 +439,7 @@ export default function PublicTracker() {
               </article>
               <article className={panel}>
                 <ChartTitle title="Performance statistics" detail="Across the selected strategies and date range" />
-                <div className="mt-3 divide-y divide-[#edf1eb]">
+                <div className="tracker-stats mt-3 grid grid-cols-1 divide-y divide-[#e8edeb] sm:grid-cols-2 sm:divide-y-0 sm:gap-x-7">
                   <Stat label="Trading days" value={String(daily.length)} />
                   <Stat label="Winning days" value={String(winningDays.length)} icon={<TrendingUp size={15} className="text-[#18805a]" />} />
                   <Stat label="Win %" value={formatPercent(winPercent)} />
@@ -416,15 +486,15 @@ function Brand({ name, logoUrl }: { name: string; logoUrl?: string }) {
 }
 
 function Metric({ label, value, valueClass = '' }: { label: string; value: string; valueClass?: string }) {
-  return <div><p className="text-[11px] text-[#75827a]">{label}</p><p className={`mt-1 font-bold tabular-nums ${valueClass}`}>{value}</p></div>
+  return <div><p className="text-[11px] font-medium text-[#68797d]">{label}</p><p className={`mt-1 font-semibold tabular-nums ${valueClass}`}>{value}</p></div>
 }
 
 function ChartTitle({ title, detail }: { title: string; detail: string }) {
-  return <div className="flex flex-wrap items-end justify-between gap-2"><div><h2 className="font-black">{title}</h2><p className="mt-1 text-xs text-[#75827a]">{detail}</p></div></div>
+  return <div className="flex flex-wrap items-end justify-between gap-2"><div><h2 className="font-[var(--tracker-heading)] text-lg font-bold tracking-[-0.02em] text-[#1d3238]">{title}</h2><p className="mt-1 text-xs text-[#617176]">{detail}</p></div></div>
 }
 
 function Stat({ label, value, valueClass = '', icon }: { label: string; value: string; valueClass?: string; icon?: ReactNode }) {
-  return <div className="flex items-center justify-between gap-3 py-3 text-sm"><span className="inline-flex items-center gap-2 text-[#52645a]">{icon}{label}</span><b className={`tabular-nums ${valueClass}`}>{value}</b></div>
+  return <div className="flex items-center justify-between gap-3 border-b border-[#e8edeb] py-3 text-sm"><span className="inline-flex items-center gap-2 text-[#506469]">{icon}{label}</span><b className={`tabular-nums ${valueClass}`}>{value}</b></div>
 }
 
 function Rollup({ title, rows, capital }: { title: string; rows: [string, number][]; capital: number }) {
