@@ -389,10 +389,10 @@ export default function PublicTracker() {
             </section>
             {data?.settings.contactUrl && <section className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#cce7d5] bg-[#e9f5ed] px-4 py-3">
               <div>
-                <p className="text-sm font-bold">Interested in portfolio management?</p>
+                <p className="text-sm font-bold">Customize your portfolio</p>
                 <p className="mt-0.5 text-xs text-[#52645a]">Contact our team to discuss your needs.</p>
               </div>
-              <a className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-[#1c7c55] px-3 py-2 text-sm font-bold text-white transition hover:bg-[#176b49]" href={data.settings.contactUrl} target="_blank" rel="noreferrer">Customize portfolio <ArrowUpRight size={14} aria-hidden="true" /></a>
+              <a className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-[#1c7c55] px-3 py-2 text-sm font-bold text-white transition hover:bg-[#176b49]" href={data.settings.contactUrl} target="_blank" rel="noreferrer">Contact <ArrowUpRight size={14} aria-hidden="true" /></a>
             </section>}
           </>
         )}
