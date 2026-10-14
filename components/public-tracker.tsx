@@ -225,7 +225,7 @@ export default function PublicTracker() {
           <div className="space-y-1">
             {strategies.map((strategy) => {
               const selected = selectedStrategy === strategy.id
-              return <button key={strategy.id} aria-pressed={selected} onClick={() => setSelectedStrategy(strategy.id)} className={`group flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] leading-[1.3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9de0b6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#14271f] ${selected ? 'bg-[#244b37] font-semibold text-white shadow-[inset_0_0_0_1px_rgba(157,224,182,0.16)]' : 'text-[#c0cec4] hover:bg-white/[0.06] hover:text-white'}`}>
+              return <button key={strategy.id} aria-pressed={selected} onClick={() => setSelectedStrategy(selected ? 'all' : strategy.id)} className={`group flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] leading-[1.3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9de0b6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#14271f] ${selected ? 'bg-[#244b37] font-semibold text-white shadow-[inset_0_0_0_1px_rgba(157,224,182,0.16)]' : 'text-[#c0cec4] hover:bg-white/[0.06] hover:text-white'}`}>
                 <span aria-hidden="true" className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full transition-colors ${selected ? 'bg-[#9de0b6]' : 'bg-[#537060] group-hover:bg-[#9de0b6]'}`} />
                 <span className="min-w-0 flex-1 break-words">{strategy.name}</span>
               </button>
@@ -292,7 +292,7 @@ export default function PublicTracker() {
 
         <div id="mobile-strategy-menu" className={`${menuOpen ? 'grid' : 'hidden'} mb-4 gap-2 rounded-2xl border border-[#d2dcda] bg-white p-3 shadow-[0_12px_30px_rgba(20,33,42,0.09)] lg:hidden`}>
           <button onClick={() => { setSelectedStrategy('all'); setMenuOpen(false) }} className={`min-h-11 rounded-lg px-3 py-2 text-left text-sm font-bold ${selectedStrategy === 'all' ? 'bg-[#edf4ed]' : 'hover:bg-[#f4f6f1]'}`}>All strategies</button>
-          {strategies.map((strategy) => <button key={strategy.id} onClick={() => { setSelectedStrategy(strategy.id); setMenuOpen(false) }} className={`min-h-11 rounded-lg px-3 py-2 text-left text-sm ${selectedStrategy === strategy.id ? 'bg-[#edf4ed] font-bold' : 'hover:bg-[#f4f6f1]'}`}>{strategy.name}</button>)}
+          {strategies.map((strategy) => <button key={strategy.id} aria-pressed={selectedStrategy === strategy.id} onClick={() => { setSelectedStrategy(selectedStrategy === strategy.id ? 'all' : strategy.id); setMenuOpen(false) }} className={`min-h-11 rounded-lg px-3 py-2 text-left text-sm ${selectedStrategy === strategy.id ? 'bg-[#edf4ed] font-bold' : 'hover:bg-[#f4f6f1]'}`}>{strategy.name}</button>)}
         </div>
 
         {error && <div role="alert" className="mb-5 rounded-xl border border-[#efc0b8] bg-[#fff2ef] p-4 text-sm text-[#a33c31]">Tracker data could not be loaded: {error}</div>}
@@ -305,6 +305,16 @@ export default function PublicTracker() {
           </section>
         ) : (
           <>
+            {typeof selectedStrategy === 'number' && selectedStrategies[0] && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dce3e1] bg-white px-5 py-4">
+              <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#75827a]">Strategy view</p><h2 className="mt-1 text-lg font-bold">{selectedStrategies[0].name}</h2></div>
+              <div className="flex flex-wrap items-center gap-2">
+                {selectedWeekdays.length > 0 && <div className="flex min-h-11 items-center gap-2 rounded-xl border border-[#8fc4e5] bg-[#eff7fd] px-3 text-xs font-semibold text-[#176b9b]">
+                  <span>Weekday filter: {trackerWeekdays.filter(({ value }) => selectedWeekdays.includes(value)).map(({ name }) => name).join(', ')}</span>
+                  <button type="button" aria-label="Clear weekday filter" onClick={() => setSelectedWeekdays([])} className="rounded px-1 py-2 underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b6f9e]">Clear</button>
+                </div>}
+                <button type="button" onClick={() => setSelectedStrategy('all')} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#244b37] px-4 text-sm font-semibold text-white hover:bg-[#1c3f2d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1c7c55] focus-visible:ring-offset-2"><Layers3 size={16} />Back to overview</button>
+              </div>
+            </div>}
             {cardStrategies.length > 0 && <section className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-3">
               {cardStrategies.map((strategy) => {
                 const rows = reportEntries.filter((entry) => entry.strategyId === strategy.id)
@@ -338,7 +348,7 @@ export default function PublicTracker() {
               })}
             </section>}
 
-            <section className={`${panel} tracker-breakdown mb-5`}>
+            {typeof selectedStrategy !== 'number' && <section className={`${panel} tracker-breakdown mb-5`}>
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div><h2 className="font-[var(--tracker-heading)] text-[1.45rem] font-bold tracking-[-0.02em] text-[#182c32]">Daily breakdown <span className="font-medium text-[#75827a]">· {currentDate || '—'}</span></h2></div>
                 <div className="flex flex-wrap items-center justify-end gap-3">
@@ -406,7 +416,7 @@ export default function PublicTracker() {
                   <Metric label="Monthly total" value={formatMoney(breakdownMonthlyPnl)} valueClass={positive(breakdownMonthlyPnl)} />
                 </div>
               </div>
-            </section>
+            </section>}
 
             <section className={`${panel} mb-5`}><ChartTitle title="Cumulative P&L" detail="Combined realized daily results" /><Chart points={daily} /></section>
 
