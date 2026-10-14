@@ -34,9 +34,10 @@ import {
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { formatMoney, formatPercent, trackerApi, trackerWeekdays, type TrackerData, type TrackerEntry } from '@/lib/public-tracker'
+import { getWeeklyPnl } from '@/lib/weekly-pnl'
 
 type Point = { date: string; pnl: number; drawdown?: number }
-const lotOptions = [1, 2, 3, 5, 10]
+const lotOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 const weekdayPreset = trackerWeekdays.slice(0, 5).map(({ value }) => value)
 
 const headingFont = Archivo({ subsets: ['latin'], weight: ['500', '600', '700', '800'], variable: '--tracker-heading' })
@@ -74,38 +75,21 @@ function Chart({ points, drawdown = false }: { points: Point[]; drawdown?: boole
   )
 }
 
-function WeekdayChart({ points }: { points: Point[] }) {
-  const data = useMemo(() => {
-    const totals = new Map<number, { pnl: number; days: number }>()
-    points.forEach(({ date, pnl }) => {
-      const weekday = new Date(`${date}T00:00:00Z`).getUTCDay()
-      const result = totals.get(weekday) ?? { pnl: 0, days: 0 }
-      result.pnl += pnl
-      result.days += 1
-      totals.set(weekday, result)
-    })
-    return weekdayPreset.map((weekday) => {
-      const result = totals.get(weekday)
-      return {
-        day: trackerWeekdays.find((item) => item.value === weekday)!.name.slice(0, 3),
-        average: result ? result.pnl / result.days : null,
-        days: result?.days ?? 0,
-      }
-    })
-  }, [points])
+function WeeklyChart({ points, weekdays, today }: { points: Point[]; weekdays: number[]; today: string }) {
+  const data = useMemo(() => getWeeklyPnl(points, weekdays, today), [points, weekdays, today])
 
-  if (data.every((item) => item.average === null)) return <div className="flex h-64 items-center justify-center text-sm text-[#75827a]">No weekday results in this range.</div>
+  if (data.every((item) => item.pnl === null)) return <div className="flex h-64 items-center justify-center text-sm text-[#75827a]">No results in the last four weeks.</div>
 
-  return <div className="h-64 w-full" role="img" aria-label="Average daily profit and loss by weekday">
+  return <div className="h-64 w-full" role="img" aria-label="Total profit and loss for this week and the previous three weeks">
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 16, right: 20, bottom: 8, left: 16 }}>
         <CartesianGrid stroke="#e7ece9" vertical={false} />
-        <XAxis dataKey="day" tick={{ fill: '#6f7d81', fontSize: 11 }} axisLine={false} tickLine={false} />
+        <XAxis dataKey="week" tick={{ fill: '#6f7d81', fontSize: 11 }} axisLine={false} tickLine={false} />
         <YAxis tickFormatter={(value: number) => formatMoney(value)} width={82} tick={{ fill: '#6f7d81', fontSize: 11 }} axisLine={false} tickLine={false} />
-        <Tooltip formatter={(value, _name, item) => [formatMoney(Number(value)), `Average P&L (${item.payload.days} sessions)`]} labelFormatter={(day) => `Average on ${day}`} contentStyle={{ border: '1px solid #dce3e1', borderRadius: 12, boxShadow: '0 8px 24px rgba(21, 38, 43, .12)' }} />
+        <Tooltip formatter={(value) => formatMoney(Number(value))} labelFormatter={(_, payload) => payload[0]?.payload?.range ?? ''} contentStyle={{ border: '1px solid #dce3e1', borderRadius: 12, boxShadow: '0 8px 24px rgba(21, 38, 43, .12)' }} />
         <ReferenceLine y={0} stroke="#8b9697" />
-        <Bar dataKey="average" name="Average P&L" radius={[4, 4, 0, 0]} isAnimationActive>
-          {data.map((item) => <Cell key={item.day} fill={(item.average ?? 0) < 0 ? '#b64b48' : '#137b80'} />)}
+        <Bar dataKey="pnl" name="Weekly P&L" radius={[4, 4, 0, 0]} isAnimationActive>
+          {data.map((item) => <Cell key={item.week} fill={(item.pnl ?? 0) < 0 ? '#b64b48' : '#137b80'} />)}
         </Bar>
       </BarChart>
     </ResponsiveContainer>
@@ -179,6 +163,8 @@ export default function PublicTracker() {
     reportEntries.forEach((entry) => totals.set(entry.tradeDate, (totals.get(entry.tradeDate) ?? 0) + entry.pnl))
     return [...totals].map(([date, pnl]) => ({ date, pnl })).sort((a, b) => a.date.localeCompare(b.date))
   }, [reportEntries])
+  const weeklyPoints = useMemo(() => allEntries.filter((entry) => selectedIds.has(entry.strategyId))
+    .map((entry) => ({ date: entry.tradeDate, pnl: entry.pnl })), [allEntries, selectedIds])
   const history = useMemo(() => {
     let balance = 0
     let peak = 0
@@ -427,7 +413,7 @@ export default function PublicTracker() {
             <section className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(min(100%,27rem),1fr))] gap-4">
               <article className={panel}><ChartTitle title="Last 30 trading days" detail="Daily P&L" /><Chart points={daily.slice(-30)} /></article>
               <article className={panel}><ChartTitle title="Drawdown" detail="Distance from the cumulative peak" /><Chart points={history.slice().reverse()} drawdown /></article>
-              <article className={panel}><ChartTitle title="Average P&L by weekday" detail="Compare the average recorded daily result" /><WeekdayChart points={daily} /></article>
+              <article className={panel}><ChartTitle title="P&L by week" detail="This week and previous three · weekday filter applies" /><WeeklyChart points={weeklyPoints} weekdays={selectedWeekdays} today={formatDate(new Date(), 'yyyy-MM-dd')} /></article>
             </section>
 
             <section className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(min(100%,27rem),1fr))] gap-4">
