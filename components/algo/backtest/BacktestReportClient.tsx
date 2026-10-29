@@ -137,12 +137,6 @@ export default function BacktestReportClient() {
             <p className="text-slate-100 font-medium">Risk Management Framework</p>
             <p className="mt-2 leading-relaxed">Backtests use historical data and do not guarantee future results. Live trading can result in losses, including losses beyond a planned limit.</p>
           </div>
-          <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4 md:p-6 md:col-span-2">
-            <p className="text-slate-100 font-medium">Capital Requirement</p>
-            <p className="mt-3 leading-relaxed">• Minimum Capital to Start: ₹2,00,000 (with complete hedge coverage)</p>
-            <p className="mt-2 leading-relaxed">• Ideal Capital for Full Portfolio: ₹6,00,000 (with complete hedge coverage)</p>
-            <p className="mt-4 leading-relaxed">You can start with lower capital by deploying selected strategies and gradually scale to the full portfolio for improved risk distribution and smoother performance.</p>
-          </div>
         </div>
       </section>
     </div>
