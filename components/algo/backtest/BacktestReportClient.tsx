@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { reportsBase, reportPrice, rupees, type ReportSettings } from '@/lib/backtest-reports';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, ExternalLink, FileText } from 'lucide-react';
+import { ExternalLink, FileText } from 'lucide-react';
 
 const backtestPdfs = [
   {
@@ -88,12 +88,6 @@ export default function BacktestReportClient() {
                     <Button variant="outline" className="w-full border-slate-600 bg-slate-800/60 text-slate-100 hover:bg-slate-700">
                       <ExternalLink className="mr-2 h-4 w-4" />
                       View Report
-                    </Button>
-                  </a>
-                  <a href={report?.hasPdf ? `${href}?download=1` : href} download className="block">
-                    <Button className="w-full bg-cyan-500 text-slate-950 hover:bg-cyan-400">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Report
                     </Button>
                   </a>
                   <a href={whatsapp(index)} target="_blank" rel="noopener noreferrer" className="block rounded-md px-2 py-2 text-center text-sm font-medium text-cyan-300 underline underline-offset-4">Ask about this package</a>
