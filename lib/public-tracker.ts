@@ -48,11 +48,15 @@ export const trackerApiBase = (
   process.env.NEXT_PUBLIC_BACKEND_URL || fallbackBackend
 ).replace(/\/+$/, '')
 
+let adminKey = ''
+export function setTrackerAdminKey(key: string) { adminKey = key }
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${trackerApiBase}/public-tracker${path}`, {
     ...init,
     headers: {
       ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init?.method ? { Authorization: `Bearer ${adminKey}` } : {}),
       ...init?.headers,
     },
     cache: 'no-store',

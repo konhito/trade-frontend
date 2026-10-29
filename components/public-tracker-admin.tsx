@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import Link from 'next/link'
 import BacktestAdmin from '@/components/backtest-admin'
 import { ArrowLeft, Check, Pencil, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react'
-import { formatMoney, trackerApi, trackerWeekdays, type TrackerData, type TrackerEntry, type TrackerSettings, type TrackerStrategy } from '@/lib/public-tracker'
+import { formatMoney, trackerApi, trackerWeekdays, setTrackerAdminKey, type TrackerData, type TrackerEntry, type TrackerSettings, type TrackerStrategy } from '@/lib/public-tracker'
 
 type StrategyForm = Omit<TrackerStrategy, 'id'>
 type EntryForm = Omit<TrackerEntry, 'id' | 'pnl'> & { pnl: string }
@@ -19,6 +19,7 @@ const field = 'w-full rounded-xl border border-[#d9e3d9] bg-white px-3 py-2.5 te
 const button = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[#1c7c55] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#176b49] disabled:cursor-wait disabled:opacity-50'
 
 export default function PublicTrackerAdmin() {
+  const [adminKey, setAdminKey] = useState('')
   const [data, setData] = useState<TrackerData | null>(null)
   const [strategy, setStrategy] = useState<StrategyForm>(blankStrategy)
   const [strategyId, setStrategyId] = useState<number | null>(null)
@@ -182,7 +183,9 @@ export default function PublicTrackerAdmin() {
 
         {message && <p role="status" className={`mt-4 rounded-xl border p-3 text-sm font-semibold ${failed ? 'border-[#efc0b8] bg-[#fff2ef] text-[#a33c31]' : 'border-[#cce5d3] bg-[#edf8ef] text-[#176b49]'}`}>{message}</p>}
 
-        <BacktestAdmin />
+        <label className="mt-5 grid max-w-md gap-1 text-sm font-semibold">Admin key<input type="password" autoComplete="off" value={adminKey} onChange={event => { setAdminKey(event.target.value); setTrackerAdminKey(event.target.value) }} className={field} /></label>
+        <p className="mt-1 text-xs text-[#52645a]">Enter the admin key to save or delete tracker and backtest data.</p>
+        <BacktestAdmin adminKey={adminKey} />
 
         <section className="mt-5 grid gap-4 lg:grid-cols-2">
           <form className={panel} onSubmit={submitStrategy}>

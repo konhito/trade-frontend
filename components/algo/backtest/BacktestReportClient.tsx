@@ -27,6 +27,13 @@ export default function BacktestReportClient() {
   const [selected, setSelected] = useState<number | null>(null);
   const [error, setError] = useState(false);
   useEffect(() => { fetch(reportsBase, { cache: 'no-store' }).then(async response => { if (!response.ok) throw new Error(); setReports(await response.json()); }).catch(() => setError(true)); }, []);
+  const whatsapp = (index: number, proof = false) => {
+    const report = reports.find(item => item.id === index + 1);
+    const message = proof
+      ? `Hello, I have paid for ${backtestPdfs[index].title}${report ? ` (${rupees(reportPrice(report))})` : ''}. I will attach my payment proof here.`
+      : `Hello, I have a question about ${backtestPdfs[index].title}. Please share what is included and how it is delivered.`;
+    return `https://wa.me/919977642137?text=${encodeURIComponent(message)}`;
+  };
   return (
     <div id="backtest-report-root" className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6 space-y-6">
       {/*
@@ -38,7 +45,8 @@ export default function BacktestReportClient() {
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 md:p-8">
         <div className="space-y-2">
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Backtest PDFs</h1>
-          <p className="text-sm md:text-base text-slate-300">Verified strategy reports for 0DTE index options.</p>
+          <p className="text-sm md:text-base text-slate-300">Explore the backtest reports and ask our team about the available strategy packages.</p>
+          <p className="text-sm text-slate-300">Reports are free to view. Contact our team for details of what is included in each paid package.</p>
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -88,6 +96,7 @@ export default function BacktestReportClient() {
                       Download Report
                     </Button>
                   </a>
+                  <a href={whatsapp(index)} target="_blank" rel="noopener noreferrer" className="block rounded-md px-2 py-2 text-center text-sm font-medium text-cyan-300 underline underline-offset-4">Ask about this package</a>
                 </CardContent>
               </Card>
             );
@@ -97,10 +106,11 @@ export default function BacktestReportClient() {
 
       <Dialog open={selected !== null} onOpenChange={open => { if (!open) setSelected(null); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto bg-slate-900 text-slate-100 border-slate-700">
-          <DialogHeader><DialogTitle>Purchase {selected !== null ? backtestPdfs[selected].title : ''}</DialogTitle><DialogDescription className="text-slate-300">Scan the QR code to pay {selected !== null && reports[selected] ? rupees(reportPrice(reports[selected])) : ''}.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Purchase {selected !== null ? backtestPdfs[selected].title : ''}</DialogTitle><DialogDescription className="text-slate-300">Amount to pay: {selected !== null && reports[selected] ? rupees(reportPrice(reports[selected])) : ''}.</DialogDescription></DialogHeader>
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-200"><li>Scan the QR code with your UPI app and check the recipient before paying.</li><li>Send your payment proof to our team on WhatsApp.</li><li>Our team will confirm your payment and proceed with the backtest strategies.</li></ol>
           <img src="/backtest/payment-qr.jpg" alt="Payment QR code for UPI ID anubhavsingh2901@axl" className="mx-auto w-full max-w-[300px] rounded-lg" />
-          <p className="text-sm leading-relaxed text-slate-200">After making payment, contact us on WhatsApp with your payment proof. Our team will then proceed with your backtest strategies.</p>
-          <a className="font-semibold text-cyan-300 underline" href="https://wa.me/919977642137" target="_blank" rel="noopener noreferrer">Contact +91 99776 42137 on WhatsApp</a>
+          <p className="text-sm leading-relaxed text-slate-200">Using the same phone? Save the QR image and open it in a UPI app that supports scanning from your gallery, or ask our team for payment help. Payment is confirmed by our team, not automatically.</p>
+          {selected !== null && <a className="font-semibold text-cyan-300 underline" href={whatsapp(selected, true)} target="_blank" rel="noopener noreferrer">Send payment proof to +91 99776 42137 on WhatsApp</a>}
         </DialogContent>
       </Dialog>
 
@@ -108,7 +118,7 @@ export default function BacktestReportClient() {
         <div className="space-y-3 md:space-y-4">
           <h3 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">Built for serious traders and investors</h3>
           <p className="text-slate-300 text-sm md:text-base">
-            Get verified live performance snapshots, full strategy logic, and a capital plan tailored to your risk profile.
+            Contact our team for live performance information, strategy details, and help choosing a package.
           </p>
         </div>
         <div className="mt-6 md:mt-8 flex flex-wrap gap-3">
@@ -131,7 +141,7 @@ export default function BacktestReportClient() {
           </div>
           <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4 md:p-5">
             <p className="text-slate-100 font-medium">Risk Management Framework</p>
-            <p className="mt-2 leading-relaxed">Maximum loss per day is capped at ~1% of deployed capital.</p>
+            <p className="mt-2 leading-relaxed">Backtests use historical data and do not guarantee future results. Live trading can result in losses, including losses beyond a planned limit.</p>
           </div>
           <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4 md:p-6 md:col-span-2">
             <p className="text-slate-100 font-medium">Capital Requirement</p>
