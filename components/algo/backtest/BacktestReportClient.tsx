@@ -1,25 +1,32 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { reportsBase, reportPrice, rupees, type ReportSettings } from '@/lib/backtest-reports';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, ExternalLink, FileText } from 'lucide-react';
 
 const backtestPdfs = [
   {
-    title: 'NIFTY 0DTE',
-    fileName: 'backtest_portfolio_NIFTY_INTRADAY_EXPIRY_STRATEGIES_0DTE_2026_05 (1) (1).pdf',
+    title: '₹5 LAKH | INTRADAY + STBT – STARTER',
+    fileName: 'starter-5-lakh-2026-10-28.pdf',
   },
   {
-    title: 'SENSEX 0DTE',
-    fileName: 'backtest_portfolio_SENSEX_INTRADAY_EXPIRY_STRATEGIES_0DTE_2026_05 (1).pdf',
+    title: '₹10 LAKH | INTRADAY + STBT – STANDARD',
+    fileName: 'standard-10-lakh-2026-10-28.pdf',
   },
   {
-    title: 'Combined NIFTY & SENSEX 0DTE',
-    fileName: 'backtest_portfolio_NIFTY_&_SENSEX_INTRADAY_EXPIRY_STRATEGIES_0DTE (1).pdf',
+    title: '₹15 LAKH | INTRADAY + STBT – ADVANCED',
+    fileName: 'advanced-15-lakh-2026-10-28.pdf',
   },
 ] as const;
 
 export default function BacktestReportClient() {
+  const [reports, setReports] = useState<ReportSettings[]>([]);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [error, setError] = useState(false);
+  useEffect(() => { fetch(reportsBase, { cache: 'no-store' }).then(async response => { if (!response.ok) throw new Error(); setReports(await response.json()); }).catch(() => setError(true)); }, []);
   return (
     <div id="backtest-report-root" className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6 space-y-6">
       {/*
@@ -50,8 +57,9 @@ export default function BacktestReportClient() {
         </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {backtestPdfs.map((pdf) => {
-            const href = `/backtest/${pdf.fileName}`;
+          {backtestPdfs.map((pdf, index) => {
+            const report = reports.find(item => item.id === index + 1);
+            const href = report?.hasPdf ? `${reportsBase}/${report.id}/pdf` : `/backtest/${pdf.fileName}`;
 
             return (
               <Card key={pdf.fileName} className="border-slate-700 bg-slate-900/70">
@@ -63,13 +71,18 @@ export default function BacktestReportClient() {
                   <CardDescription className="text-slate-400">PDF Report</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
+                  {report ? <div className="pb-2">
+                    <p className="text-xl font-semibold text-white">{rupees(reportPrice(report))}</p>
+                    {report.discount > 0 && <p className="text-sm text-slate-300"><span className="line-through">{rupees(report.price)}</span> · {report.discount}% off</p>}
+                  </div> : <p className="pb-2 text-sm text-slate-300">{error ? 'Price unavailable. Please try again later.' : 'Loading price…'}</p>}
+                  <Button disabled={!report} onClick={() => setSelected(index)} className="w-full bg-cyan-500 text-slate-950 hover:bg-cyan-400">Purchase</Button>
                   <a href={href} target="_blank" rel="noopener noreferrer" className="block">
                     <Button variant="outline" className="w-full border-slate-600 bg-slate-800/60 text-slate-100 hover:bg-slate-700">
                       <ExternalLink className="mr-2 h-4 w-4" />
                       View Report
                     </Button>
                   </a>
-                  <a href={href} download className="block">
+                  <a href={report?.hasPdf ? `${href}?download=1` : href} download className="block">
                     <Button className="w-full bg-cyan-500 text-slate-950 hover:bg-cyan-400">
                       <Download className="mr-2 h-4 w-4" />
                       Download Report
@@ -81,6 +94,15 @@ export default function BacktestReportClient() {
           })}
         </div>
       </section>
+
+      <Dialog open={selected !== null} onOpenChange={open => { if (!open) setSelected(null); }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto bg-slate-900 text-slate-100 border-slate-700">
+          <DialogHeader><DialogTitle>Purchase {selected !== null ? backtestPdfs[selected].title : ''}</DialogTitle><DialogDescription className="text-slate-300">Scan the QR code to pay {selected !== null && reports[selected] ? rupees(reportPrice(reports[selected])) : ''}.</DialogDescription></DialogHeader>
+          <img src="/backtest/payment-qr.jpg" alt="Payment QR code for UPI ID anubhavsingh2901@axl" className="mx-auto w-full max-w-[300px] rounded-lg" />
+          <p className="text-sm leading-relaxed text-slate-200">After making payment, contact us on WhatsApp with your payment proof. Our team will then proceed with your backtest strategies.</p>
+          <a className="font-semibold text-cyan-300 underline" href="https://wa.me/919977642137" target="_blank" rel="noopener noreferrer">Contact +91 99776 42137 on WhatsApp</a>
+        </DialogContent>
+      </Dialog>
 
       <section className="mt-6 md:mt-10 rounded-2xl border border-cyan-400/40 bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/50 p-6 md:p-10 shadow-[0_0_55px_-18px_rgba(34,211,238,0.5)]">
         <div className="space-y-3 md:space-y-4">

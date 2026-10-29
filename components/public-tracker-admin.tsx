@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react'
 import Link from 'next/link'
+import BacktestAdmin from '@/components/backtest-admin'
 import { ArrowLeft, Check, Pencil, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react'
 import { formatMoney, trackerApi, trackerWeekdays, type TrackerData, type TrackerEntry, type TrackerSettings, type TrackerStrategy } from '@/lib/public-tracker'
 
@@ -180,6 +181,8 @@ export default function PublicTrackerAdmin() {
         </header>
 
         {message && <p role="status" className={`mt-4 rounded-xl border p-3 text-sm font-semibold ${failed ? 'border-[#efc0b8] bg-[#fff2ef] text-[#a33c31]' : 'border-[#cce5d3] bg-[#edf8ef] text-[#176b49]'}`}>{message}</p>}
+
+        <BacktestAdmin />
 
         <section className="mt-5 grid gap-4 lg:grid-cols-2">
           <form className={panel} onSubmit={submitStrategy}>
