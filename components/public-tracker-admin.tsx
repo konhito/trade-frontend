@@ -23,9 +23,9 @@ export default function PublicTrackerAdmin() {
   const [data, setData] = useState<TrackerData | null>(null)
   const [strategy, setStrategy] = useState<StrategyForm>(blankStrategy)
   const [strategyId, setStrategyId] = useState<number | null>(null)
-  const [entry, setEntry] = useState<EntryForm>({ strategyId: 0, tradeDate: localDate(), pnl: '', note: '' })
+  const [entry, setEntry] = useState<EntryForm>({ strategyId: 0, tradeDate: weeklyReportDate(), pnl: '', note: '' })
   const [entryId, setEntryId] = useState<number | null>(null)
-  const [settings, setSettings] = useState<TrackerSettings>({ title: 'DECAY HUNTERS — P&L Tracker', contactUrl: '', logoUrl: '' })
+  const [settings, setSettings] = useState<TrackerSettings>({ title: 'DECAY HUNTERS PORTFOLIO — Weekly P&L Tracker', contactUrl: '', logoUrl: '' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -82,14 +82,14 @@ export default function PublicTrackerAdmin() {
       const payload = { ...entry, pnl: Number(entry.pnl) }
       if (entryId === null) await trackerApi.createEntry(payload)
       else await trackerApi.updateEntry(entryId, payload)
-      setEntry((current) => ({ ...current, pnl: '', note: '', tradeDate: localDate() }))
+      setEntry((current) => ({ ...current, pnl: '', note: '', tradeDate: weeklyReportDate() }))
       setEntryId(null)
       setFailed(false)
-      setMessage(entryId === null ? 'Daily result added.' : 'Daily result updated.')
+      setMessage(entryId === null ? 'Weekly result added.' : 'Weekly result updated.')
       await load(true)
     } catch (error) {
       setFailed(true)
-      setMessage(error instanceof Error ? error.message : 'Could not save daily result')
+      setMessage(error instanceof Error ? error.message : 'Could not save weekly result')
     } finally {
       setSaving(false)
     }
@@ -130,17 +130,17 @@ export default function PublicTrackerAdmin() {
   function editEntry(item: TrackerEntry) {
     setEntryId(item.id)
     setEntry({ strategyId: item.strategyId, tradeDate: item.tradeDate, pnl: String(item.pnl), note: item.note })
-    document.getElementById('daily-entry-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    document.getElementById('weekly-entry-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
   async function removeStrategy(item: TrackerStrategy) {
-    if (!window.confirm(`Delete ${item.name} and all of its daily entries?`)) return
+    if (!window.confirm(`Delete ${item.name} and all of its weekly entries?`)) return
     setSaving(true)
     try {
       await trackerApi.deleteStrategy(item.id)
       if (strategyId === item.id) { setStrategy(blankStrategy); setStrategyId(null) }
       setFailed(false)
-      setMessage('Strategy and its daily entries deleted.')
+      setMessage('Strategy and its weekly entries deleted.')
       await load(true)
     } catch (error) {
       setFailed(true)
@@ -157,11 +157,11 @@ export default function PublicTrackerAdmin() {
       await trackerApi.deleteEntry(item.id)
       if (entryId === item.id) setEntryId(null)
       setFailed(false)
-      setMessage('Daily result deleted.')
+      setMessage('Weekly result deleted.')
       await load(true)
     } catch (error) {
       setFailed(true)
-      setMessage(error instanceof Error ? error.message : 'Could not delete daily result')
+      setMessage(error instanceof Error ? error.message : 'Could not delete weekly result')
     } finally {
       setSaving(false)
     }
@@ -177,7 +177,7 @@ export default function PublicTrackerAdmin() {
       <div className="mx-auto max-w-6xl">
         <Link href="/tracker" className="inline-flex items-center gap-2 text-sm font-bold text-[#52645a] hover:text-[#1c7c55]"><ArrowLeft size={16} /> Back to tracker</Link>
         <header className="mt-5 flex flex-wrap items-end justify-between gap-4">
-          <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#1c7c55]">Public performance report</p><h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">Tracker manager</h1><p className="mt-2 text-sm text-[#75827a]">Update the public report, strategy details, and daily results.</p></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#1c7c55]">Public performance report</p><h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">Tracker manager</h1><p className="mt-2 text-sm text-[#75827a]">Update the public report, strategy details, and weekly results.</p></div>
           <button type="button" className={`${button} bg-white !text-[#245d43] ring-1 ring-[#d9e3d9] hover:bg-[#edf4ed]`} onClick={() => void load()} disabled={loading || saving}><RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh data</button>
         </header>
 
@@ -214,12 +214,12 @@ export default function PublicTrackerAdmin() {
             <button className={`${button} mt-4`} disabled={saving}>{strategyId === null ? <Plus size={16} /> : <Save size={16} />}{saving ? 'Saving…' : strategyId === null ? 'Add strategy' : 'Save changes'}</button>
           </form>
 
-          <form id="daily-entry-form" className={panel} onSubmit={submitEntry}>
-            <div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#75827a]">Daily results</p><h2 className="mt-1 text-xl font-black">{entryId === null ? 'Add daily P&L' : 'Edit daily P&L'}</h2></div>{entryId !== null && <button type="button" aria-label="Cancel daily result edit" onClick={() => { setEntryId(null); setEntry((current) => ({ ...current, pnl: '', note: '' })) }} className="rounded-lg p-2 text-[#75827a] hover:bg-[#f1f5ef]"><X size={18} /></button>}</div>
+          <form id="weekly-entry-form" className={panel} onSubmit={submitEntry}>
+            <div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#75827a]">Weekly results</p><h2 className="mt-1 text-xl font-black">{entryId === null ? 'Add weekly P&L' : 'Edit weekly P&L'}</h2></div>{entryId !== null && <button type="button" aria-label="Cancel weekly result edit" onClick={() => { setEntryId(null); setEntry((current) => ({ ...current, pnl: '', note: '' })) }} className="rounded-lg p-2 text-[#75827a] hover:bg-[#f1f5ef]"><X size={18} /></button>}</div>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1.5 text-xs font-semibold text-[#52645a] sm:col-span-2">Strategy<select required className={field} value={entry.strategyId || ''} onChange={(event) => setEntry({ ...entry, strategyId: Number(event.target.value) })} disabled={loading || !strategies.length}><option value="">{loading ? 'Loading…' : 'Choose a strategy'}</option>{strategies.map((item) => <option key={item.id} value={item.id}>{item.name}{item.active ? '' : ' (hidden)'}</option>)}</select></label>
-              <label className="grid gap-1.5 text-xs font-semibold text-[#52645a]">Trading date<input required type="date" className={field} value={entry.tradeDate} onChange={(event) => setEntry({ ...entry, tradeDate: event.target.value })} /></label>
-              <label className="grid gap-1.5 text-xs font-semibold text-[#52645a]">Daily P&amp;L (₹)<input required type="number" step="0.01" className={field} value={entry.pnl} onChange={(event) => setEntry({ ...entry, pnl: event.target.value })} /></label>
+              <label className="grid gap-1.5 text-xs font-semibold text-[#52645a]">Week ending (Friday)<input required type="date" className={field} value={entry.tradeDate} onChange={(event) => setEntry({ ...entry, tradeDate: event.target.value })} /></label>
+              <label className="grid gap-1.5 text-xs font-semibold text-[#52645a]">Weekly P&amp;L (₹)<input required type="number" step="0.01" className={field} value={entry.pnl} onChange={(event) => setEntry({ ...entry, pnl: event.target.value })} /></label>
               <label className="grid gap-1.5 text-xs font-semibold text-[#52645a] sm:col-span-2">Note<input maxLength={2000} className={field} value={entry.note} onChange={(event) => setEntry({ ...entry, note: event.target.value })} /></label>
             </div>
             <button className={`${button} mt-4`} disabled={saving || loading || !strategies.length}>{saving ? 'Saving…' : entryId === null ? <><Plus size={16} /> Add result</> : <><Save size={16} /> Save changes</>}</button>
@@ -248,13 +248,13 @@ export default function PublicTrackerAdmin() {
         </section>
 
         <section className={`${panel} mt-4`}>
-          <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#75827a]">Public page data</p><h2 className="mt-1 text-xl font-black">Manage daily results</h2></div><span className="text-sm text-[#75827a]">{loading ? 'Loading…' : `${entries.length} total`}</span></div>
+          <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#75827a]">Public page data</p><h2 className="mt-1 text-xl font-black">Manage weekly results</h2></div><span className="text-sm text-[#75827a]">{loading ? 'Loading…' : `${entries.length} total`}</span></div>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[680px] text-left text-sm">
               <thead className="text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="pb-3 font-semibold">Date</th><th className="pb-3 font-semibold">Strategy</th><th className="pb-3 text-right font-semibold">P&amp;L</th><th className="pb-3 font-semibold">Note</th><th className="pb-3 text-right font-semibold">Actions</th></tr></thead>
               <tbody>{entries.map((item) => <tr key={item.id} className="border-t border-[#edf1eb]"><td className="py-3">{item.tradeDate}</td><td className="py-3 font-semibold">{strategyNames.get(item.strategyId) ?? 'Removed strategy'}</td><td className={`py-3 text-right font-bold tabular-nums ${item.pnl < 0 ? 'text-[#c74f42]' : 'text-[#18805a]'}`}>{formatMoney(item.pnl)}</td><td className="max-w-[300px] truncate py-3 text-[#75827a]">{item.note || '—'}</td><td className="py-3"><div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => editEntry(item)} aria-label={`Edit ${item.tradeDate} entry`} className="rounded-lg border border-[#d9e3d9] p-2 text-[#52645a] hover:bg-[#edf4ed] disabled:opacity-50"><Pencil size={14} /></button><button type="button" disabled={saving} onClick={() => void removeEntry(item)} aria-label={`Delete ${item.tradeDate} entry`} className="rounded-lg border border-[#f0d2ce] p-2 text-[#b04439] hover:bg-[#fff2ef] disabled:opacity-50"><Trash2 size={14} /></button></div></td></tr>)}</tbody>
             </table>
-            {!loading && !entries.length && <p className="rounded-xl bg-[#f4f6f1] p-4 text-sm text-[#75827a]">No daily results yet.</p>}
+            {!loading && !entries.length && <p className="rounded-xl bg-[#f4f6f1] p-4 text-sm text-[#75827a]">No weekly results yet.</p>}
           </div>
         </section>
 
@@ -264,7 +264,8 @@ export default function PublicTrackerAdmin() {
   )
 }
 
-function localDate() {
+function weeklyReportDate() {
   const now = new Date()
+  now.setDate(now.getDate() - (now.getDay() + 2) % 7)
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }

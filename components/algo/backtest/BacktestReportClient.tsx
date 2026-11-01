@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import PortfolioFaq from './PortfolioFaq';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { reportsBase, reportPrice, rupees, type ReportSettings } from '@/lib/backtest-reports';
 import { Button } from '@/components/ui/button';
@@ -97,6 +98,8 @@ export default function BacktestReportClient() {
           })}
         </div>
       </section>
+
+      <PortfolioFaq />
 
       <Dialog open={selected !== null} onOpenChange={open => { if (!open) setSelected(null); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto bg-slate-900 text-slate-100 border-slate-700">

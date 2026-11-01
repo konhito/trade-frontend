@@ -1,0 +1,137 @@
+[
+  {
+    "title": "Portfolio & Strategy Details",
+    "items": [
+      {
+        "id": 1,
+        "question": "What is included in the Algo?",
+        "answer": "Complete strategy logic, entry and exit conditions, stop-loss, targets, position sizing, risk management and strategy export files for AlgoTest deployment. Everything is included. You only need to deploy the strategies."
+      },
+      {
+        "id": 2,
+        "question": "Is it Option Selling or Option Buying?",
+        "answer": "The portfolio primarily focuses on Option Selling, along with selected Option Buying strategies for better diversification."
+      },
+      {
+        "id": 3,
+        "question": "Does the portfolio include Intraday and STBT?",
+        "answer": "Yes. Both Intraday and STBT strategies are included to capture opportunities in different market conditions."
+      },
+      {
+        "id": 4,
+        "question": "What happens during a huge Gap Up or Gap Down?",
+        "answer": "For STBT positions, buying a hedge before market closing is mandatory. The hedge is exited the next morning around 9:17 AM.\n\nOur risk management is designed to handle extreme market gaps. Historical risk estimates are approximately 1.5% of deployed capital. Actual losses may vary depending on market conditions and execution."
+      },
+      {
+        "id": 5,
+        "question": "Can I run the portfolio with ₹5L, ₹10L or ₹15L?",
+        "answer": "Yes. We have three portfolio configurations:\n- ₹5 Lakh – 2 Strategies.\n- ₹10 Lakh – Additional strategies for diversification.\n- ₹15 Lakh – More strategies for better diversification.\nEach portfolio is designed according to its capital allocation and risk management."
+      },
+      {
+        "id": 6,
+        "question": "Why are the portfolio prices different?",
+        "answer": "The difference is based on the number of strategies included. Larger portfolios include additional strategies to improve diversification and distribute risk across different strategies."
+      },
+      {
+        "id": 7,
+        "question": "What about execution settings and deployment?",
+        "answer": "After purchase, I will share the complete execution settings and guide you through the AlgoTest deployment process."
+      },
+      {
+        "id": 8,
+        "question": "What monthly returns can I expect?",
+        "answer": "Our backtests have shown 3%+ returns in certain periods. However, we keep a conservative expectation of approximately 2–3% monthly returns. Actual returns are not guaranteed and may vary."
+      },
+      {
+        "id": 9,
+        "question": "How many days will the Algo run?",
+        "answer": "- Intraday strategies: Monday to Friday.\n- STBT strategies: Monday and Wednesday.\n- No positions are carried over the weekend."
+      }
+    ]
+  },
+  {
+    "title": "Risk, Backtesting & Performance",
+    "items": [
+      {
+        "id": 10,
+        "question": "Are Slippages, Taxes and Charges included in the Backtest?",
+        "answer": "Yes. Slippages, brokerage, taxes and applicable charges are considered in our backtest PDF report.\n\nWe have also included approximately 1% slippage in the backtest calculations, so you can review the estimated costs in the report."
+      },
+      {
+        "id": 11,
+        "question": "What is the Maximum Drawdown (DD)?",
+        "answer": "Our historical one-year results show approximately 1.5% drawdown.\nPortfolio\tApprox. Historical DD\n₹5 Lakh\t₹6,000\n₹10 Lakh\t₹12,000–₹13,000\n₹15 Lakh\t₹18,000\n\nThese are historical figures. Actual future drawdowns may differ."
+      },
+      {
+        "id": 12,
+        "question": "What if my DD gets breached?",
+        "answer": "Our current estimated DD is approximately 1.5%.\n\nIf the drawdown reaches 3% (double the estimated DD), we will review the strategies and take necessary action.\n- Intraday: If DD increases significantly, we will review the strategy, make necessary adjustments or update the strategy if required.\n- STBT: Positions are already hedged to manage overnight gap risk.\nIf the DD reaches the defined 3% threshold, trading will be stopped for review and necessary strategy modifications before restarting."
+      },
+      {
+        "id": 13,
+        "question": "Why do you share the Backtest Report from September 2025 onwards?",
+        "answer": "Because the Nifty and Sensex expiry schedules changed in September 2025, affecting strategy execution logic.\n\nEarlier, Nifty expiry was on Thursday and Sensex expiry was on Tuesday. The schedules subsequently changed.\n\nTherefore, we prefer sharing the latest one-year report based on the updated expiry structure."
+      },
+      {
+        "id": 14,
+        "question": "Can I get a 4–5 year Backtest Report?",
+        "answer": "Yes. For Zero DTE strategies, we can provide 4–5 years of historical backtest reports.\n\nHowever, STBT strategies are more dependent on changing market conditions, so we prefer sharing the latest one-year report.\n\nThe latest report also covers different market conditions, including:\n- Budget and major market events.\n- High crude oil volatility.\n- Russia–Ukraine war.\n- US–Iran geopolitical tensions.\n- Major global uncertainties and market volatility."
+      },
+      {
+        "id": 15,
+        "question": "What is the Refund Policy?",
+        "answer": "If the portfolio does not deliver satisfactory results within 3–4 months, we offer a refund as per the agreed refund policy.\n\nYou must continuously run the same strategies with the recommended settings throughout the evaluation period."
+      }
+    ]
+  },
+  {
+    "title": "Purchasing & Profit Sharing Options",
+    "items": [
+      {
+        "id": 16,
+        "question": "What if I don't want to purchase the Strategy Export Files?",
+        "answer": "No problem. We also offer a monthly profit-sharing option. You don't need to purchase the strategy export files under this option."
+      },
+      {
+        "id": 17,
+        "question": "How does the Monthly Profit Sharing Option work?",
+        "answer": "You simply need to connect your broker account to my AlgoTest setup. All strategies will be managed and executed from my end.\n\nAt the end of each month, you will share 30% of the Net Profit as the strategy profit-sharing fee.\n\nExample: If your monthly net profit is ₹50,000, the profit-sharing amount will be ₹15,000."
+      },
+      {
+        "id": 18,
+        "question": "Can I increase the capital beyond ₹15 Lakh?",
+        "answer": "Yes. If you have ₹20–40 lakh capital, you can purchase the ₹15 lakh portfolio and increase the lot quantity according to your capital and risk capacity.\n\nI personally run approximately ₹35–40 lakh capital on the same setup."
+      }
+    ]
+  },
+  {
+    "title": "Updates, Support & Assistance",
+    "items": [
+      {
+        "id": 19,
+        "question": "Will I receive future strategy updates?",
+        "answer": "Yes. We regularly review strategy performance. If any strategy is not performing as expected, we may replace it after reviewing market conditions.\n\nAll new updates will be shared through our dedicated broadcast group."
+      },
+      {
+        "id": 20,
+        "question": "Will I receive daily and monthly performance reports?",
+        "answer": "Yes. You will get access to our Telegram and Twitter updates, including:\n- Backtest vs Live Results.\n- Daily P&L Updates.\n- Monthly P&L Reports.\n- Strategy Performance Updates."
+      },
+      {
+        "id": 21,
+        "question": "What if I don't know anything about Algo Trading?",
+        "answer": "No problem. You don't need any prior experience. After purchasing, my team will guide you through the complete setup, execution settings and deployment process."
+      },
+      {
+        "id": 22,
+        "question": "What if I face any technical issues?",
+        "answer": "You can directly contact me or my team. We will help you with strategy deployment, execution settings and technical guidance."
+      },
+      {
+        "id": 23,
+        "question": "Can I monitor my live trading and P&L?",
+        "answer": "Yes. You can monitor your live positions, executions and P&L through your broker and AlgoTest dashboard."
+      }
+    ]
+  }
+]

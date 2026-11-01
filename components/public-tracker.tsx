@@ -158,44 +158,44 @@ export default function PublicTracker() {
   ), [allEntries, rangeStart, rangeEnd])
   const reportEntries = useMemo(() => allReportEntries.filter((entry) => selectedIds.has(entry.strategyId)), [allReportEntries, selectedIds])
 
-  const daily = useMemo(() => {
+  const weekly = useMemo(() => {
     const totals = new Map<string, number>()
     reportEntries.forEach((entry) => totals.set(entry.tradeDate, (totals.get(entry.tradeDate) ?? 0) + entry.pnl))
     return [...totals].map(([date, pnl]) => ({ date, pnl })).sort((a, b) => a.date.localeCompare(b.date))
   }, [reportEntries])
-  const weeklyPoints = useMemo(() => allEntries.filter((entry) => selectedIds.has(entry.strategyId))
-    .map((entry) => ({ date: entry.tradeDate, pnl: entry.pnl })), [allEntries, selectedIds])
+  const weeklyPoints = useMemo(() => allReportEntries.filter((entry) => selectedIds.has(entry.strategyId))
+    .map((entry) => ({ date: entry.tradeDate, pnl: entry.pnl })), [allReportEntries, selectedIds])
   const history = useMemo(() => {
     let balance = 0
     let peak = 0
-    return daily.map((point) => {
+    return weekly.map((point) => {
       balance += point.pnl
       peak = Math.max(peak, balance)
       return { ...point, drawdown: balance - peak }
     }).reverse()
-  }, [daily])
+  }, [weekly])
   const totalCapital = selectedStrategies.reduce((total, strategy) => total + strategy.capital * (lotMultipliers[strategy.id] ?? 1), 0)
   const totalPnl = reportEntries.reduce((total, entry) => total + entry.pnl, 0)
-  const currentDate = rangeEnd || rangeStart || getCurrentTradingDate()
+  const currentDate = allReportEntries.reduce((latest, entry) => entry.tradeDate > latest ? entry.tradeDate : latest, '') || rangeEnd || rangeStart || getCurrentTradingDate()
   const reportWeekday = new Date(`${currentDate}T00:00:00Z`).getUTCDay()
   const selectedMonth = currentDate.slice(0, 7)
   const sortedBreakdownStrategies = useMemo(() => {
-    const dailyPnlByStrategy = new Map<number, number>()
+    const weeklyPnlByStrategy = new Map<number, number>()
     allReportEntries.forEach((entry) => {
-      if (entry.tradeDate === currentDate) dailyPnlByStrategy.set(entry.strategyId, (dailyPnlByStrategy.get(entry.strategyId) ?? 0) + entry.pnl)
+      if (entry.tradeDate === currentDate) weeklyPnlByStrategy.set(entry.strategyId, (weeklyPnlByStrategy.get(entry.strategyId) ?? 0) + entry.pnl)
     })
-    return [...strategies].sort((a, b) => (dailyPnlByStrategy.get(b.id) ?? 0) - (dailyPnlByStrategy.get(a.id) ?? 0))
+    return [...strategies].sort((a, b) => (weeklyPnlByStrategy.get(b.id) ?? 0) - (weeklyPnlByStrategy.get(a.id) ?? 0))
   }, [allReportEntries, strategies, currentDate])
   const breakdownCapital = strategies.reduce((total, strategy) => total + strategy.capital * (lotMultipliers[strategy.id] ?? 1), 0)
-  const breakdownDailyPnl = allReportEntries.filter((entry) => entry.tradeDate === currentDate).reduce((total, entry) => total + entry.pnl, 0)
+  const breakdownWeeklyPnl = allReportEntries.filter((entry) => entry.tradeDate === currentDate).reduce((total, entry) => total + entry.pnl, 0)
   const breakdownMonthlyPnl = allReportEntries.filter((entry) => entry.tradeDate.startsWith(selectedMonth)).reduce((total, entry) => total + entry.pnl, 0)
   const monthly = useMemo(() => rollup(reportEntries, (entry) => entry.tradeDate.slice(0, 7)), [reportEntries])
-  const winningDays = daily.filter((point) => point.pnl > 0)
-  const losingDays = daily.filter((point) => point.pnl < 0)
-  const winPercent = daily.length ? winningDays.length / daily.length * 100 : 0
-  const lossPercent = daily.length ? losingDays.length / daily.length * 100 : 0
-  const averageWin = winningDays.length ? winningDays.reduce((sum, point) => sum + point.pnl, 0) / winningDays.length : 0
-  const averageLoss = losingDays.length ? Math.abs(losingDays.reduce((sum, point) => sum + point.pnl, 0)) / losingDays.length : 0
+  const winningWeeks = weekly.filter((point) => point.pnl > 0)
+  const losingWeeks = weekly.filter((point) => point.pnl < 0)
+  const winPercent = weekly.length ? winningWeeks.length / weekly.length * 100 : 0
+  const lossPercent = weekly.length ? losingWeeks.length / weekly.length * 100 : 0
+  const averageWin = winningWeeks.length ? winningWeeks.reduce((sum, point) => sum + point.pnl, 0) / winningWeeks.length : 0
+  const averageLoss = losingWeeks.length ? Math.abs(losingWeeks.reduce((sum, point) => sum + point.pnl, 0)) / losingWeeks.length : 0
   const expectancy = winPercent / 100 * averageWin - lossPercent / 100 * averageLoss
   const rangeLabel = selectedRange?.from
     ? `${formatDate(selectedRange.from, 'MMM d, yyyy')}${selectedRange.to ? ` – ${formatDate(selectedRange.to, 'MMM d, yyyy')}` : ' – Select end date'}`
@@ -203,7 +203,8 @@ export default function PublicTracker() {
   const reportDateLabel = currentDate
     ? formatDate(new Date(`${currentDate}T00:00:00`), 'dd MMM yyyy')
     : 'No report date'
-  const brand = data?.settings.title || 'DECAY HUNTERS — P&L Tracker'
+  const storedBrand = data?.settings.title || 'DECAY HUNTERS PORTFOLIO — Weekly P&L Tracker'
+  const brand = /Weekly P&L Tracker$/i.test(storedBrand) ? storedBrand : storedBrand.replace(/P&L Tracker$/i, 'Weekly P&L Tracker')
   const logoUrl = data?.settings.logoUrl
 
   if (loading) return <LoadingState />
@@ -236,7 +237,7 @@ export default function PublicTracker() {
         <div className="mt-3 shrink-0 border-t border-white/10 pt-4">
           <p className="flex items-start gap-2.5 px-3 text-[11px] leading-5 text-[#a9beae]">
             <span aria-hidden="true" className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c693]" />
-            Daily results, updated by the tracker team.
+            Weekly results, updated each Friday.
           </p>
         </div>
       </aside>
@@ -282,9 +283,9 @@ export default function PublicTracker() {
                 </div>
               </PopoverContent>
             </Popover>
-            <span role="status" aria-label="EOD Report" className="inline-flex items-center gap-2 rounded-full border border-[#cce7d5] bg-[#e9f5ed] px-3 py-2 text-xs font-bold text-[#176b49]">
+            <span role="status" aria-label="EOW Report" className="inline-flex items-center gap-2 rounded-full border border-[#cce7d5] bg-[#e9f5ed] px-3 py-2 text-xs font-bold text-[#176b49]">
               <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#21875d]" />
-              EOD Report
+              EOW Report
             </span>
             {data?.settings.contactUrl && <a className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-[#1c7c55] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#176b49]" href={data.settings.contactUrl} target="_blank" rel="noreferrer">Contact <ArrowUpRight size={15} /></a>}
           </div>
@@ -301,7 +302,7 @@ export default function PublicTracker() {
           <section className={`${panel} mt-12 py-16 text-center`}>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#1c7c55]">Performance report</p>
             <h2 className="mt-3 text-2xl font-black">The tracker is being set up</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#75827a]">Strategy and daily P&amp;L updates will appear here as soon as they are added.</p>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#75827a]">Strategy and weekly P&amp;L updates will appear here after each Friday close.</p>
           </section>
         ) : (
           <>
@@ -334,7 +335,7 @@ export default function PublicTracker() {
                   <div className="mt-5 grid grid-cols-2 gap-4 border-t border-[#edf1eb] pt-4 text-sm">
                     <Metric label="Capital" value={formatMoney(capital)} />
                     <Metric label="Total P&L" value={formatMoney(pnl)} valueClass={positive(pnl)} />
-                    <Metric label="Trading days" value={String(rows.length)} />
+                    <Metric label="Reporting weeks" value={String(rows.length)} />
                     <Metric label="Win rate" value={formatPercent(winRate)} />
                     <label className="grid content-start gap-1.5 text-[11px] text-[#75827a]">
                       <span>Lot</span>
@@ -350,7 +351,7 @@ export default function PublicTracker() {
 
             {typeof selectedStrategy !== 'number' && <section className={`${panel} tracker-breakdown mb-5`}>
               <div className="flex flex-wrap items-end justify-between gap-3">
-                <div><h2 className="font-[var(--tracker-heading)] text-[1.45rem] font-bold tracking-[-0.02em] text-[#182c32]">Daily breakdown <span className="font-medium text-[#75827a]">· {currentDate || '—'}</span></h2></div>
+                <div><h2 className="font-[var(--tracker-heading)] text-[1.45rem] font-bold tracking-[-0.02em] text-[#182c32]">Weekly breakdown <span className="font-medium text-[#75827a]">· week ending {currentDate || '—'}</span></h2></div>
                 <div className="flex flex-wrap items-center justify-end gap-3">
                   <p className="text-xs text-[#75827a]">Monthly figures include the selected month</p>
                   <button type="button" aria-label={`Weekday filter: ${weekdayFilterSummary}. ${weekdayFilterOpen ? 'Hide' : 'Show'} options`} aria-expanded={weekdayFilterOpen} aria-controls="weekday-filter-options" onClick={() => setWeekdayFilterOpen((open) => !open)} className={`inline-flex min-h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b6f9e] focus-visible:ring-offset-2 ${selectedWeekdays.length ? 'border-[#8fc4e5] bg-[#eff7fd] text-[#176b9b]' : 'border-[#d9e3d9] bg-white text-[#52635a] hover:bg-[#f7f9f6]'}`}>
@@ -379,16 +380,16 @@ export default function PublicTracker() {
               <div className="tracker-breakdown-table mt-4 hidden overflow-x-auto overscroll-x-contain xl:block">
                 <table className="w-full min-w-max table-fixed text-left text-sm">
                   <colgroup><col className="w-[40%]" /><col className="w-[15%]" /><col className="w-[15%]" /><col className="w-[15%]" /><col className="w-[15%]" /></colgroup>
-                  <thead className="text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="px-3 pb-3 font-semibold">Strategy / days</th><th className="px-3 pb-3 text-right font-semibold">Capital</th><th className="px-3 pb-3 text-center font-semibold">Lot</th><th className="px-3 pb-3 text-right font-semibold" title="Strategies sorted by daily profit, highest first">Daily P&amp;L ↓</th><th className="px-3 pb-3 text-right font-semibold">Monthly P&amp;L</th></tr></thead>
+                  <thead className="text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="px-3 pb-3 font-semibold">Strategy / schedule</th><th className="px-3 pb-3 text-right font-semibold">Capital</th><th className="px-3 pb-3 text-center font-semibold">Lot</th><th className="px-3 pb-3 text-right font-semibold" title="Strategies sorted by weekly profit, highest first">Weekly P&amp;L ↓</th><th className="px-3 pb-3 text-right font-semibold">Monthly P&amp;L</th></tr></thead>
                   <tbody>{sortedBreakdownStrategies.length ? sortedBreakdownStrategies.map((strategy) => {
                     const day = allReportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate === currentDate).reduce((sum, entry) => sum + entry.pnl, 0)
                     const month = allReportEntries.filter((entry) => entry.strategyId === strategy.id && entry.tradeDate.startsWith(selectedMonth)).reduce((sum, entry) => sum + entry.pnl, 0)
                     const scheduledDays = trackerWeekdays.filter((weekday) => (strategy.weekdays ?? []).includes(weekday.value))
-                    return <tr key={strategy.id} className="border-t border-[#edf1eb]"><td className="px-3 py-3"><p className="font-semibold">{strategy.name}</p>{scheduledDays.length ? <div className="mt-1.5 flex flex-wrap gap-1" aria-label={`Trading days for ${strategy.name}`}>
+                    return <tr key={strategy.id} className="border-t border-[#edf1eb]"><td className="px-3 py-3"><p className="font-semibold">{strategy.name}</p>{scheduledDays.length ? <div className="mt-1.5 flex flex-wrap gap-1" aria-label={`Trading schedule for ${strategy.name}`}>
                       {scheduledDays.map((weekday) => <abbr key={weekday.value} title={weekday.value === reportWeekday ? `${weekday.name} · report date` : weekday.name} className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[10px] font-bold no-underline ${weekday.value === reportWeekday ? 'bg-[#1c7c55] text-white' : 'bg-[#e9f5ed] text-[#176b49]'}`}>{weekday.short}</abbr>)}
-                    </div> : <p className="mt-1 text-[11px] font-normal text-[#75827a]">Schedule not set</p>}</td><td className="px-3 py-4 text-right tabular-nums">{formatMoney(strategy.capital * (lotMultipliers[strategy.id] ?? 1))}</td><td className="px-3 py-3 text-center"><select aria-label={`${strategy.name} lot size in daily breakdown`} value={String(lotMultipliers[strategy.id] ?? 1)} onChange={(event) => setLotMultipliers((current) => ({ ...current, [strategy.id]: Number(event.target.value) }))} className="min-h-11 rounded-lg border border-[#d9e3d9] bg-white px-3 text-sm font-semibold text-[#173126]">{lotOptions.map((option) => <option key={option} value={option}>{option}x</option>)}</select></td><td className={`px-3 py-4 text-right font-bold tabular-nums ${positive(day)}`}>{formatMoney(day)}</td><td className={`px-3 py-4 text-right font-semibold tabular-nums ${positive(month)}`}>{formatMoney(month)}</td></tr>
+                    </div> : <p className="mt-1 text-[11px] font-normal text-[#75827a]">Schedule not set</p>}</td><td className="px-3 py-4 text-right tabular-nums">{formatMoney(strategy.capital * (lotMultipliers[strategy.id] ?? 1))}</td><td className="px-3 py-3 text-center"><select aria-label={`${strategy.name} lot size in weekly breakdown`} value={String(lotMultipliers[strategy.id] ?? 1)} onChange={(event) => setLotMultipliers((current) => ({ ...current, [strategy.id]: Number(event.target.value) }))} className="min-h-11 rounded-lg border border-[#d9e3d9] bg-white px-3 text-sm font-semibold text-[#173126]">{lotOptions.map((option) => <option key={option} value={option}>{option}x</option>)}</select></td><td className={`px-3 py-4 text-right font-bold tabular-nums ${positive(day)}`}>{formatMoney(day)}</td><td className={`px-3 py-4 text-right font-semibold tabular-nums ${positive(month)}`}>{formatMoney(month)}</td></tr>
                   }) : <tr><td colSpan={5} className="border-t border-[#edf1eb] px-3 py-8 text-center text-sm text-[#75827a]">No strategies scheduled for the selected day{selectedWeekdays.length > 1 ? 's' : ''}.</td></tr>}</tbody>
-                  <tfoot><tr className="border-t-2 border-[#dfe8dd]"><td className="px-3 pt-4 font-black">Total</td><td className="px-3 pt-4 text-right font-bold tabular-nums">{formatMoney(breakdownCapital)}</td><td className="px-3 pt-4" aria-hidden="true"></td><td className={`px-3 pt-4 text-right font-bold tabular-nums ${positive(breakdownDailyPnl)}`}>{formatMoney(breakdownDailyPnl)}</td><td className={`px-3 pt-4 text-right font-bold tabular-nums ${positive(breakdownMonthlyPnl)}`}>{formatMoney(breakdownMonthlyPnl)}</td></tr></tfoot>
+                  <tfoot><tr className="border-t-2 border-[#dfe8dd]"><td className="px-3 pt-4 font-black">Total</td><td className="px-3 pt-4 text-right font-bold tabular-nums">{formatMoney(breakdownCapital)}</td><td className="px-3 pt-4" aria-hidden="true"></td><td className={`px-3 pt-4 text-right font-bold tabular-nums ${positive(breakdownWeeklyPnl)}`}>{formatMoney(breakdownWeeklyPnl)}</td><td className={`px-3 pt-4 text-right font-bold tabular-nums ${positive(breakdownMonthlyPnl)}`}>{formatMoney(breakdownMonthlyPnl)}</td></tr></tfoot>
                 </table>
               </div>
               <div className="mt-4 grid gap-3 xl:hidden">
@@ -398,54 +399,54 @@ export default function PublicTracker() {
                   const scheduledDays = trackerWeekdays.filter((weekday) => (strategy.weekdays ?? []).includes(weekday.value))
                   return <article key={strategy.id} className="tracker-breakdown-row rounded-2xl border border-[#e1e8e5] bg-[#fbfcfb] p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0"><h3 className="font-semibold leading-snug">{strategy.name}</h3>{scheduledDays.length ? <div className="mt-2 flex flex-wrap gap-1" aria-label={`Trading days for ${strategy.name}`}>
+                      <div className="min-w-0"><h3 className="font-semibold leading-snug">{strategy.name}</h3>{scheduledDays.length ? <div className="mt-2 flex flex-wrap gap-1" aria-label={`Trading schedule for ${strategy.name}`}>
                         {scheduledDays.map((weekday) => <abbr key={weekday.value} title={weekday.value === reportWeekday ? `${weekday.name} (report date)` : weekday.name} className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold no-underline ${weekday.value === reportWeekday ? 'bg-[#137b80] text-white' : 'bg-[#e9f2ef] text-[#386c68]'}`}>{weekday.short}</abbr>)}
                       </div> : <p className="mt-1 text-[11px] text-[#6f7d81]">Schedule not set</p>}</div>
-                      <label className="grid shrink-0 gap-1 text-[10px] font-medium text-[#68797d]">Lot<select aria-label={`${strategy.name} lot size in daily breakdown`} value={String(lotMultipliers[strategy.id] ?? 1)} onChange={(event) => setLotMultipliers((current) => ({ ...current, [strategy.id]: Number(event.target.value) }))} className="min-h-9 rounded-lg border border-[#ccd7d5] bg-white px-2.5 text-xs font-semibold text-[#19272d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#137b80]">{lotOptions.map((option) => <option key={option} value={option}>{option}x</option>)}</select></label>
+                      <label className="grid shrink-0 gap-1 text-[10px] font-medium text-[#68797d]">Lot<select aria-label={`${strategy.name} lot size in weekly breakdown`} value={String(lotMultipliers[strategy.id] ?? 1)} onChange={(event) => setLotMultipliers((current) => ({ ...current, [strategy.id]: Number(event.target.value) }))} className="min-h-9 rounded-lg border border-[#ccd7d5] bg-white px-2.5 text-xs font-semibold text-[#19272d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#137b80]">{lotOptions.map((option) => <option key={option} value={option}>{option}x</option>)}</select></label>
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 border-t border-[#e5ebe8] pt-3">
                       <Metric label="Capital" value={formatMoney(strategy.capital * (lotMultipliers[strategy.id] ?? 1))} />
-                      <Metric label="Daily P&L" value={formatMoney(day)} valueClass={positive(day)} />
+                      <Metric label="Weekly P&L" value={formatMoney(day)} valueClass={positive(day)} />
                       <Metric label="Monthly P&L" value={formatMoney(month)} valueClass={positive(month)} />
                     </div>
                   </article>
                 }) : <div className="rounded-xl border border-dashed border-[#d2dcda] px-4 py-9 text-center text-sm text-[#617176]">No strategies scheduled for the selected day{selectedWeekdays.length > 1 ? 's' : ''}.</div>}
                 <div className="grid grid-cols-2 gap-x-3 gap-y-3 rounded-xl bg-[#eef3f0] px-4 py-3">
                   <Metric label="Total capital" value={formatMoney(breakdownCapital)} />
-                  <Metric label="Daily total" value={formatMoney(breakdownDailyPnl)} valueClass={positive(breakdownDailyPnl)} />
+                  <Metric label="Weekly total" value={formatMoney(breakdownWeeklyPnl)} valueClass={positive(breakdownWeeklyPnl)} />
                   <Metric label="Monthly total" value={formatMoney(breakdownMonthlyPnl)} valueClass={positive(breakdownMonthlyPnl)} />
                 </div>
               </div>
             </section>}
 
-            <section className={`${panel} mb-5`}><ChartTitle title="Cumulative P&L" detail="Combined realized daily results" /><Chart points={daily} /></section>
+            <section className={`${panel} mb-5`}><ChartTitle title="Cumulative P&L" detail="Combined reported weekly results" /><Chart points={weekly} /></section>
 
             <section className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(min(100%,27rem),1fr))] gap-4">
-              <article className={panel}><ChartTitle title="Last 30 trading days" detail="Daily P&L" /><Chart points={daily.slice(-30)} /></article>
+              <article className={panel}><ChartTitle title="Last 30 reporting weeks" detail="Weekly P&L" /><Chart points={weekly.slice(-30)} /></article>
               <article className={panel}><ChartTitle title="Drawdown" detail="Distance from the cumulative peak" /><Chart points={history.slice().reverse()} drawdown /></article>
-              <article className={panel}><ChartTitle title="P&L by week" detail="This week and previous three · weekday filter applies" /><WeeklyChart points={weeklyPoints} weekdays={selectedWeekdays} today={formatDate(new Date(), 'yyyy-MM-dd')} /></article>
+              <article className={panel}><ChartTitle title="P&L by week" detail="Selected week and previous three · weekday filter applies" /><WeeklyChart points={weeklyPoints} weekdays={selectedWeekdays} today={currentDate} /></article>
             </section>
 
             <section className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(min(100%,27rem),1fr))] gap-4">
               <article className={panel}>
-                <ChartTitle title="Daily P&L history" detail="Results by trading date" />
+                <ChartTitle title="Weekly P&L history" detail="Results by reporting week" />
                 <div className="mt-4 max-h-[390px] overflow-auto overscroll-x-contain">
-                  <table className="w-full min-w-max text-sm"><thead className="sticky top-0 bg-white text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="pb-2 text-left font-semibold">Date</th><th className="pb-2 text-right font-semibold">Daily P&amp;L</th><th className="pb-2 text-right font-semibold">Daily ROI</th><th className="pb-2 text-right font-semibold">Drawdown</th></tr></thead><tbody>{history.map((point) => <tr key={point.date} className="border-t border-[#edf1eb]"><td className="py-2.5">{point.date}</td><td className={`py-2.5 text-right font-semibold tabular-nums ${positive(point.pnl)}`}>{formatMoney(point.pnl)}</td><td className="py-2.5 text-right tabular-nums">{formatPercent(totalCapital ? point.pnl / totalCapital * 100 : 0)}</td><td className={`py-2.5 text-right tabular-nums ${positive(point.drawdown ?? 0)}`}>{formatMoney(point.drawdown ?? 0)}</td></tr>)}</tbody></table>
+                  <table className="w-full min-w-max text-sm"><thead className="sticky top-0 bg-white text-[11px] uppercase tracking-wide text-[#75827a]"><tr><th className="pb-2 text-left font-semibold">Week ending</th><th className="pb-2 text-right font-semibold">Weekly P&amp;L</th><th className="pb-2 text-right font-semibold">Weekly ROI</th><th className="pb-2 text-right font-semibold">Drawdown</th></tr></thead><tbody>{history.map((point) => <tr key={point.date} className="border-t border-[#edf1eb]"><td className="py-2.5">{point.date}</td><td className={`py-2.5 text-right font-semibold tabular-nums ${positive(point.pnl)}`}>{formatMoney(point.pnl)}</td><td className="py-2.5 text-right tabular-nums">{formatPercent(totalCapital ? point.pnl / totalCapital * 100 : 0)}</td><td className={`py-2.5 text-right tabular-nums ${positive(point.drawdown ?? 0)}`}>{formatMoney(point.drawdown ?? 0)}</td></tr>)}</tbody></table>
                 </div>
               </article>
               <article className={panel}>
                 <ChartTitle title="Performance statistics" detail="Across the selected strategies and date range" />
                 <div className="tracker-stats mt-3 grid grid-cols-1 divide-y divide-[#e8edeb] sm:grid-cols-2 sm:divide-y-0 sm:gap-x-7">
-                  <Stat label="Trading days" value={String(daily.length)} />
-                  <Stat label="Winning days" value={String(winningDays.length)} icon={<TrendingUp size={15} className="text-[#18805a]" />} />
+                  <Stat label="Reporting weeks" value={String(weekly.length)} />
+                  <Stat label="Winning weeks" value={String(winningWeeks.length)} icon={<TrendingUp size={15} className="text-[#18805a]" />} />
                   <Stat label="Win %" value={formatPercent(winPercent)} />
-                  <Stat label="Losing days" value={String(losingDays.length)} icon={<TrendingDown size={15} className="text-[#c74f42]" />} />
+                  <Stat label="Losing weeks" value={String(losingWeeks.length)} icon={<TrendingDown size={15} className="text-[#c74f42]" />} />
                   <Stat label="Loss %" value={formatPercent(lossPercent)} />
                   <Stat label="Expectancy ratio" value={formatMoney(expectancy)} valueClass={positive(expectancy)} />
                   <Stat label="Net P&L" value={formatMoney(totalPnl)} valueClass={positive(totalPnl)} />
                   <Stat label="Total ROI" value={formatPercent(totalCapital ? totalPnl / totalCapital * 100 : 0)} />
-                  <Stat label="Best day" value={formatMoney(Math.max(0, ...daily.map((point) => point.pnl)))} valueClass="text-[#18805a]" />
-                  <Stat label="Worst day" value={formatMoney(Math.min(0, ...daily.map((point) => point.pnl)))} valueClass="text-[#c74f42]" />
+                  <Stat label="Best week" value={formatMoney(Math.max(0, ...weekly.map((point) => point.pnl)))} valueClass="text-[#18805a]" />
+                  <Stat label="Worst week" value={formatMoney(Math.min(0, ...weekly.map((point) => point.pnl)))} valueClass="text-[#c74f42]" />
                 </div>
               </article>
             </section>
@@ -457,15 +458,19 @@ export default function PublicTracker() {
               <div>
                 <p className="text-sm font-bold">Customize your portfolio</p>
                 <p className="mt-0.5 text-xs text-[#52645a]">Contact our team to discuss your needs.</p>
+                <p className="mt-2 text-xs font-medium text-[#176b49]">Daily live P&amp;L will be uploaded in my Telegram channel.</p>
               </div>
-              <a className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-[#1c7c55] px-3 py-2 text-sm font-bold text-white transition hover:bg-[#176b49]" href={data.settings.contactUrl} target="_blank" rel="noreferrer">Contact <ArrowUpRight size={14} aria-hidden="true" /></a>
+              <div className="grid justify-items-start gap-2 sm:justify-items-end">
+                <a className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-[#1c7c55] px-3 py-2 text-sm font-bold text-white transition hover:bg-[#176b49]" href={data.settings.contactUrl} target="_blank" rel="noreferrer">Contact <ArrowUpRight size={14} aria-hidden="true" /></a>
+                <a className="inline-flex items-center gap-1 text-xs font-semibold text-[#176b49] underline underline-offset-2 hover:text-[#12563a]" href={data.settings.contactUrl} target="_blank" rel="noreferrer">Telegram channel <ArrowUpRight size={13} aria-hidden="true" /></a>
+              </div>
             </section>}
           </>
         )}
 
         <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-[#dfe7dd] py-5 text-xs text-[#75827a]">
           <span className="inline-flex items-center gap-1.5"><CircleHelp size={14} /> P&amp;L values are reported in Indian rupees.</span>
-          <span>Updated from daily strategy entries</span>
+          <span>Updated from weekly Friday reports</span>
         </footer>
       </main>
     </div>
@@ -495,14 +500,14 @@ function Stat({ label, value, valueClass = '', icon }: { label: string; value: s
 
 function Rollup({ title, rows, capital }: { title: string; rows: [string, number][]; capital: number }) {
   return <article className={panel}>
-    <ChartTitle title={title} detail="Aggregated daily results" />
+    <ChartTitle title={title} detail="Aggregated weekly results" />
     <div className="mt-4 max-h-[330px] overflow-auto overscroll-x-contain"><table className="w-full min-w-max text-sm"><tbody>{rows.map(([period, pnl]) => <tr key={period} className="border-t border-[#edf1eb]"><td className="py-2.5 font-medium">{period}<span className="ml-2 text-xs font-normal text-[#75827a]">{new Date(`${period}-01T00:00:00Z`).toLocaleString(undefined, { month: 'long', timeZone: 'UTC' })}</span></td><td className={`py-2.5 text-right font-semibold tabular-nums ${positive(pnl)}`}>{formatMoney(pnl)}</td><td className="py-2.5 text-right text-xs text-[#75827a]">{formatPercent(capital ? pnl / capital * 100 : 0)}</td></tr>)}</tbody></table></div>
     {!rows.length && <p className="mt-4 text-sm text-[#75827a]">No P&amp;L data yet.</p>}
   </article>
 }
 
 function dateRange(history: Point[]) {
-  if (!history.length) return 'No trading dates yet'
+  if (!history.length) return 'No reporting weeks yet'
   return `${history[history.length - 1].date} — ${history[0].date}`
 }
 
