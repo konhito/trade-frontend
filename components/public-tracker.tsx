@@ -35,6 +35,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { formatMoney, formatPercent, trackerApi, trackerWeekdays, type TrackerData, type TrackerEntry } from '@/lib/public-tracker'
 import { getWeeklyPnl } from '@/lib/weekly-pnl'
+import { getTrackerStatistics } from '@/lib/tracker-statistics'
 
 type Point = { date: string; pnl: number; drawdown?: number }
 const lotOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -197,6 +198,7 @@ export default function PublicTracker() {
   const averageWin = winningWeeks.length ? winningWeeks.reduce((sum, point) => sum + point.pnl, 0) / winningWeeks.length : 0
   const averageLoss = losingWeeks.length ? Math.abs(losingWeeks.reduce((sum, point) => sum + point.pnl, 0)) / losingWeeks.length : 0
   const expectancy = winPercent / 100 * averageWin - lossPercent / 100 * averageLoss
+  const statistics = getTrackerStatistics(weekly)
   const rangeLabel = selectedRange?.from
     ? `${formatDate(selectedRange.from, 'MMM d, yyyy')}${selectedRange.to ? ` – ${formatDate(selectedRange.to, 'MMM d, yyyy')}` : ' – Select end date'}`
     : 'All dates'
@@ -442,12 +444,23 @@ export default function PublicTracker() {
                   <Stat label="Win %" value={formatPercent(winPercent)} />
                   <Stat label="Losing weeks" value={String(losingWeeks.length)} icon={<TrendingDown size={15} className="text-[#c74f42]" />} />
                   <Stat label="Loss %" value={formatPercent(lossPercent)} />
-                  <Stat label="Expectancy ratio" value={formatMoney(expectancy)} valueClass={positive(expectancy)} />
+                  <Stat label="Average weekly P&L" value={formatMoney(expectancy)} valueClass={positive(expectancy)} />
                   <Stat label="Net P&L" value={formatMoney(totalPnl)} valueClass={positive(totalPnl)} />
                   <Stat label="Total ROI" value={formatPercent(totalCapital ? totalPnl / totalCapital * 100 : 0)} />
                   <Stat label="Best week" value={formatMoney(Math.max(0, ...weekly.map((point) => point.pnl)))} valueClass="text-[#18805a]" />
                   <Stat label="Worst week" value={formatMoney(Math.min(0, ...weekly.map((point) => point.pnl)))} valueClass="text-[#c74f42]" />
+                  <Stat label="Gross profit" value={formatMoney(statistics.grossProfit)} valueClass="text-[#18805a]" />
+                  <Stat label="Gross loss" value={formatMoney(-statistics.grossLoss)} valueClass="text-[#c74f42]" />
+                  <Stat label="Average winning week" value={winningWeeks.length ? formatMoney(averageWin) : '—'} valueClass="text-[#18805a]" />
+                  <Stat label="Average losing week" value={losingWeeks.length ? formatMoney(-averageLoss) : '—'} valueClass="text-[#c74f42]" />
+                  <Stat label="Profit factor" value={statistics.grossLoss ? `${(statistics.grossProfit / statistics.grossLoss).toFixed(2)}×` : '—'} />
+                  <Stat label="Payoff ratio" value={winningWeeks.length && averageLoss ? `${(averageWin / averageLoss).toFixed(2)}×` : '—'} />
+                  <Stat label="Maximum drawdown" value={formatMoney(-statistics.maxDrawdown)} valueClass="text-[#c74f42]" />
+                  <Stat label="Breakeven weeks" value={String(weekly.length - winningWeeks.length - losingWeeks.length)} />
+                  <Stat label="Longest winning streak" value={`${statistics.longestWinningStreak} weeks`} />
+                  <Stat label="Longest losing streak" value={`${statistics.longestLosingStreak} weeks`} />
                 </div>
+                <p className="mt-3 text-xs text-[#617176]">Profit factor = gross profit ÷ gross loss. Payoff ratio = average win ÷ average loss. — means insufficient results. Breakeven weeks reset streaks.</p>
               </article>
             </section>
 
@@ -470,7 +483,7 @@ export default function PublicTracker() {
 
         <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-[#dfe7dd] py-5 text-xs text-[#75827a]">
           <span className="inline-flex items-center gap-1.5"><CircleHelp size={14} /> P&amp;L values are reported in Indian rupees.</span>
-          <span>Updated from weekly Friday reports</span>
+          <span>Weekly Data Updated Every Friday Evening</span>
         </footer>
       </main>
     </div>
